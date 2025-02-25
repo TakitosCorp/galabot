@@ -192,7 +192,7 @@ async function isLive(logger, client) {
           const nextLiveData = loadNextLiveVideoId();
           const embed = {
             color: 0x800080,
-            title: `🔴 ¡Takitos, Gala está en directoooowo!`,
+            title: `🔴 ¡Gala está iniciando un nuevo directoooowo!`,
             description: `**${nextLiveData.title}**\n\n[Haz clic aquí pa venir a ver el directito y saludar a Galita!](https://www.youtube.com/watch?v=${nextLiveData.videoId})`,
             image: {
               url: nextLiveData.thumbnail,
@@ -204,7 +204,7 @@ async function isLive(logger, client) {
           try {
             const channel = await client.channels.fetch(discordChannelId);
             if (channel) {
-              await channel.send({ content: "<@&1080660073564614739>", embeds: [embed] });
+              await channel.send({ content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI", embeds: [embed] });
               logger.info("Embed enviado correctamente.");
               saveEmbedStatus(true, logger);
               embedSent = true;

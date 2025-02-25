@@ -1,7 +1,10 @@
 {
-  "name": "docker-djs",
+  "name": "galabot",
   "version": "1.0.0",
-  "main": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
   "dependencies": {
     "@discordjs/rest": "^2.4.3",
     "discord-api-types": "^0.37.119",

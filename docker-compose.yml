@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./.env:/app/.env
+    restart: always

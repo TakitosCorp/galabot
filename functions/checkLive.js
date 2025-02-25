@@ -2,6 +2,7 @@ const dotenv = require("dotenv");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { url } = require("inspector");
 
 dotenv.config();
 
@@ -196,10 +197,9 @@ async function isLive(logger, client) {
             color: 0x800080,
             title: `🔴 ¡TAKITOS, Gala está en directoooowo!`,
             description: `**${nextLiveData.title}**\n\n[Haz clic aquí para ver el directo](https://www.youtube.com/watch?v=${nextLiveData.videoId})`,
-            thumbnail: {
+            image: {
               url: nextLiveData.thumbnail,
             },
-            timestamp: new Date(),
             footer: {
               text: "¡No te lo pierdas!",
             },

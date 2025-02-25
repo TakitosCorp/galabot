@@ -2,7 +2,6 @@ const dotenv = require("dotenv");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const { url } = require("inspector");
 
 dotenv.config();
 
@@ -26,7 +25,7 @@ function saveNextLiveVideoId(videoDetails, logger) {
     thumbnail: videoDetails.thumbnail,
     url: `https://www.youtube.com/watch?v=${videoDetails.videoId}`,
     timestamp: Date.now(),
-    embedSent: false, // Añadir el estado del embed aquí
+    embedSent: false,
   };
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   logger.info("Detalles del próximo directo guardados en nextLiveVideo.json");
@@ -38,7 +37,6 @@ function loadEmbedStatus() {
     const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
     return data.embedSent;
   } else {
-    // Si el archivo no existe, crearlo con el valor false
     fs.writeFileSync(filePath, JSON.stringify({ embedSent: false }, null, 2));
     return false;
   }
@@ -52,7 +50,6 @@ function saveEmbedStatus(embedSent, logger) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info("Estado del embed guardado en nextLiveVideo.json");
   } else {
-    // Si el archivo no existe, crearlo con el valor embedSent
     const data = { embedSent };
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info("Estado del embed guardado en nextLiveVideo.json");
@@ -195,13 +192,13 @@ async function isLive(logger, client) {
           const nextLiveData = loadNextLiveVideoId();
           const embed = {
             color: 0x800080,
-            title: `🔴 ¡TAKITOS, Gala está en directoooowo!`,
-            description: `**${nextLiveData.title}**\n\n[Haz clic aquí para ver el directo](https://www.youtube.com/watch?v=${nextLiveData.videoId})`,
+            title: `🔴 ¡Takitos, Gala está en directoooowo!`,
+            description: `**${nextLiveData.title}**\n\n[Haz clic aquí pa venir a ver el directito y saludar a Galita!](https://www.youtube.com/watch?v=${nextLiveData.videoId})`,
             image: {
               url: nextLiveData.thumbnail,
             },
             footer: {
-              text: "¡No te lo pierdas!",
+              text: "¡No te pierdas el directo eh, y si vienes asegúrate de dejar tu like y saludar ^.^!",
             },
           };
           try {

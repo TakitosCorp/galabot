@@ -16,6 +16,7 @@ module.exports = (client, logger) => {
         client.on(event.name, (...args) => event.execute(client, logger, ...args));
       }
     } catch (error) {
+      console.log(error);
       logger.error(`Error al cargar el evento ${file}:`, error);
     }
   }

@@ -18,7 +18,7 @@ module.exports = {
       "Que haces leyendo esto?",
       "Protegiendo a los takitos",
       "Reclutando takitos",
-      "Vigilando que se cumplan las reglas",
+      "Nada de portarse mal eh!",
       "No menciones a Gala!",
       "Evadiendo impuestos",
     ];
@@ -29,14 +29,11 @@ module.exports = {
     }
 
     async function updatePresence(client, logger) {
-      logger.warn("Iniciando la actualización de la presencia.");
       const liveStatus = await isLive(logger, client);
 
       if (liveStatus) {
-        logger.info("El canal está en directo.");
         const nextLiveData = loadNextLiveVideoId();
         if (nextLiveData) {
-          logger.warn(`Datos del próximo directo cargados: ${JSON.stringify(nextLiveData)}`);
           client.user.setActivity({
             name: nextLiveData.title,
             type: ActivityType.Streaming,
@@ -50,7 +47,6 @@ module.exports = {
           randomStatusInterval = null;
         }
       } else {
-        logger.info("El canal no está en directo.");
         setRandomStatus();
         if (!randomStatusInterval) {
           randomStatusInterval = setInterval(setRandomStatus, 300000);
@@ -85,13 +81,11 @@ module.exports = {
     }
 
     cron.schedule("0 */3 * * *", async () => {
-      logger.warn("Ejecutando tarea programada para actualizar el próximo directo.");
       await updateNextLiveVideo(logger);
       await updatePresence(client, logger);
     });
 
     cron.schedule("* * * * *", async () => {
-      logger.warn("Ejecutando tarea programada para comprobar el estado del directo.");
       await updatePresence(client, logger);
     });
   },

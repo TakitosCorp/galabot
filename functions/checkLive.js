@@ -2,7 +2,6 @@ const dotenv = require("dotenv");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const { url } = require("inspector");
 
 dotenv.config();
 
@@ -26,10 +25,9 @@ function saveNextLiveVideoId(videoDetails, logger) {
     thumbnail: videoDetails.thumbnail,
     url: `https://www.youtube.com/watch?v=${videoDetails.videoId}`,
     timestamp: Date.now(),
-    embedSent: false, // Añadir el estado del embed aquí
+    embedSent: false,
   };
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  logger.info("Detalles del próximo directo guardados en nextLiveVideo.json");
 }
 
 function loadEmbedStatus() {
@@ -38,7 +36,6 @@ function loadEmbedStatus() {
     const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
     return data.embedSent;
   } else {
-    // Si el archivo no existe, crearlo con el valor false
     fs.writeFileSync(filePath, JSON.stringify({ embedSent: false }, null, 2));
     return false;
   }
@@ -50,9 +47,7 @@ function saveEmbedStatus(embedSent, logger) {
     const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
     data.embedSent = embedSent;
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    logger.info("Estado del embed guardado en nextLiveVideo.json");
   } else {
-    // Si el archivo no existe, crearlo con el valor embedSent
     const data = { embedSent };
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info("Estado del embed guardado en nextLiveVideo.json");
@@ -134,7 +129,6 @@ async function updateNextLiveVideo(logger) {
         const nextStream = ongoingStreams[0];
         nextLiveVideoId = nextStream.videoId;
         saveNextLiveVideoId(nextStream, logger);
-        logger.info(`Directo en curso encontrado: ${nextStream.title} (ID: ${nextStream.videoId})`);
         return;
       }
 
@@ -146,12 +140,6 @@ async function updateNextLiveVideo(logger) {
         const nextStream = upcomingStreams[0];
         nextLiveVideoId = nextStream.videoId;
         saveNextLiveVideoId(nextStream, logger);
-        logger.info(`Próximo directo encontrado: ${nextStream.title} (ID: ${nextStream.videoId})`);
-        if (nextStream.scheduledTime) {
-          logger.info(`Fecha y hora programadas: ${new Date(nextStream.scheduledTime).toLocaleString()}`);
-        } else {
-          logger.info("Fecha y hora programadas: No disponible");
-        }
       } else {
         nextLiveVideoId = null;
       }
@@ -180,7 +168,6 @@ async function isLive(logger, client) {
       const liveDetails = data.items[0].liveStreamingDetails;
 
       if (liveDetails && liveDetails.concurrentViewers) {
-        logger.info("¡Gala está en directo!");
         let embedSent = loadEmbedStatus();
         if (!embedSent) {
           const nextLiveData = loadNextLiveVideoId();
@@ -195,13 +182,39 @@ async function isLive(logger, client) {
               text: "¡No te pierdas el directo eh, y si vienes asegúrate de dejar tu like y saludar ^.^!",
             },
           };
+          const button = {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                label: "Ver directo",
+                style: 5,
+                url: `https://www.youtube.com/watch?v=${nextLiveData.videoId}`,
+              },
+            ],
+          };
           try {
             const channel = await client.channels.fetch(discordChannelId);
             if (channel) {
-              await channel.send({ content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI", embeds: [embed] });
-              logger.info("Embed enviado correctamente.");
-              saveEmbedStatus(true, logger);
-              embedSent = true;
+              try {
+                await channel.send({
+                  content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
+                  embeds: [embed],
+                  components: [button],
+                });
+                logger.info("Embed enviado correctamente.");
+                saveEmbedStatus(true, logger);
+                embedSent = true;
+              } catch (err) {
+                logger.warn("Error al enviar el embed con el botón:", err);
+                await channel.send({
+                  content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
+                  embeds: [embed],
+                });
+                logger.info("Embed enviado correctamente sin el botón.");
+                saveEmbedStatus(true, logger);
+                embedSent = true;
+              }
             } else {
               logger.warn("No se pudo obtener el canal de Discord.");
             }
@@ -253,7 +266,6 @@ async function getLiveDetails(logger) {
 async function saveLiveData(data, logger) {
   const filePath = path.join(__dirname, "../data/liveData.json");
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  logger.info("Datos del directo guardados en liveData.json");
 }
 
 module.exports = {

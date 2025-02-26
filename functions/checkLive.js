@@ -2,6 +2,7 @@ const dotenv = require("dotenv");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { url } = require("inspector");
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ function saveNextLiveVideoId(videoDetails, logger) {
     thumbnail: videoDetails.thumbnail,
     url: `https://www.youtube.com/watch?v=${videoDetails.videoId}`,
     timestamp: Date.now(),
-    embedSent: false,
+    embedSent: false, // Añadir el estado del embed aquí
   };
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   logger.info("Detalles del próximo directo guardados en nextLiveVideo.json");
@@ -37,6 +38,7 @@ function loadEmbedStatus() {
     const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
     return data.embedSent;
   } else {
+    // Si el archivo no existe, crearlo con el valor false
     fs.writeFileSync(filePath, JSON.stringify({ embedSent: false }, null, 2));
     return false;
   }
@@ -50,6 +52,7 @@ function saveEmbedStatus(embedSent, logger) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info("Estado del embed guardado en nextLiveVideo.json");
   } else {
+    // Si el archivo no existe, crearlo con el valor embedSent
     const data = { embedSent };
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info("Estado del embed guardado en nextLiveVideo.json");
@@ -116,8 +119,15 @@ async function updateNextLiveVideo(logger) {
         })
       );
 
-      const ongoingStreams = detailedStreams
-        .filter((item) => item && item.actualStartTime && item.actualStartTime <= Date.now())
+      const now = Date.now();
+      const sixHoursAgo = now - 6 * 60 * 60 * 1000;
+
+      const validStreams = detailedStreams.filter(
+        (item) => item && item.scheduledTime && item.scheduledTime > sixHoursAgo
+      );
+
+      const ongoingStreams = validStreams
+        .filter((item) => item.actualStartTime && item.actualStartTime <= now)
         .sort((a, b) => (a.actualStartTime || Infinity) - (b.actualStartTime || Infinity));
 
       if (ongoingStreams.length > 0) {
@@ -128,25 +138,8 @@ async function updateNextLiveVideo(logger) {
         return;
       }
 
-      const recentStreams = detailedStreams
-        .filter((item) => item && item.scheduledTime && Date.now() - item.scheduledTime <= 12 * 60 * 60 * 1000)
-        .sort((a, b) => (a.scheduledTime || Infinity) - (b.scheduledTime || Infinity));
-
-      for (const stream of recentStreams) {
-        const liveStatus = await checkLiveStatus(apiKey, stream.videoId, logger);
-        if (liveStatus.items && liveStatus.items.length > 0) {
-          const liveDetails = liveStatus.items[0].liveStreamingDetails;
-          if (liveDetails && liveDetails.concurrentViewers) {
-            nextLiveVideoId = stream.videoId;
-            saveNextLiveVideoId(stream, logger);
-            logger.info(`Directo reciente encontrado y en curso: ${stream.title} (ID: ${stream.videoId})`);
-            return;
-          }
-        }
-      }
-
-      const upcomingStreams = detailedStreams
-        .filter((item) => item && (item.scheduledTime > Date.now() || !item.scheduledTime))
+      const upcomingStreams = validStreams
+        .filter((item) => item.scheduledTime && item.scheduledTime > now)
         .sort((a, b) => (a.scheduledTime || Infinity) - (b.scheduledTime || Infinity));
 
       if (upcomingStreams.length > 0) {
@@ -166,6 +159,7 @@ async function updateNextLiveVideo(logger) {
       nextLiveVideoId = null;
     }
   } catch (err) {
+    console.error(err);
     logger.warn("Error al obtener los directos:", err);
   }
 }

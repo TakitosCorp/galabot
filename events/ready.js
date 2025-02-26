@@ -76,15 +76,15 @@ module.exports = {
       const lastUpdateTime = nextLiveData.timestamp;
       const hoursSinceLastUpdate = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
 
-      if (hoursSinceLastUpdate > 24) {
-        logger.warn("Han pasado más de 24 horas desde la última actualización. Actualizando el próximo directo.");
+      if (hoursSinceLastUpdate > 6) {
+        logger.warn("Han pasado más de 6 horas desde la última actualización. Actualizando el próximo directo.");
         updateNextLiveVideo(logger);
       }
     } else {
       logger.warn("No se encontraron datos del próximo directo al iniciar.");
     }
 
-    cron.schedule("0 4 * * *", async () => {
+    cron.schedule("0 */3 * * *", async () => {
       logger.warn("Ejecutando tarea programada para actualizar el próximo directo.");
       await updateNextLiveVideo(logger);
       await updatePresence(client, logger);

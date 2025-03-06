@@ -1,13 +1,13 @@
 const { ActivityType } = require("discord.js");
 const cron = require("node-cron");
-const { updateNextLiveVideo, isLive, loadNextLiveVideoId } = require("../functions/checkLive");
+const { workflows } = require("../functions/youtube");
 
 let nextLiveVideoId = null;
 let randomStatusInterval = null;
 
 module.exports = {
   name: "ready",
-  execute(client, logger) {
+  async execute(client, logger) {
     logger.info(`[✅] ${client.user.username} se ha conectado correctamente a Discord!`);
 
     const statusMessages = [
@@ -29,15 +29,15 @@ module.exports = {
     }
 
     async function updatePresence(client, logger) {
-      const liveStatus = await isLive(logger, client);
+      const liveStatus = await workflows.checkFunction(client);
 
       if (liveStatus) {
-        const nextLiveData = loadNextLiveVideoId();
+        const nextLiveData = require("../data/nextUpcomingStream.json");
         if (nextLiveData) {
           client.user.setActivity({
             name: nextLiveData.title,
             type: ActivityType.Streaming,
-            url: nextLiveData.url,
+            url: nextLiveData.streamUrl,
           });
         } else {
           logger.warn("No se pudieron cargar los datos del próximo directo.");
@@ -56,32 +56,35 @@ module.exports = {
 
     (async () => {
       logger.warn("Actualizando el próximo directo al iniciar.");
-      await updateNextLiveVideo(logger);
-      const nextLiveData = loadNextLiveVideoId();
+      await workflows.updateWorkflow();
+      const nextLiveData = require("../data/nextUpcomingStream.json");
       if (nextLiveData) {
         nextLiveVideoId = nextLiveData.videoId;
+      } else {
+        logger.warn("No se encontraron datos del próximo directo al iniciar. Creando datos iniciales.");
+        await workflows.updateWorkflow();
       }
       await updatePresence(client, logger);
     })();
 
-    const nextLiveData = loadNextLiveVideoId();
+    const nextLiveData = require("../data/nextUpcomingStream.json");
     if (nextLiveData) {
       logger.warn(`Datos del próximo directo cargados al iniciar: ${JSON.stringify(nextLiveData)}`);
       nextLiveVideoId = nextLiveData.videoId;
       const currentTime = Date.now();
-      const lastUpdateTime = nextLiveData.timestamp;
+      const lastUpdateTime = new Date(nextLiveData.scheduledStart).getTime();
       const hoursSinceLastUpdate = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
 
       if (hoursSinceLastUpdate > 6) {
         logger.warn("Han pasado más de 6 horas desde la última actualización. Actualizando el próximo directo.");
-        updateNextLiveVideo(logger);
+        await workflows.updateWorkflow();
       }
     } else {
       logger.warn("No se encontraron datos del próximo directo al iniciar.");
     }
 
     cron.schedule("0 */3 * * *", async () => {
-      await updateNextLiveVideo(logger);
+      await workflows.updateWorkflow();
       await updatePresence(client, logger);
     });
 

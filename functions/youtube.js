@@ -129,6 +129,59 @@ const workflows = {
       return false;
     }
   },
+
+  //! Workflow 3: Send embed
+  async sendEmbed(client, nextLiveData) {
+    const embed = {
+      color: 0x800080,
+      title: `🔴 ¡Gala está iniciando un nuevo directoooowo!`,
+      description: `**${nextLiveData.title}**\n\n[Haz clic aquí pa venir a ver el directito y saludar a Galita!](https://www.youtube.com/watch?v=${nextLiveData.videoId})`,
+      image: {
+        url: nextLiveData.thumbnail,
+      },
+      footer: {
+        text: "¡No te pierdas el directo eh, y si vienes asegúrate de dejar tu like y saludar ^.^!",
+      },
+    };
+    const button = {
+      type: 1,
+      components: [
+        {
+          type: 2,
+          label: "Ver directo",
+          style: 5,
+          url: `https://www.youtube.com/watch?v=${nextLiveData.videoId}`,
+        },
+      ],
+    };
+
+    try {
+      const channel = await client.channels.fetch(process.env.GALAYAKI_YTDISCORD);
+      if (channel) {
+        try {
+          await channel.send({
+            content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
+            embeds: [embed],
+            components: [button],
+          });
+          logger.info("Embed enviado correctamente.");
+        } catch (err) {
+          logger.warn("Error al enviar el embed con el botón:", err);
+          await channel.send({
+            content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
+            embeds: [embed],
+          });
+          logger.info("Embed enviado correctamente sin el botón.");
+          saveEmbedStatus(true, logger);
+          embedSent = true;
+        }
+      } else {
+        logger.warn("No se pudo obtener el canal de Discord.");
+      }
+    } catch (err) {
+      logger.warn("Error al obtener el canal de Discord:", err);
+    }
+  },
 };
 
 module.exports = {

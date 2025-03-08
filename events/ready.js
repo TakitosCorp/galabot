@@ -1,9 +1,11 @@
 const { ActivityType } = require("discord.js");
 const cron = require("node-cron");
 const { workflows } = require("../functions/youtube");
+const { writeJSON, getFilePath } = require("../utils/fileUtils.js");
 
 let nextLiveVideoId = null;
 let randomStatusInterval = null;
+const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
 
 module.exports = {
   name: "ready",
@@ -45,6 +47,11 @@ module.exports = {
         if (randomStatusInterval) {
           clearInterval(randomStatusInterval);
           randomStatusInterval = null;
+        }
+        if (nextLiveData.embedSent === false) {
+          await workflows.sendEmbed(client, nextLiveData);
+          nextLiveData.embedSent = true;
+          writeJSON(nextUpcomingStreamFile, nextLiveData);
         }
       } else {
         setRandomStatus();

@@ -119,17 +119,19 @@ const workflows = {
     ensureFileExists(nextUpcomingStreamFile);
     const nextUpcomingStream = require(nextUpcomingStreamFile);
 
-    // Get the ongoing streams
-    const ongoingStreams = await youtubeUtils.getOngoingStream();
+    // Get the ongoing stats for the next upcoming stream
+    const ongoingStats = await youtubeUtils.getOngoingStats(nextUpcomingStream.videoId);
 
-    // Check if there are ongoing streams, if not, return false
-    if (ongoingStreams.items.length === 0) {
+    // Check if there are ongoing stats, if not, return false
+    if (ongoingStats.items.length === 0) {
       return false;
     }
 
-    // Check if the next upcoming stream is the same as the ongoing stream
-    const liveStream = ongoingStreams.items[0];
-    if (liveStream.id.videoId === nextUpcomingStream.videoId) {
+    const liveDetails = ongoingStats.items[0].liveStreamingDetails;
+
+    // Check if the stream is live
+    if (liveDetails && liveDetails.concurrentViewers) {
+      console.log("Stream is live!");
       return true;
     } else {
       return false;

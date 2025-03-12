@@ -1,7 +1,7 @@
 const dotenv = require("dotenv");
 const axios = require("axios");
 const fs = require("fs");
-const { getFilePath, writeJSON } = require("../utils/fileUtils");
+const { getFilePath, writeJSON, ensureFileExists } = require("../utils/fileUtils");
 
 // Load the environment variables from the .env file.
 dotenv.config();
@@ -40,6 +40,9 @@ const workflows = {
     const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
     const upcomingStreamsArray = [];
 
+    ensureFileExists(upcomingStreamsFile);
+    ensureFileExists(nextUpcomingStreamFile);
+
     // First, we get all the upcoming streams.
     const upcomingStreams = await youtubeUtils.getUpcomingStreams();
 
@@ -47,6 +50,8 @@ const workflows = {
     for (const item of upcomingStreams.items) {
       const videoId = item.id.videoId;
       const stats = await youtubeUtils.getOngoingStats(videoId);
+      if (stats.items.length === 0) continue; // Verificar si hay datos
+
       const scheduledStart = new Date(stats.items[0].liveStreamingDetails.scheduledStartTime);
 
       // Check if the scheduled start time is within the last 12 hours
@@ -83,7 +88,7 @@ const workflows = {
 
     if (currentNextStream.embedSent) {
       const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-      if (!ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
+      if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
         nextUpcomingStream.embedSent = false;
       } else {
         nextUpcomingStream.embedSent = true;
@@ -95,7 +100,7 @@ const workflows = {
     // Check if the next upcoming stream is the same as the current one
     if (currentNextStream.videoId !== nextUpcomingStream.videoId) {
       const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-      if (!ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
+      if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
         nextUpcomingStream.embedSent = false;
         writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
       }
@@ -111,6 +116,7 @@ const workflows = {
   //! If it is live, we send an embed message to the Discord channel.
   async checkFunction(client) {
     const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
+    ensureFileExists(nextUpcomingStreamFile);
     const nextUpcomingStream = require(nextUpcomingStreamFile);
 
     // Get the ongoing streams
@@ -131,7 +137,7 @@ const workflows = {
   },
 
   //! Workflow 3: Send embed
-  async sendEmbed(client, nextLiveData) {
+  async sendEmbed(client, nextLiveData, logger) {
     const embed = {
       color: 0x800080,
       title: `🔴 ¡Gala está iniciando un nuevo directoooowo!`,

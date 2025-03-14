@@ -33,7 +33,7 @@ const youtubeUtils = {
 const workflows = {
   //! Workflow 1: Every 4 hours, we get all the upcoming streams and we save them in a JSON file.
   //! In the same workflow, we would save the next upcoming stream in a separate JSON file.
-  async updateWorkflow() {
+  async updateWorkflow(logger) {
     // We define the constants
     const nowDate = new Date();
     const upcomingStreamsFile = getFilePath("upcomingStreams.json");

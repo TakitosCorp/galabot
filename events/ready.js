@@ -2,6 +2,7 @@ const { ActivityType } = require("discord.js");
 const cron = require("node-cron");
 const { workflows } = require("../functions/youtube");
 const { writeJSON, getFilePath, ensureFileExists } = require("../utils/fileUtils.js");
+const resources = require("../data/resources.json");
 
 let nextLiveVideoId = null;
 let randomStatusInterval = null;
@@ -14,18 +15,7 @@ module.exports = {
   async execute(client, logger) {
     logger.info(`[✅] ${client.user.username} se ha conectado correctamente a Discord!`);
 
-    const statusMessages = [
-      "Vigilando a los takitos",
-      "Esperando el stream de Galita",
-      "Leyendo lo que escribes...",
-      "Comiendo pulpo a la gallega",
-      "Que haces leyendo esto?",
-      "Protegiendo a los takitos",
-      "Reclutando takitos",
-      "Nada de portarse mal eh!",
-      "No menciones a Gala!",
-      "Evadiendo impuestos",
-    ];
+    const statusMessages = resources.statusMessages;
 
     function setRandomStatus() {
       const randomStatus = statusMessages[Math.floor(Math.random() * statusMessages.length)];

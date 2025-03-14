@@ -64,19 +64,19 @@ module.exports = {
 
     async function initialSetup() {
       logger.warn("Actualizando datos al iniciar el bot.");
-      await workflows.updateWorkflow();
+      await workflows.updateWorkflow(logger);
       const nextLiveData = require("../data/nextUpcomingStream.json");
       if (nextLiveData) {
         nextLiveVideoId = nextLiveData.videoId;
       } else {
         logger.warn("No se encontraron datos del próximo directo al iniciar. Creando datos iniciales.");
-        await workflows.updateWorkflow();
+        await workflows.updateWorkflow(logger);
       }
       await updatePresence(client, logger);
     }
 
     async function scheduledTasks() {
-      await workflows.updateWorkflow();
+      await workflows.updateWorkflow(logger);
       await updatePresence(client, logger);
     }
 

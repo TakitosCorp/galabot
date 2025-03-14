@@ -33,8 +33,7 @@ module.exports = {
     }
 
     async function updatePresence(client, logger) {
-      const liveStatus = await workflows.checkFunction(client);
-
+      const liveStatus = await workflows.checkFunction();
       if (liveStatus) {
         const nextLiveData = require("../data/nextUpcomingStream.json");
         if (nextLiveData) {
@@ -63,8 +62,8 @@ module.exports = {
       }
     }
 
-    (async () => {
-      logger.warn("Actualizando el próximo directo al iniciar.");
+    async function initialSetup() {
+      logger.warn("Actualizando datos al iniciar el bot.");
       await workflows.updateWorkflow();
       const nextLiveData = require("../data/nextUpcomingStream.json");
       if (nextLiveData) {
@@ -74,27 +73,18 @@ module.exports = {
         await workflows.updateWorkflow();
       }
       await updatePresence(client, logger);
-    })();
-
-    const nextLiveData = require("../data/nextUpcomingStream.json");
-    if (nextLiveData) {
-      logger.warn(`Datos del próximo directo cargados al iniciar: ${JSON.stringify(nextLiveData)}`);
-      nextLiveVideoId = nextLiveData.videoId;
-      const currentTime = Date.now();
-      const lastUpdateTime = new Date(nextLiveData.scheduledStart).getTime();
-      const hoursSinceLastUpdate = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
-
-      if (hoursSinceLastUpdate > 6) {
-        logger.warn("Han pasado más de 6 horas desde la última actualización. Actualizando el próximo directo.");
-        await workflows.updateWorkflow();
-      }
-    } else {
-      logger.warn("No se encontraron datos del próximo directo al iniciar.");
     }
 
-    cron.schedule("0 */3 * * *", async () => {
+    async function scheduledTasks() {
       await workflows.updateWorkflow();
       await updatePresence(client, logger);
+    }
+
+    await initialSetup();
+
+    cron.schedule("0 */3 * * *", async () => {
+      logger.info("Ejecutando tarea programada: Actualizar workflow y presencia.");
+      await scheduledTasks();
     });
 
     cron.schedule("* * * * *", async () => {

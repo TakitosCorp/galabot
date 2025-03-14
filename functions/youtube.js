@@ -46,11 +46,30 @@ const workflows = {
     // First, we get all the upcoming streams.
     const upcomingStreams = await youtubeUtils.getUpcomingStreams();
 
+    // Then we get the ongoing stream
+    const ongoingStreamData = await youtubeUtils.getOngoingStream();
+    let ongoingStream = null;
+
+    if (ongoingStreamData.items.length > 0) {
+      const videoId = ongoingStreamData.items[0].id.videoId;
+      const stats = await youtubeUtils.getOngoingStats(videoId);
+      if (stats.items.length > 0) {
+        ongoingStream = {
+          videoId: videoId,
+          scheduledStart: new Date(stats.items[0].liveStreamingDetails.actualStartTime).toISOString(),
+          title: stats.items[0].snippet.title,
+          thumbnail: stats.items[0].snippet.thumbnails.maxres.url,
+          streamUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        };
+        upcomingStreamsArray.push(ongoingStream);
+      }
+    }
+
     // Then, for each upcoming stream, we get the data that is important for us.
     for (const item of upcomingStreams.items) {
       const videoId = item.id.videoId;
       const stats = await youtubeUtils.getOngoingStats(videoId);
-      if (stats.items.length === 0) continue; // Verificar si hay datos
+      if (stats.items.length === 0) continue;
 
       const scheduledStart = new Date(stats.items[0].liveStreamingDetails.scheduledStartTime);
 
@@ -78,35 +97,45 @@ const workflows = {
     upcomingStreamsArray.sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
 
     // We now save the upcoming stream to a variable.
-    const nextUpcomingStream = upcomingStreamsArray[0];
+    let nextUpcomingStream = upcomingStreamsArray[0];
 
-    // Check if the current embedSent is true
-    let currentNextStream = {};
-    if (fs.existsSync(nextUpcomingStreamFile)) {
-      currentNextStream = require(nextUpcomingStreamFile);
+    // If there is an ongoing stream, set it as the next upcoming stream
+    if (ongoingStream) {
+      nextUpcomingStream = ongoingStream;
     }
 
-    if (currentNextStream.embedSent) {
-      const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-      if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
-        nextUpcomingStream.embedSent = false;
-      } else {
-        nextUpcomingStream.embedSent = true;
+    // Check if nextUpcomingStream exists before proceeding
+    if (nextUpcomingStream) {
+      // Check if the current embedSent is true
+      let currentNextStream = {};
+      if (fs.existsSync(nextUpcomingStreamFile)) {
+        currentNextStream = require(nextUpcomingStreamFile);
       }
-    } else {
-      nextUpcomingStream.embedSent = false;
-    }
 
-    // Check if the next upcoming stream is the same as the current one
-    if (currentNextStream.videoId !== nextUpcomingStream.videoId) {
-      const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-      if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
+      if (currentNextStream.embedSent) {
+        const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
+        if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
+          nextUpcomingStream.embedSent = false;
+        } else {
+          nextUpcomingStream.embedSent = true;
+        }
+      } else {
+        nextUpcomingStream.embedSent = false;
+      }
+
+      // Check if the next upcoming stream is the same as the current one
+      if (currentNextStream.videoId !== nextUpcomingStream.videoId) {
+        const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
+        if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
+          nextUpcomingStream.embedSent = false;
+          writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
+        }
+      } else if (!currentNextStream.embedSent) {
         nextUpcomingStream.embedSent = false;
         writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
       }
-    } else if (!currentNextStream.embedSent) {
-      nextUpcomingStream.embedSent = false;
-      writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
+    } else {
+      logger.log("No se han encontrado directos en progreso o próximos.");
     }
 
     return upcomingStreamsArray;
@@ -114,7 +143,7 @@ const workflows = {
 
   //! Workflow 2: Every minute, we check if the stream that is loaded from the JSON file is live.
   //! If it is live, we send an embed message to the Discord channel.
-  async checkFunction(client) {
+  async checkFunction() {
     const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
     ensureFileExists(nextUpcomingStreamFile);
     const nextUpcomingStream = require(nextUpcomingStreamFile);
@@ -131,7 +160,6 @@ const workflows = {
 
     // Check if the stream is live
     if (liveDetails && liveDetails.concurrentViewers) {
-      console.log("Stream is live!");
       return true;
     } else {
       return false;

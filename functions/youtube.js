@@ -135,7 +135,7 @@ const workflows = {
         writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
       }
     } else {
-      logger.log("No se han encontrado directos en progreso o próximos.");
+      logger.warn("No se han encontrado directos en progreso o próximos.");
     }
 
     return upcomingStreamsArray;

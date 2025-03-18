@@ -24,6 +24,7 @@ module.exports = {
 
     async function updatePresence(client, logger) {
       const liveStatus = await workflows.checkFunction();
+      console.log("Live status según checkFunction:" + liveStatus);
       if (liveStatus) {
         const nextLiveData = require("../data/nextUpcomingStream.json");
         if (nextLiveData) {
@@ -32,17 +33,17 @@ module.exports = {
             type: ActivityType.Streaming,
             url: nextLiveData.streamUrl,
           });
+          if (nextLiveData.embedSent === false) {
+            await workflows.sendEmbed(client, nextLiveData, logger);
+            nextLiveData.embedSent = true;
+            writeJSON(nextUpcomingStreamFile, nextLiveData);
+          }
         } else {
           logger.warn("No se pudieron cargar los datos del próximo directo.");
         }
         if (randomStatusInterval) {
           clearInterval(randomStatusInterval);
           randomStatusInterval = null;
-        }
-        if (nextLiveData.embedSent === false) {
-          await workflows.sendEmbed(client, nextLiveData, logger);
-          nextLiveData.embedSent = true;
-          writeJSON(nextUpcomingStreamFile, nextLiveData);
         }
       } else {
         setRandomStatus();
@@ -78,6 +79,7 @@ module.exports = {
     });
 
     cron.schedule("* * * * *", async () => {
+      logger.info("Ejecutando tarea programada: Detectar si hay streams en progreso.");
       await updatePresence(client, logger);
     });
   },

@@ -153,10 +153,12 @@ const workflows = {
 
     // Check if there are ongoing stats, if not, return false
     if (ongoingStats.items.length === 0) {
+      console.log("Las stats no están disponibles.");
       return false;
     }
 
     const liveDetails = ongoingStats.items[0].liveStreamingDetails;
+    console.log(liveDetails);
 
     // Check if the stream is live
     if (liveDetails && liveDetails.concurrentViewers) {

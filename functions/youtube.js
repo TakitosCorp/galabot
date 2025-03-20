@@ -150,6 +150,7 @@ const workflows = {
 
     // Get the ongoing stats for the next upcoming stream
     const ongoingStats = await youtubeUtils.getOngoingStats(nextUpcomingStream.videoId);
+    console.log("ID: " + ongoingStats.items[0].id);
 
     // Check if there are ongoing stats, if not, return false
     if (ongoingStats.items.length === 0) {

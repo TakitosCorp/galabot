@@ -65,6 +65,17 @@ const workflows = {
       }
     }
 
+    // Validate current stream before continuing
+    const currentNextStream = require(nextUpcomingStreamFile);
+    if (currentNextStream && currentNextStream.videoId) {
+      const scheduledStart = new Date(currentNextStream.scheduledStart);
+      // If stream is older than 12 hours, discard it
+      if (nowDate - scheduledStart > 12 * 60 * 60 * 1000) {
+        logger.info("Stored stream has expired, searching for new stream...");
+        writeJSON(nextUpcomingStreamFile, {}); // Clear the file
+      }
+    }
+
     // Then, for each upcoming stream, we get the data that is important for us.
     for (const item of upcomingStreams.items) {
       const videoId = item.id.videoId;
@@ -104,38 +115,20 @@ const workflows = {
       nextUpcomingStream = ongoingStream;
     }
 
-    // Check if nextUpcomingStream exists before proceeding
+    // Additional validation before saving the next stream
     if (nextUpcomingStream) {
-      // Check if the current embedSent is true
-      let currentNextStream = {};
-      if (fs.existsSync(nextUpcomingStreamFile)) {
-        currentNextStream = require(nextUpcomingStreamFile);
-      }
-
-      if (currentNextStream.embedSent) {
-        const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-        if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
-          nextUpcomingStream.embedSent = false;
-        } else {
-          nextUpcomingStream.embedSent = true;
-        }
-      } else {
-        nextUpcomingStream.embedSent = false;
-      }
-
-      // Check if the next upcoming stream is the same as the current one
-      if (currentNextStream.videoId !== nextUpcomingStream.videoId) {
-        const ongoingStream = await youtubeUtils.getOngoingStats(currentNextStream.videoId);
-        if (ongoingStream.items.length === 0 || !ongoingStream.items[0].liveStreamingDetails.concurrentViewers) {
-          nextUpcomingStream.embedSent = false;
-          writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
-        }
-      } else if (!currentNextStream.embedSent) {
+      const streamStart = new Date(nextUpcomingStream.scheduledStart);
+      // Only save if the stream hasn't passed more than 12 hours ago
+      if (nowDate - streamStart <= 12 * 60 * 60 * 1000) {
         nextUpcomingStream.embedSent = false;
         writeJSON(nextUpcomingStreamFile, nextUpcomingStream);
+        logger.info(`New stream saved: ${nextUpcomingStream.title}`);
+      } else {
+        logger.warn("Found stream has expired, will not be saved");
+        writeJSON(nextUpcomingStreamFile, {});
       }
     } else {
-      logger.warn("No se han encontrado directos en progreso o próximos.");
+      logger.warn("No ongoing or upcoming streams found.");
     }
 
     return upcomingStreamsArray;
@@ -143,23 +136,35 @@ const workflows = {
 
   //! Workflow 2: Every minute, we check if the stream that is loaded from the JSON file is live.
   //! If it is live, we send an embed message to the Discord channel.
-  async checkFunction() {
+  async checkFunction(logger) {
     const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
     ensureFileExists(nextUpcomingStreamFile);
     const nextUpcomingStream = require(nextUpcomingStreamFile);
 
+    // Validate that we have a video ID to check
+    if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
+      logger.info("No stream data to check");
+      return false;
+    }
+
+    // Validate that the stream isn't too old
+    const streamDate = new Date(nextUpcomingStream.scheduledStart);
+    const now = new Date();
+    if (now - streamDate > 12 * 60 * 60 * 1000) {
+      logger.info("Stream is too old to be valid");
+      return false;
+    }
+
     // Get the ongoing stats for the next upcoming stream
     const ongoingStats = await youtubeUtils.getOngoingStats(nextUpcomingStream.videoId);
-    console.log("ID: " + ongoingStats.items[0].id);
 
     // Check if there are ongoing stats, if not, return false
     if (ongoingStats.items.length === 0) {
-      console.log("Las stats no están disponibles.");
+      logger.info("Las stats no están disponibles.");
       return false;
     }
 
     const liveDetails = ongoingStats.items[0].liveStreamingDetails;
-    console.log(liveDetails);
 
     // Check if the stream is live
     if (liveDetails && liveDetails.concurrentViewers) {

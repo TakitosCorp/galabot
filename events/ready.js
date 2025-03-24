@@ -1,5 +1,5 @@
 const { ActivityType } = require("discord.js");
-const cron = require("node-cron");
+const { CronJob } = require("cron");
 const { workflows } = require("../functions/youtube");
 const { writeJSON, getFilePath, ensureFileExists } = require("../utils/fileUtils.js");
 const resources = require("../data/resources.json");
@@ -72,15 +72,26 @@ module.exports = {
     }
 
     await initialSetup();
+    await scheduledTasks();
 
-    cron.schedule("0 */3 * * *", async () => {
-      logger.info("Ejecutando tarea programada: Actualizar workflow y presencia.");
-      await scheduledTasks();
-    });
+    new CronJob(
+      "0 */3 * * *",
+      async () => {
+        logger.info("Ejecutando tarea programada: Actualizar workflow y presencia.");
+        await scheduledTasks();
+      },
+      null,
+      true
+    );
 
-    cron.schedule("* * * * *", async () => {
-      logger.info("Ejecutando tarea programada: Detectar si hay streams en progreso.");
-      await updatePresence(client, logger);
-    });
+    new CronJob(
+      "* * * * *",
+      async () => {
+        logger.info("Ejecutando tarea programada: Detectar si hay streams en progreso.");
+        await updatePresence(client, logger);
+      },
+      null,
+      true
+    );
   },
 };

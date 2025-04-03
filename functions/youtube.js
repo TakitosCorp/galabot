@@ -89,11 +89,15 @@ const workflows = {
         const title = stats.items[0].snippet.title;
         // Check if the title is not the title that it's used in the "Schedule stream". If it is, we don't add it to the array.
         if (!title.includes("【HORARIO SEMANAL】 Free chat! || GalaYaki")) {
+          const thumbnail = stats.items[0].snippet.thumbnails.maxres
+            ? stats.items[0].snippet.thumbnails.maxres.url
+            : stats.items[0].snippet.thumbnails.high.url;
+
           const stream = {
             videoId,
             scheduledStart: stats.items[0].liveStreamingDetails.scheduledStartTime,
             title,
-            thumbnail: stats.items[0].snippet.thumbnails.maxres.url,
+            thumbnail,
             streamUrl: `https://www.youtube.com/watch?v=${videoId}`,
           };
           upcomingStreamsArray.push(stream);

@@ -23,7 +23,7 @@ module.exports = {
     }
 
     async function updatePresence(client, logger) {
-      const liveStatus = await workflows.checkFunction();
+      const liveStatus = await workflows.checkFunction(logger);
       console.log("Live status según checkFunction: " + liveStatus);
       if (liveStatus) {
         const nextLiveData = require("../data/nextUpcomingStream.json");

@@ -145,24 +145,33 @@ const workflows = {
     ensureFileExists(nextUpcomingStreamFile);
     const nextUpcomingStream = require(nextUpcomingStreamFile);
 
-    // Validate that we have a video ID to check
+    // Validar que tenemos un video ID para comprobar
     if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
       logger.info("No stream data to check");
       return false;
     }
 
-    // Validate that the stream isn't too old
-    const streamDate = new Date(nextUpcomingStream.scheduledStart);
+    // Restaurar las definiciones de now y streamDate
     const now = new Date();
+    const streamDate = new Date(nextUpcomingStream.scheduledStart);
+
+    // Solo validar que el stream no sea demasiado viejo (más de 12 horas después de su hora programada)
+    // Los streams futuros son perfectamente válidos
     if (now - streamDate > 12 * 60 * 60 * 1000) {
-      logger.info("Stream is too old to be valid");
+      logger.info(
+        `Stream es demasiado viejo para ser válido. Stream programado: ${streamDate.toISOString()}, Ahora: ${now.toISOString()}`
+      );
       return false;
     }
 
-    // Get the ongoing stats for the next upcoming stream
+    // Log para depuración
+    logger.info(`Comprobando stream: ${nextUpcomingStream.title} (ID: ${nextUpcomingStream.videoId})`);
+    logger.info(`Fecha programada: ${streamDate.toISOString()}, Fecha actual: ${now.toISOString()}`);
+
+    // Obtener las estadísticas en curso para el próximo stream
     const ongoingStats = await youtubeUtils.getOngoingStats(nextUpcomingStream.videoId);
 
-    // Check if there are ongoing stats, if not, return false
+    // Comprobar si hay estadísticas en curso, si no, devolver false
     if (ongoingStats.items.length === 0) {
       logger.info("Las stats no están disponibles.");
       return false;
@@ -170,10 +179,16 @@ const workflows = {
 
     const liveDetails = ongoingStats.items[0].liveStreamingDetails;
 
-    // Check if the stream is live
+    // Comprobar si el stream está en vivo
     if (liveDetails && liveDetails.concurrentViewers) {
+      logger.info(`Stream en vivo con ${liveDetails.concurrentViewers} espectadores`);
       return true;
     } else {
+      if (liveDetails) {
+        logger.info("Stream existe pero no está en vivo todavía");
+      } else {
+        logger.info("No hay detalles de transmisión en vivo disponibles");
+      }
       return false;
     }
   },

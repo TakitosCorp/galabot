@@ -58,7 +58,9 @@ const workflows = {
           videoId: videoId,
           scheduledStart: new Date(stats.items[0].liveStreamingDetails.actualStartTime).toISOString(),
           title: stats.items[0].snippet.title,
-          thumbnail: stats.items[0].snippet.thumbnails.maxres.url,
+          thumbnail: stats.items[0].snippet.thumbnails.maxres
+            ? stats.items[0].snippet.thumbnails.maxres.url
+            : stats.items[0].snippet.thumbnails.high.url,
           streamUrl: `https://www.youtube.com/watch?v=${videoId}`,
         };
         upcomingStreamsArray.push(ongoingStream);

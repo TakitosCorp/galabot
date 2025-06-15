@@ -144,55 +144,71 @@ const workflows = {
   //! If it is live, we send an embed message to the Discord channel.
   async checkFunction(logger) {
     const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
+    const upcomingStreamsFile = getFilePath("upcomingStreams.json");
     ensureFileExists(nextUpcomingStreamFile);
-    const nextUpcomingStream = require(nextUpcomingStreamFile);
+    ensureFileExists(upcomingStreamsFile);
 
-    // Validar que tenemos un video ID para comprobar
-    if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
-      logger.info("No stream data to check");
-      return false;
-    }
-
-    // Restaurar las definiciones de now y streamDate
+    let nextUpcomingStream = require(nextUpcomingStreamFile);
     const now = new Date();
-    const streamDate = new Date(nextUpcomingStream.scheduledStart);
 
-    // Solo validar que el stream no sea demasiado viejo (más de 12 horas después de su hora programada)
-    // Los streams futuros son perfectamente válidos
-    if (now - streamDate > 12 * 60 * 60 * 1000) {
-      logger.info(
-        `Stream es demasiado viejo para ser válido. Stream programado: ${streamDate.toISOString()}, Ahora: ${now.toISOString()}`
-      );
-      return false;
-    }
+    // Función auxiliar para validar un stream
+    const validateStream = async (stream) => {
+      if (!stream || !stream.videoId) return false;
+      const streamDate = new Date(stream.scheduledStart);
+      if (now - streamDate > 12 * 60 * 60 * 1000) return false;
 
-    // Log para depuración
-    logger.info(`Comprobando stream: ${nextUpcomingStream.title} (ID: ${nextUpcomingStream.videoId})`);
-    logger.info(`Fecha programada: ${streamDate.toISOString()}, Fecha actual: ${now.toISOString()}`);
+      logger.info(`Comprobando stream: ${stream.title} (ID: ${stream.videoId})`);
+      logger.info(`Fecha programada: ${streamDate.toISOString()}, Fecha actual: ${now.toISOString()}`);
 
-    // Obtener las estadísticas en curso para el próximo stream
-    const ongoingStats = await youtubeUtils.getOngoingStats(nextUpcomingStream.videoId);
+      const ongoingStats = await youtubeUtils.getOngoingStats(stream.videoId);
+      if (ongoingStats.items.length === 0) return false;
 
-    // Comprobar si hay estadísticas en curso, si no, devolver false
-    if (ongoingStats.items.length === 0) {
-      logger.info("Las stats no están disponibles.");
-      return false;
-    }
-
-    const liveDetails = ongoingStats.items[0].liveStreamingDetails;
-
-    // Comprobar si el stream está en vivo
-    if (liveDetails && liveDetails.concurrentViewers) {
-      logger.info(`Stream en vivo con ${liveDetails.concurrentViewers} espectadores`);
-      return true;
-    } else {
-      if (liveDetails) {
-        logger.info("Stream existe pero no está en vivo todavía");
+      const liveDetails = ongoingStats.items[0].liveStreamingDetails;
+      if (liveDetails && liveDetails.concurrentViewers) {
+        logger.info(`Stream en vivo con ${liveDetails.concurrentViewers} espectadores`);
+        return true;
       } else {
-        logger.info("No hay detalles de transmisión en vivo disponibles");
+        logger.info(
+          liveDetails
+            ? "Stream existe pero no está en vivo todavía"
+            : "No hay detalles de transmisión en vivo disponibles"
+        );
+        return false;
       }
-      return false;
+    };
+
+    // Intentar con el stream actual
+    if (await validateStream(nextUpcomingStream)) {
+      return true;
     }
+
+    // Si el stream actual no es válido, buscar en los streams disponibles
+    logger.info("Stream actual no válido, buscando alternativas...");
+    const upcomingStreams = require(upcomingStreamsFile);
+
+    if (Array.isArray(upcomingStreams) && upcomingStreams.length > 0) {
+      // Ordenar por fecha y filtrar streams antiguos
+      const validStreams = upcomingStreams
+        .filter((stream) => new Date(stream.scheduledStart) > now - 12 * 60 * 60 * 1000)
+        .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
+
+      // Intentar cada stream hasta encontrar uno válido
+      for (const stream of validStreams) {
+        if (stream.videoId !== nextUpcomingStream.videoId) {
+          logger.info(`Intentando con stream alternativo: ${stream.title}`);
+          if (await validateStream(stream)) {
+            // Actualizar el archivo con el nuevo stream válido
+            stream.embedSent = false;
+            writeJSON(nextUpcomingStreamFile, stream);
+            logger.info(`Nuevo stream válido encontrado y guardado: ${stream.title}`);
+            return true;
+          }
+        }
+      }
+    }
+
+    logger.info("No se encontraron streams válidos alternativos");
+    return false;
   },
 
   //! Workflow 3: Send embed

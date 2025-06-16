@@ -143,6 +143,14 @@ const workflows = {
   //! Workflow 2: Every minute, we check if the stream that is loaded from the JSON file is live.
   //! If it is live, we send an embed message to the Discord channel.
   async checkFunction(logger) {
+    const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
+    const upcomingStreamsFile = getFilePath("upcomingStreams.json");
+    ensureFileExists(nextUpcomingStreamFile);
+    ensureFileExists(upcomingStreamsFile);
+
+    const nextUpcomingStream = require(nextUpcomingStreamFile);
+    const now = new Date();
+
     // Validate that we have a video ID to check
     if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
       logger.info("No stream data to check");
@@ -251,6 +259,9 @@ const workflows = {
 
 // Helper function to check if a stream is live
 async function checkStreamLive(stream, logger) {
+  const now = new Date();
+  const streamDate = new Date(stream.scheduledStart);
+
   // Debug log
   logger.info(`Checking stream: ${stream.title} (ID: ${stream.videoId})`);
   logger.info(`Scheduled date: ${streamDate.toISOString()}, Current date: ${now.toISOString()}`);

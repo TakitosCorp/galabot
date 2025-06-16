@@ -43,5 +43,5 @@ registerEvents(client, logger);
 registerCommands(client, logger);
 
 client.login(process.env.GALAYAKI_TOKEN).catch((error) => {
-  logger.error("Error al conectar el bot:", error);
+  logger.error("Error connecting the bot:", error);
 });

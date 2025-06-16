@@ -143,72 +143,56 @@ const workflows = {
   //! Workflow 2: Every minute, we check if the stream that is loaded from the JSON file is live.
   //! If it is live, we send an embed message to the Discord channel.
   async checkFunction(logger) {
-    const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
-    const upcomingStreamsFile = getFilePath("upcomingStreams.json");
-    ensureFileExists(nextUpcomingStreamFile);
-    ensureFileExists(upcomingStreamsFile);
+    // Validate that we have a video ID to check
+    if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
+      logger.info("No stream data to check");
+      return false;
+    }
 
-    let nextUpcomingStream = require(nextUpcomingStreamFile);
-    const now = new Date();
+    // Get stream date
+    const streamDate = new Date(nextUpcomingStream.scheduledStart);
 
-    // Función auxiliar para validar un stream
-    const validateStream = async (stream) => {
-      if (!stream || !stream.videoId) return false;
-      const streamDate = new Date(stream.scheduledStart);
-      if (now - streamDate > 12 * 60 * 60 * 1000) return false;
+    // If the stream is too old (more than 12 hours after its scheduled time)
+    // we look for the next scheduled stream and update it
+    if (now - streamDate > 12 * 60 * 60 * 1000) {
+      logger.info(
+        `Stream is too old to be valid. Scheduled stream: ${streamDate.toISOString()}, Now: ${now.toISOString()}`
+      );
 
-      logger.info(`Comprobando stream: ${stream.title} (ID: ${stream.videoId})`);
-      logger.info(`Fecha programada: ${streamDate.toISOString()}, Fecha actual: ${now.toISOString()}`);
+      // Load all upcoming streams
+      const upcomingStreams = require(upcomingStreamsFile);
 
-      const ongoingStats = await youtubeUtils.getOngoingStats(stream.videoId);
-      if (ongoingStats.items.length === 0) return false;
+      if (Array.isArray(upcomingStreams) && upcomingStreams.length > 0) {
+        // Sort and filter valid streams (future or recent)
+        const validStreams = upcomingStreams
+          .filter((stream) => {
+            const streamTime = new Date(stream.scheduledStart);
+            return streamTime > now - 12 * 60 * 60 * 1000;
+          })
+          .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
 
-      const liveDetails = ongoingStats.items[0].liveStreamingDetails;
-      if (liveDetails && liveDetails.concurrentViewers) {
-        logger.info(`Stream en vivo con ${liveDetails.concurrentViewers} espectadores`);
-        return true;
+        // If there is a valid stream, update it
+        if (validStreams.length > 0) {
+          const newNextStream = validStreams[0];
+          newNextStream.embedSent = false;
+          writeJSON(nextUpcomingStreamFile, newNextStream);
+          logger.info(`Expired stream replaced by: ${newNextStream.title}`);
+
+          // Immediately verify the new stream
+          return await checkStreamLive(newNextStream, logger);
+        } else {
+          logger.info("No valid future streams found to replace the expired one");
+          writeJSON(nextUpcomingStreamFile, {});
+          return false;
+        }
       } else {
-        logger.info(
-          liveDetails
-            ? "Stream existe pero no está en vivo todavía"
-            : "No hay detalles de transmisión en vivo disponibles"
-        );
+        logger.info("No list of upcoming streams available");
         return false;
       }
-    };
-
-    // Intentar con el stream actual
-    if (await validateStream(nextUpcomingStream)) {
-      return true;
     }
 
-    // Si el stream actual no es válido, buscar en los streams disponibles
-    logger.info("Stream actual no válido, buscando alternativas...");
-    const upcomingStreams = require(upcomingStreamsFile);
-
-    if (Array.isArray(upcomingStreams) && upcomingStreams.length > 0) {
-      // Ordenar por fecha y filtrar streams antiguos
-      const validStreams = upcomingStreams
-        .filter((stream) => new Date(stream.scheduledStart) > now - 12 * 60 * 60 * 1000)
-        .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
-
-      // Intentar cada stream hasta encontrar uno válido
-      for (const stream of validStreams) {
-        if (stream.videoId !== nextUpcomingStream.videoId) {
-          logger.info(`Intentando con stream alternativo: ${stream.title}`);
-          if (await validateStream(stream)) {
-            // Actualizar el archivo con el nuevo stream válido
-            stream.embedSent = false;
-            writeJSON(nextUpcomingStreamFile, stream);
-            logger.info(`Nuevo stream válido encontrado y guardado: ${stream.title}`);
-            return true;
-          }
-        }
-      }
-    }
-
-    logger.info("No se encontraron streams válidos alternativos");
-    return false;
+    // If the stream is still valid, check if it's live
+    return await checkStreamLive(nextUpcomingStream, logger);
   },
 
   //! Workflow 3: Send embed
@@ -264,6 +248,37 @@ const workflows = {
     }
   },
 };
+
+// Helper function to check if a stream is live
+async function checkStreamLive(stream, logger) {
+  // Debug log
+  logger.info(`Checking stream: ${stream.title} (ID: ${stream.videoId})`);
+  logger.info(`Scheduled date: ${streamDate.toISOString()}, Current date: ${now.toISOString()}`);
+
+  // Get the ongoing stats for the stream
+  const ongoingStats = await youtubeUtils.getOngoingStats(stream.videoId);
+
+  // Check if there are ongoing stats, if not, return false
+  if (ongoingStats.items.length === 0) {
+    logger.info("Stats are not available.");
+    return false;
+  }
+
+  const liveDetails = ongoingStats.items[0].liveStreamingDetails;
+
+  // Check if the stream is live
+  if (liveDetails && liveDetails.concurrentViewers) {
+    logger.info(`Stream is live with ${liveDetails.concurrentViewers} viewers`);
+    return true;
+  } else {
+    if (liveDetails) {
+      logger.info("Stream exists but is not live yet");
+    } else {
+      logger.info("No live streaming details available");
+    }
+    return false;
+  }
+}
 
 module.exports = {
   youtubeUtils,

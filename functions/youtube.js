@@ -1,6 +1,16 @@
 const dotenv = require("dotenv");
 const axios = require("axios");
 const { getFilePath, writeJSON, ensureFileExists } = require("../utils/fileUtils");
+const { 
+  workflowUpdateLogger, 
+  workflowCheckLogger, 
+  workflowNotifyLogger, 
+  liveCheckLogger, 
+  streamDataLogger,
+  notificationLogger, 
+  embedLogger,
+  youtubeApiLogger
+} = require("../loggers/index");
 
 // Load environment variables
 dotenv.config();
@@ -10,20 +20,26 @@ const channelId = process.env.GALAYAKI_YTCHANNELID;
 // YouTube API utility functions
 const youtubeUtils = {
   async getUpcomingStreams() {
+    youtubeApiLogger.info("Obteniendo streams programados del canal");
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=upcoming&type=video&key=${apiKey}`;
     const response = await axios.get(url);
+    youtubeApiLogger.debug(`Respuesta recibida: ${response.data.items ? response.data.items.length : 0} resultados`);
     return response.data;
   },
 
   async getOngoingStream() {
+    youtubeApiLogger.info("Obteniendo streams en directo del canal");
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${apiKey}`;
     const response = await axios.get(url);
+    youtubeApiLogger.debug(`Respuesta recibida: ${response.data.items ? response.data.items.length : 0} resultados en directo`);
     return response.data;
   },
 
   async getOngoingStats(videoId) {
+    youtubeApiLogger.info(`Obteniendo estadísticas para el video: ${videoId}`);
     const url = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${videoId}&key=${apiKey}`;
     const response = await axios.get(url);
+    youtubeApiLogger.debug(`Datos de estadísticas recibidos para ${videoId}`);
     return response.data;
   },
 };
@@ -50,6 +66,7 @@ function extractStreamData(videoId, stats) {
     ? streamData.snippet.thumbnails.high.url
     : streamData.snippet.thumbnails.default.url;
 
+  streamDataLogger.info(`Datos extraídos para stream "${streamData.snippet.title}" (ID: ${videoId})`);
   return {
     videoId,
     scheduledStart: startTime,
@@ -61,64 +78,59 @@ function extractStreamData(videoId, stats) {
 }
 
 // Helper function para guardar estado de envío del embed
-function saveEmbedStatus(status, logger) {
+function saveEmbedStatus(status) {
   try {
     const embedStatusFile = getFilePath("embedStatus.json");
     ensureFileExists(embedStatusFile);
     writeJSON(embedStatusFile, { sent: status });
-    logger.info(`Estado del embed actualizado: ${status ? "enviado" : "no enviado"}`);
+    embedLogger.info(`Estado del embed actualizado: ${status ? "enviado" : "no enviado"}`);
   } catch (error) {
-    logger.error("Error al guardar el estado del embed:", error);
+    embedLogger.error("Error al guardar el estado del embed:", error);
   }
 }
 
 // Helper function para comprobar si un stream está en directo
-async function checkStreamLive(stream, logger) {
+async function checkStreamLive(stream) {
   try {
     const now = new Date();
     const streamDate = new Date(stream.scheduledStart);
 
-    logger.info(`[CHECK LIVE] Comprobando stream: "${stream.title}" (ID: ${stream.videoId})`);
-    logger.info(`[CHECK LIVE] Fecha programada: ${streamDate.toISOString()}, Fecha actual: ${now.toISOString()}`);
-    logger.info(`[CHECK LIVE] Diferencia de tiempo: ${Math.round((now - streamDate) / (60 * 1000))} minutos`);
+    liveCheckLogger.info(`Comprobando stream: "${stream.title}" (ID: ${stream.videoId})`);
+    liveCheckLogger.debug(`Fecha programada: ${streamDate.toISOString()}, Diferencia: ${Math.round((now - streamDate) / (60 * 1000))} minutos`);
 
     // Obtener estadísticas en tiempo real del stream
-    logger.info(`[CHECK LIVE] Obteniendo estadísticas para videoId: ${stream.videoId}`);
+    liveCheckLogger.info(`Obteniendo estadísticas en vivo para: ${stream.videoId}`);
     const ongoingStats = await youtubeUtils.getOngoingStats(stream.videoId);
 
     // Verificar si hay estadísticas disponibles
     if (!ongoingStats || !ongoingStats.items || ongoingStats.items.length === 0) {
-      logger.warn(`[CHECK LIVE] No hay estadísticas disponibles para el stream ${stream.videoId}`);
+      liveCheckLogger.warn(`No hay estadísticas disponibles para el stream ${stream.videoId}`);
       return false;
     }
 
     const liveDetails = ongoingStats.items[0].liveStreamingDetails;
-    logger.debug(`[CHECK LIVE] Detalles de transmisión: ${JSON.stringify(liveDetails)}`);
+    liveCheckLogger.debug(`Detalles recibidos: ${JSON.stringify(liveDetails)}`);
 
     // Comprobar si el stream está en directo (tiene espectadores)
     if (liveDetails && liveDetails.concurrentViewers) {
-      logger.info(`[CHECK LIVE] ¡Stream en directo! Espectadores actuales: ${liveDetails.concurrentViewers}`);
+      liveCheckLogger.info(`¡Stream en directo! Espectadores actuales: ${liveDetails.concurrentViewers}`);
       return true;
     } else {
       if (liveDetails) {
         if (liveDetails.actualStartTime) {
-          logger.info(
-            `[CHECK LIVE] Stream iniciado pero sin datos de espectadores. Hora de inicio: ${liveDetails.actualStartTime}`
-          );
+          liveCheckLogger.info(`Stream iniciado pero sin datos de espectadores. Hora de inicio: ${liveDetails.actualStartTime}`);
         } else if (liveDetails.scheduledStartTime) {
           const scheduledDate = new Date(liveDetails.scheduledStartTime);
           const minutesToStart = Math.round((scheduledDate - now) / (60 * 1000));
-          logger.info(
-            `[CHECK LIVE] Stream programado para iniciar en ${minutesToStart} minutos (${scheduledDate.toISOString()})`
-          );
+          liveCheckLogger.info(`Stream programado para iniciar en ${minutesToStart} minutos (${scheduledDate.toISOString()})`);
         }
       } else {
-        logger.warn(`[CHECK LIVE] No hay detalles de transmisión disponibles para ${stream.videoId}`);
+        liveCheckLogger.warn(`No hay detalles de transmisión disponibles para ${stream.videoId}`);
       }
       return false;
     }
   } catch (error) {
-    logger.error(`[CHECK LIVE] Error al comprobar si el stream está en directo: ${error.message}`, error);
+    liveCheckLogger.error(`Error al comprobar si el stream está en directo: ${error.message}`, error);
     return false;
   }
 }
@@ -126,73 +138,64 @@ async function checkStreamLive(stream, logger) {
 // Workflow implementation
 const workflows = {
   // Workflow 1: Update stream information every 4 hours
-  async updateWorkflow(logger) {
+  async updateWorkflow() {
     try {
-      logger.info("===== INICIANDO WORKFLOW DE ACTUALIZACIÓN DE STREAMS =====");
+      workflowUpdateLogger.info("===== WORKFLOW DE ACTUALIZACIÓN INICIADO =====");
       const nowDate = new Date();
-      logger.info(`Fecha actual: ${nowDate.toISOString()}`);
-
+      
       const upcomingStreamsFile = getFilePath("upcomingStreams.json");
       const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
-      logger.info(`Archivos: ${upcomingStreamsFile}, ${nextUpcomingStreamFile}`);
+      workflowUpdateLogger.info(`Preparando archivos de datos`);
 
       const upcomingStreamsArray = [];
       ensureFileExists(upcomingStreamsFile);
       ensureFileExists(nextUpcomingStreamFile);
 
       // Paso 1: Obtener stream en directo si existe
-      logger.info("[WORKFLOW 1] Buscando streams en directo...");
+      workflowUpdateLogger.info("Buscando streams en directo actualmente");
       let ongoingStream = null;
       try {
         const ongoingStreamData = await youtubeUtils.getOngoingStream();
-        logger.debug(`[WORKFLOW 1] Respuesta de streams en directo: ${JSON.stringify(ongoingStreamData)}`);
-
+        
         if (ongoingStreamData.items && ongoingStreamData.items.length > 0) {
           const videoId = ongoingStreamData.items[0].id.videoId;
-          logger.info(`[WORKFLOW 1] Stream en directo detectado con ID: ${videoId}`);
+          workflowUpdateLogger.info(`Stream en directo detectado con ID: ${videoId}`);
 
           const stats = await youtubeUtils.getOngoingStats(videoId);
           const streamData = extractStreamData(videoId, stats);
           if (streamData) {
             ongoingStream = streamData;
             upcomingStreamsArray.push(ongoingStream);
-            logger.info(`[WORKFLOW 1] Stream en directo añadido: "${ongoingStream.title}"`);
+            workflowUpdateLogger.info(`Stream en directo añadido: "${ongoingStream.title}"`);
           } else {
-            logger.warn(`[WORKFLOW 1] No se pudieron extraer datos del stream en directo con ID: ${videoId}`);
+            workflowUpdateLogger.warn(`No se pudieron extraer datos del stream en directo con ID: ${videoId}`);
           }
         } else {
-          logger.info("[WORKFLOW 1] No hay streams en directo actualmente");
+          workflowUpdateLogger.info("No hay streams en directo actualmente");
         }
       } catch (error) {
-        logger.error("[WORKFLOW 1] Error al obtener streams en directo:", error);
+        workflowUpdateLogger.error("Error al obtener streams en directo:", error);
       }
 
       // Paso 2: Obtener streams futuros
-      logger.info("[WORKFLOW 1] Buscando próximos streams programados...");
+      workflowUpdateLogger.info("Buscando próximos streams programados");
       try {
         const upcomingStreams = await youtubeUtils.getUpcomingStreams();
-        logger.debug(
-          `[WORKFLOW 1] Número de streams futuros encontrados: ${
-            upcomingStreams.items ? upcomingStreams.items.length : 0
-          }`
-        );
-
+        
         if (upcomingStreams.items && upcomingStreams.items.length > 0) {
-          logger.info(`[WORKFLOW 1] Procesando ${upcomingStreams.items.length} streams futuros`);
+          workflowUpdateLogger.info(`Procesando ${upcomingStreams.items.length} streams futuros`);
 
           for (const item of upcomingStreams.items) {
             try {
               const videoId = item.id.videoId;
-              logger.info(`[WORKFLOW 1] Procesando stream futuro con ID: ${videoId}`);
+              streamDataLogger.info(`Procesando stream con ID: ${videoId}`);
 
               const stats = await youtubeUtils.getOngoingStats(videoId);
               const streamData = extractStreamData(videoId, stats);
 
               if (streamData) {
                 const scheduledStart = new Date(streamData.scheduledStart);
-                logger.info(
-                  `[WORKFLOW 1] Stream "${streamData.title}" programado para: ${scheduledStart.toISOString()}`
-                );
+                streamDataLogger.info(`Stream "${streamData.title}" programado para: ${scheduledStart.toISOString()}`);
 
                 // Añadir si es válido y no es un horario semanal
                 if (
@@ -200,53 +203,53 @@ const workflows = {
                   !streamData.title.includes("【HORARIO SEMANAL】 Free chat! || GalaYaki")
                 ) {
                   upcomingStreamsArray.push(streamData);
-                  logger.info(`[WORKFLOW 1] Stream futuro añadido: "${streamData.title}"`);
+                  streamDataLogger.info(`Stream futuro añadido: "${streamData.title}"`);
                 } else {
                   if (!isStreamValid(scheduledStart, nowDate)) {
-                    logger.info(`[WORKFLOW 1] Stream "${streamData.title}" demasiado antiguo, ignorado`);
+                    streamDataLogger.info(`Stream "${streamData.title}" demasiado antiguo, ignorado`);
                   }
                   if (streamData.title.includes("【HORARIO SEMANAL】")) {
-                    logger.info(`[WORKFLOW 1] Stream "${streamData.title}" es horario semanal, ignorado`);
+                    streamDataLogger.info(`Stream "${streamData.title}" es horario semanal, ignorado`);
                   }
                 }
               } else {
-                logger.warn(`[WORKFLOW 1] No se pudieron extraer datos del stream con ID: ${videoId}`);
+                streamDataLogger.warn(`No se pudieron extraer datos del stream con ID: ${videoId}`);
               }
             } catch (itemError) {
-              logger.warn(`[WORKFLOW 1] Error al procesar stream individual: ${itemError.message}`);
+              streamDataLogger.warn(`Error al procesar stream individual: ${itemError.message}`);
               continue; // Continuar con el siguiente stream si hay error
             }
           }
         } else {
-          logger.info("[WORKFLOW 1] No se encontraron streams programados");
+          workflowUpdateLogger.info("No se encontraron streams programados");
         }
       } catch (error) {
-        logger.error("[WORKFLOW 1] Error al obtener próximos streams:", error);
+        workflowUpdateLogger.error("Error al obtener próximos streams:", error);
       }
 
       // Paso 3: Guardar todos los streams encontrados
-      logger.info(`[WORKFLOW 1] Guardando ${upcomingStreamsArray.length} streams en el archivo`);
+      workflowUpdateLogger.info(`Guardando ${upcomingStreamsArray.length} streams en el archivo`);
       writeJSON(upcomingStreamsFile, upcomingStreamsArray);
 
       // Paso 4: Determinar el próximo stream
-      logger.info("[WORKFLOW 1] Ordenando streams por fecha");
+      workflowUpdateLogger.info("Ordenando streams por fecha");
       upcomingStreamsArray.sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
 
       let nextStream = null;
       if (ongoingStream) {
         nextStream = ongoingStream;
-        logger.info(`[WORKFLOW 1] Stream en directo seleccionado como próximo: "${nextStream.title}"`);
+        workflowUpdateLogger.info(`Stream en directo seleccionado como próximo: "${nextStream.title}"`);
       } else if (upcomingStreamsArray.length > 0) {
         nextStream = upcomingStreamsArray[0];
-        logger.info(`[WORKFLOW 1] Stream futuro seleccionado como próximo: "${nextStream.title}"`);
+        workflowUpdateLogger.info(`Stream futuro seleccionado como próximo: "${nextStream.title}"`);
       } else {
-        logger.warn("[WORKFLOW 1] No se encontraron streams para definir como próximo");
+        workflowUpdateLogger.warn("No se encontraron streams para definir como próximo");
       }
 
       // Paso 5: Guardar el próximo stream si es válido
       if (nextStream) {
         const streamStart = new Date(nextStream.scheduledStart);
-        logger.info(`[WORKFLOW 1] Validando próximo stream: "${nextStream.title}" (${streamStart.toISOString()})`);
+        workflowUpdateLogger.info(`Validando próximo stream: "${nextStream.title}" (${streamStart.toISOString()})`);
 
         if (isStreamValid(streamStart, nowDate)) {
           // Verificar si ya teníamos este stream guardado
@@ -254,146 +257,134 @@ const workflows = {
             const existingData = require(nextUpcomingStreamFile);
             if (existingData && existingData.videoId === nextStream.videoId) {
               nextStream.embedSent = existingData.embedSent || false;
-              logger.info(
-                `[WORKFLOW 1] Preservando estado de embed para stream existente: ${
-                  nextStream.embedSent ? "ya enviado" : "no enviado"
-                }`
-              );
+              workflowUpdateLogger.info(`Preservando estado de embed: ${nextStream.embedSent ? "ya enviado" : "no enviado"}`);
             } else {
-              logger.info(`[WORKFLOW 1] Nuevo stream detectado, estado de embed reiniciado`);
+              workflowUpdateLogger.info(`Nuevo stream detectado, estado de embed reiniciado`);
             }
           } catch (e) {
-            logger.warn(`[WORKFLOW 1] Error al leer el archivo de próximo stream: ${e.message}`);
+            workflowUpdateLogger.warn(`Error al leer el archivo de próximo stream: ${e.message}`);
           }
 
           writeJSON(nextUpcomingStreamFile, nextStream);
-          logger.info(`[WORKFLOW 1] Próximo stream guardado: "${nextStream.title}" (${streamStart.toISOString()})`);
+          workflowUpdateLogger.info(`Próximo stream guardado: "${nextStream.title}"`);
         } else {
-          logger.warn(`[WORKFLOW 1] Stream demasiado antiguo para ser guardado: "${nextStream.title}"`);
+          workflowUpdateLogger.warn(`Stream demasiado antiguo para ser guardado: "${nextStream.title}"`);
           writeJSON(nextUpcomingStreamFile, {});
         }
       } else {
-        logger.warn("[WORKFLOW 1] No se encontró ningún próximo stream para guardar");
+        workflowUpdateLogger.warn("No se encontró ningún próximo stream para guardar");
         writeJSON(nextUpcomingStreamFile, {});
       }
 
-      logger.info("===== WORKFLOW DE ACTUALIZACIÓN COMPLETADO =====");
+      workflowUpdateLogger.info("===== WORKFLOW DE ACTUALIZACIÓN COMPLETADO =====");
       return upcomingStreamsArray;
     } catch (error) {
-      logger.error("[WORKFLOW 1] Error crítico en updateWorkflow:", error);
+      workflowUpdateLogger.error("Error en actualización", error);
       return [];
     }
   },
 
   // Workflow 2: Check every minute if the stream is now live
-  async checkFunction(logger) {
+  async checkFunction() {
     try {
-      logger.info("===== INICIANDO VERIFICACIÓN DE STREAM EN DIRECTO =====");
+      workflowCheckLogger.info("Verificando streams en directo");
       const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
       const upcomingStreamsFile = getFilePath("upcomingStreams.json");
 
-      logger.info(`[WORKFLOW 2] Archivos: ${nextUpcomingStreamFile}, ${upcomingStreamsFile}`);
       ensureFileExists(nextUpcomingStreamFile);
       ensureFileExists(upcomingStreamsFile);
 
       let nextUpcomingStream;
       try {
         nextUpcomingStream = require(nextUpcomingStreamFile);
-        logger.debug(`[WORKFLOW 2] Datos del próximo stream: ${JSON.stringify(nextUpcomingStream)}`);
+        workflowCheckLogger.debug(`Datos del próximo stream cargados`);
       } catch (error) {
-        logger.warn(`[WORKFLOW 2] Error al cargar el archivo nextUpcomingStream.json: ${error.message}`);
+        workflowCheckLogger.warn(`Error al cargar el archivo nextUpcomingStream.json: ${error.message}`);
         return false;
       }
 
       const now = new Date();
-      logger.info(`[WORKFLOW 2] Fecha actual: ${now.toISOString()}`);
 
       // Salir si no hay datos para comprobar
       if (!nextUpcomingStream || !nextUpcomingStream.videoId) {
-        logger.info("[WORKFLOW 2] No hay datos de stream para comprobar");
+        workflowCheckLogger.info("No hay datos de stream para comprobar");
         return false;
       }
 
       const streamDate = new Date(nextUpcomingStream.scheduledStart);
-      logger.info(`[WORKFLOW 2] Verificando stream: "${nextUpcomingStream.title}" (${streamDate.toISOString()})`);
-      logger.info(`[WORKFLOW 2] Diferencia de tiempo: ${Math.round((now - streamDate) / (60 * 1000))} minutos`);
+      workflowCheckLogger.info(`Verificando stream: "${nextUpcomingStream.title}"`);
 
       // Si el stream es demasiado antiguo, buscar uno nuevo
       if (!isStreamValid(streamDate, now)) {
-        logger.info(`[WORKFLOW 2] Stream demasiado antiguo. Buscando reemplazo.`);
+        workflowCheckLogger.info(`Stream demasiado antiguo. Buscando reemplazo.`);
 
         let upcomingStreams = [];
         try {
           upcomingStreams = require(upcomingStreamsFile);
-          logger.info(`[WORKFLOW 2] ${upcomingStreams.length} streams disponibles para reemplazo`);
+          workflowCheckLogger.info(`${upcomingStreams.length} streams disponibles para reemplazo`);
         } catch (error) {
-          logger.warn(`[WORKFLOW 2] Error al cargar upcomingStreams.json: ${error.message}`);
+          workflowCheckLogger.warn(`Error al cargar upcomingStreams.json: ${error.message}`);
           upcomingStreams = [];
         }
 
         if (Array.isArray(upcomingStreams) && upcomingStreams.length > 0) {
           // Filtrar streams válidos
-          logger.info(`[WORKFLOW 2] Filtrando streams válidos desde una lista de ${upcomingStreams.length} streams`);
+          workflowCheckLogger.info(`Filtrando streams válidos de ${upcomingStreams.length} disponibles`);
           const validStreams = upcomingStreams
             .filter((stream) => {
               const streamTime = new Date(stream.scheduledStart);
               const isValid = isStreamValid(streamTime, now);
-              logger.debug(`[WORKFLOW 2] Stream "${stream.title}" - Válido: ${isValid}`);
+              workflowCheckLogger.debug(`Stream "${stream.title}" - Válido: ${isValid}`);
               return isValid;
             })
             .sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
 
-          logger.info(`[WORKFLOW 2] ${validStreams.length} streams válidos encontrados`);
+          workflowCheckLogger.info(`${validStreams.length} streams válidos encontrados`);
 
           if (validStreams.length > 0) {
             const newNextStream = validStreams[0];
-            logger.info(`[WORKFLOW 2] Nuevo stream seleccionado: "${newNextStream.title}"`);
+            workflowCheckLogger.info(`Nuevo stream seleccionado: "${newNextStream.title}"`);
 
             // Evitar bucle infinito con el mismo stream
             if (newNextStream.videoId === nextUpcomingStream.videoId) {
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
               newNextStream.scheduledStart = tomorrow.toISOString();
-              logger.warn(
-                `[WORKFLOW 2] Mismo stream encontrado, ajustando fecha para evitar bucle: ${tomorrow.toISOString()}`
-              );
+              workflowCheckLogger.warn(`Mismo stream encontrado, ajustando fecha para evitar bucle`);
             }
 
             newNextStream.embedSent = false;
             writeJSON(nextUpcomingStreamFile, newNextStream);
-            logger.info(`[WORKFLOW 2] Nuevo stream guardado como próximo: "${newNextStream.title}"`);
+            workflowCheckLogger.info(`Nuevo stream guardado como próximo: "${newNextStream.title}"`);
 
-            logger.info(`[WORKFLOW 2] Verificando inmediatamente si el nuevo stream está en directo`);
-            return await checkStreamLive(newNextStream, logger);
+            workflowCheckLogger.info(`Verificando inmediatamente si el nuevo stream está en directo`);
+            return await checkStreamLive(newNextStream);
           } else {
-            logger.warn("[WORKFLOW 2] No se encontraron streams válidos para reemplazo");
+            workflowCheckLogger.warn("No se encontraron streams válidos para reemplazo");
             writeJSON(nextUpcomingStreamFile, {});
             return false;
           }
         } else {
-          logger.warn("[WORKFLOW 2] No hay lista de streams futuros disponible para reemplazo");
+          workflowCheckLogger.warn("No hay lista de streams futuros disponible para reemplazo");
           return false;
         }
       }
 
       // Comprobar si el stream está en directo
-      logger.info(`[WORKFLOW 2] Verificando si el stream "${nextUpcomingStream.title}" está en directo`);
-      const result = await checkStreamLive(nextUpcomingStream, logger);
-      logger.info(`[WORKFLOW 2] Resultado: ${result ? "STREAM EN DIRECTO" : "No está en directo"}`);
+      workflowCheckLogger.info(`Verificando si el stream "${nextUpcomingStream.title}" está en directo`);
+      const result = await checkStreamLive(nextUpcomingStream);
+      workflowCheckLogger.info(`Resultado: ${result ? "STREAM EN DIRECTO" : "No está en directo"}`);
       return result;
     } catch (error) {
-      logger.error("[WORKFLOW 2] Error crítico en checkFunction:", error);
+      workflowCheckLogger.error("Error en verificación", error);
       return false;
     }
   },
 
   // Workflow 3: Send embed notification when a stream goes live
-  async sendEmbed(client, nextLiveData, logger) {
+  async sendEmbed(client, nextLiveData) {
     try {
-      logger.info("===== INICIANDO ENVÍO DE NOTIFICACIÓN DE STREAM =====");
-      logger.info(
-        `[WORKFLOW 3] Preparando notificación para stream: "${nextLiveData.title}" (ID: ${nextLiveData.videoId})`
-      );
+      workflowNotifyLogger.info(`Enviando notificación para: ${nextLiveData.title}`);
 
       // Crear Discord embed para el stream en directo
       const embed = {
@@ -419,57 +410,57 @@ const workflows = {
       };
 
       // Obtener el canal de Discord
-      logger.info(`[WORKFLOW 3] Obteniendo canal de Discord: ${process.env.GALAYAKI_YTDISCORD}`);
+      notificationLogger.info(`Obteniendo canal de Discord: ${process.env.GALAYAKI_YTDISCORD}`);
       let channel;
       try {
         channel = await client.channels.fetch(process.env.GALAYAKI_YTDISCORD);
         if (!channel) {
           throw new Error("Canal no encontrado");
         }
-        logger.info(`[WORKFLOW 3] Canal encontrado: ${channel.name} (${channel.id})`);
+        notificationLogger.info(`Canal encontrado: ${channel.name} (${channel.id})`);
       } catch (err) {
-        logger.error(`[WORKFLOW 3] Error al obtener el canal de Discord: ${err.message}`, err);
+        notificationLogger.error(`Error al obtener el canal de Discord: ${err.message}`, err);
         return;
       }
 
       // Intentar enviar el mensaje con botón
-      logger.info("[WORKFLOW 3] Intentando enviar mensaje con botón...");
+      embedLogger.info("Intentando enviar mensaje con botón");
       try {
         await channel.send({
           content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
           embeds: [embed],
           components: [button],
         });
-        logger.info("[WORKFLOW 3] ✅ Notificación con botón enviada correctamente");
-        saveEmbedStatus(true, logger);
+        embedLogger.info("✅ Notificación con botón enviada correctamente");
+        saveEmbedStatus(true);
 
         // Actualizar estado del stream
-        logger.info("[WORKFLOW 3] Actualizando estado del stream para evitar duplicados");
+        workflowNotifyLogger.info("Actualizando estado del stream para evitar duplicados");
         const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
         try {
           const nextStream = require(nextUpcomingStreamFile);
           if (nextStream && nextStream.videoId === nextLiveData.videoId) {
             nextStream.embedSent = true;
             writeJSON(nextUpcomingStreamFile, nextStream);
-            logger.info("[WORKFLOW 3] Estado del stream actualizado correctamente");
+            workflowNotifyLogger.info("Estado del stream actualizado correctamente");
           } else {
-            logger.warn("[WORKFLOW 3] El stream actual ya no coincide con el notificado");
+            workflowNotifyLogger.warn("El stream actual ya no coincide con el notificado");
           }
         } catch (updateError) {
-          logger.error(`[WORKFLOW 3] Error al actualizar estado del stream: ${updateError.message}`);
+          workflowNotifyLogger.error(`Error al actualizar estado del stream: ${updateError.message}`);
         }
       } catch (err) {
         // Fallback sin botón
-        logger.warn(`[WORKFLOW 3] Error al enviar notificación con botón: ${err.message}`);
-        logger.info("[WORKFLOW 3] Intentando enviar mensaje sin botón (fallback)...");
+        embedLogger.warn(`Error al enviar notificación con botón: ${err.message}`);
+        embedLogger.info("Intentando enviar mensaje sin botón (fallback)");
 
         try {
           await channel.send({
             content: "<@&1080660073564614739> Galita en directo WOOWLWOIOPWOWI",
             embeds: [embed],
           });
-          logger.info("[WORKFLOW 3] ✅ Notificación sin botón enviada correctamente");
-          saveEmbedStatus(true, logger);
+          embedLogger.info("✅ Notificación sin botón enviada correctamente");
+          saveEmbedStatus(true);
 
           // Actualizar estado
           const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
@@ -477,16 +468,16 @@ const workflows = {
           if (nextStream && nextStream.videoId === nextLiveData.videoId) {
             nextStream.embedSent = true;
             writeJSON(nextUpcomingStreamFile, nextStream);
-            logger.info("[WORKFLOW 3] Estado del stream actualizado correctamente");
+            workflowNotifyLogger.info("Estado del stream actualizado correctamente");
           }
         } catch (finalError) {
-          logger.error(`[WORKFLOW 3] Error fatal al enviar notificación fallback: ${finalError.message}`, finalError);
+          embedLogger.error(`Error fatal al enviar notificación fallback: ${finalError.message}`, finalError);
         }
       }
 
-      logger.info("===== ENVÍO DE NOTIFICACIÓN COMPLETADO =====");
+      workflowNotifyLogger.info("===== ENVÍO DE NOTIFICACIÓN COMPLETADO =====");
     } catch (error) {
-      logger.error(`[WORKFLOW 3] Error crítico en sendEmbed: ${error.message}`, error);
+      workflowNotifyLogger.error("Error al enviar notificación", error);
     }
   },
 };

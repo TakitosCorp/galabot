@@ -3,8 +3,13 @@ const { CronJob } = require("cron");
 const { workflows } = require("../functions/youtube");
 const { writeJSON, getFilePath, ensureFileExists } = require("../utils/fileUtils.js");
 const resources = require("../data/resources.json");
+const { 
+  systemLogger, 
+  streamLogger, 
+  workflowUpdateLogger,
+  workflowCheckLogger
+} = require("../loggers/index");
 
-let nextLiveVideoId = null;
 let randomStatusInterval = null;
 const nextUpcomingStreamFile = getFilePath("nextUpcomingStream.json");
 
@@ -12,8 +17,8 @@ ensureFileExists(nextUpcomingStreamFile);
 
 module.exports = {
   name: "ready",
-  async execute(client, logger) {
-    logger.info(`[✅] ${client.user.username} se ha conectado correctamente a Discord!`);
+  async execute(client) {
+    systemLogger.info(`Bot ${client.user.username} conectado`);
 
     const statusMessages = resources.statusMessages;
 
@@ -22,9 +27,9 @@ module.exports = {
       client.user.setActivity(randomStatus, { type: ActivityType.Custom });
     }
 
-    async function updatePresence(client, logger) {
-      const liveStatus = await workflows.checkFunction(logger);
-      console.log("Live status según checkFunction: " + liveStatus);
+    async function updatePresence(client) {
+      const liveStatus = await workflows.checkFunction();
+      streamLogger.debug(`Estado en directo: ${liveStatus}`);
       if (liveStatus) {
         const nextLiveData = require("../data/nextUpcomingStream.json");
         if (nextLiveData) {
@@ -34,12 +39,12 @@ module.exports = {
             url: nextLiveData.streamUrl,
           });
           if (nextLiveData.embedSent === false) {
-            await workflows.sendEmbed(client, nextLiveData, logger);
+            await workflows.sendEmbed(client, nextLiveData);
             nextLiveData.embedSent = true;
             writeJSON(nextUpcomingStreamFile, nextLiveData);
           }
         } else {
-          logger.warn("No se pudieron cargar los datos del próximo directo.");
+          streamLogger.warn("No se pudieron cargar los datos del próximo directo.");
         }
         if (randomStatusInterval) {
           clearInterval(randomStatusInterval);
@@ -54,21 +59,21 @@ module.exports = {
     }
 
     async function initialSetup() {
-      logger.warn("Actualizando datos al iniciar el bot.");
-      await workflows.updateWorkflow(logger);
+      systemLogger.warn("Actualizando datos al iniciar el bot.");
+      await workflows.updateWorkflow();
       const nextLiveData = require("../data/nextUpcomingStream.json");
       if (nextLiveData) {
         nextLiveVideoId = nextLiveData.videoId;
       } else {
-        logger.warn("No se encontraron datos del próximo directo al iniciar. Creando datos iniciales.");
-        await workflows.updateWorkflow(logger);
+        systemLogger.warn("No se encontraron datos del próximo directo al iniciar. Creando datos iniciales.");
+        await workflows.updateWorkflow();
       }
-      await updatePresence(client, logger);
+      await updatePresence(client);
     }
 
     async function scheduledTasks() {
-      await workflows.updateWorkflow(logger);
-      await updatePresence(client, logger);
+      await workflows.updateWorkflow();
+      await updatePresence(client);
     }
 
     await initialSetup();
@@ -77,7 +82,7 @@ module.exports = {
     new CronJob(
       "0 */3 * * *",
       async () => {
-        logger.info("Ejecutando tarea programada: Actualizar workflow y presencia.");
+        workflowUpdateLogger.info("Ejecutando actualización programada de datos de streams");
         await scheduledTasks();
       },
       null,
@@ -87,8 +92,8 @@ module.exports = {
     new CronJob(
       "* * * * *",
       async () => {
-        logger.info("Ejecutando tarea programada: Detectar si hay streams en progreso.");
-        await updatePresence(client, logger);
+        workflowCheckLogger.info("Ejecutando verificación de streams en progreso");
+        await updatePresence(client);
       },
       null,
       true

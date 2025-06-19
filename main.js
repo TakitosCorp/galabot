@@ -4,7 +4,7 @@ const registerEvents = require("./handlers/events.js");
 const registerCommands = require("./handlers/commands.js");
 const fs = require("fs");
 const path = require("path");
-const pino = require("pino");
+const { systemLogger } = require("./loggers/index");
 
 dotenv.config();
 
@@ -12,21 +12,6 @@ const logDirectory = path.resolve("./logs");
 if (!fs.existsSync(logDirectory)) {
   fs.mkdirSync(logDirectory);
 }
-
-const logger = pino({
-  transport: {
-    targets: [
-      {
-        target: "pino-pretty",
-        options: { colorize: true },
-      },
-      {
-        target: "pino/file",
-        options: { destination: `${logDirectory}/bot.log` },
-      },
-    ],
-  },
-});
 
 const client = new Client({
   intents: [
@@ -39,9 +24,9 @@ const client = new Client({
 
 client.commands = new Collection();
 
-registerEvents(client, logger);
-registerCommands(client, logger);
+registerEvents(client, systemLogger);
+registerCommands(client, systemLogger);
 
 client.login(process.env.GALAYAKI_TOKEN).catch((error) => {
-  logger.error("Error connecting the bot:", error);
+  systemLogger.error("Error connecting the bot:", error);
 });

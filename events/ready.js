@@ -1,6 +1,6 @@
 const { ActivityType } = require("discord.js");
 const { CronJob } = require("cron");
-const { workflows } = require("../functions/youtube");
+const { workflows, loadNextUpcomingStream } = require("../functions/youtube");
 const { writeJSON, getFilePath, ensureFileExists } = require("../utils/fileUtils.js");
 const resources = require("../data/resources.json");
 const { 
@@ -31,7 +31,7 @@ module.exports = {
       const liveStatus = await workflows.checkFunction();
       streamLogger.debug(`Estado en directo: ${liveStatus}`);
       if (liveStatus) {
-        const nextLiveData = require("../data/nextUpcomingStream.json");
+        const nextLiveData = loadNextUpcomingStream();
         if (nextLiveData) {
           client.user.setActivity({
             name: nextLiveData.title,

@@ -1,23 +1,22 @@
 const { createCustomLogger } = require("./config");
 
+const systemLogger = createCustomLogger("SYSTEM", "system.log");
+
+const workflowLogger = createCustomLogger("WORKFLOW", "workflows.log");
+
+const streamLogger = createCustomLogger("STREAM", "streams.log");
+
+const notificationLogger = createCustomLogger("NOTIFICATION", "notifications.log");
+
+const workflowUpdateLogger = createCustomLogger("WORKFLOW_UPDATE", "workflow_updates.log");
+
+const workflowCheckLogger = createCustomLogger("WORKFLOW_CHECK", "workflow_checks.log");
+
 module.exports = {
-  // Loggers del sistema
-  systemLogger: createCustomLogger("SYSTEM"),
-
-  // Loggers para flujos de trabajo
-  workflowUpdateLogger: createCustomLogger("WORKFLOW-UPDATE"),
-  workflowCheckLogger: createCustomLogger("WORKFLOW-CHECK"),
-  workflowNotifyLogger: createCustomLogger("WORKFLOW-NOTIFY"),
-
-  // Loggers para verificación de streams
-  streamLogger: createCustomLogger("STREAM"),
-  liveCheckLogger: createCustomLogger("LIVE-CHECK"),
-  streamDataLogger: createCustomLogger("STREAM-DATA"),
-
-  // Loggers para notificaciones
-  notificationLogger: createCustomLogger("NOTIFICATION"),
-  embedLogger: createCustomLogger("EMBED"),
-
-  // Loggers para API y conexiones externas
-  youtubeApiLogger: createCustomLogger("YOUTUBE-API"),
+  systemLogger,
+  workflowLogger,
+  streamLogger,
+  notificationLogger,
+  workflowUpdateLogger,
+  workflowCheckLogger,
 };

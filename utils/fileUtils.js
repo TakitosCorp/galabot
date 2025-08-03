@@ -7,7 +7,7 @@ function readJSON(filePath, defaultValue = null) {
 }
 
 function writeJSON(filePath, data) {
-  ensureFileExists(filePath);
+  // Sobrescribe el archivo siempre
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 

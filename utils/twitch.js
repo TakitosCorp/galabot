@@ -1,5 +1,4 @@
 const fileUtils = require("./fileUtils");
-const { systemLogger } = require("../loggers/index");
 const axios = require("axios");
 
 const twitchConfigPath = fileUtils.getFilePath("twitch.json");
@@ -24,7 +23,6 @@ async function validateToken(accessToken) {
     });
     return response.status === 200;
   } catch (err) {
-    systemLogger.error("Error al validar el token de Twitch:", err);
     return false;
   }
 }
@@ -46,7 +44,6 @@ async function getValidTwitchConfig() {
   }
 
   if (!twitchConfig.ACCESS_TOKEN || !twitchConfig.REFRESH_TOKEN || now >= validUntil || !tokenValid) {
-    systemLogger.info("El token de Twitch ha expirado o es inválido. Refrescando...");
     const response = await refreshToken(twitchConfig.REFRESH_TOKEN);
     if (response.success) {
       twitchConfig.ACCESS_TOKEN = response.token;
@@ -55,9 +52,7 @@ async function getValidTwitchConfig() {
       const ms59days = 59 * 24 * 60 * 60 * 1000;
       twitchConfig.VALID_UNTIL = new Date(now + ms59days).toISOString();
       fileUtils.writeJSON(twitchConfigPath, twitchConfig);
-      systemLogger.info("Token de Twitch actualizado correctamente.");
     } else {
-      systemLogger.error("No se pudo refrescar el token de Twitch.");
       process.exit(1);
     }
   }

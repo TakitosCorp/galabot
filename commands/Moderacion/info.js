@@ -14,7 +14,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setContexts(InteractionContextType.Guild),
 
-  async execute(client, interaction, logger) {
+  async execute(discordClient, interaction, logger) {
     const usuario = interaction.options.getUser("usuario");
 
     const warnsPath = path.resolve(__dirname, "../../data/warns.json");

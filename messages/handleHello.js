@@ -5,7 +5,7 @@ const { readJSON, writeJSON, getFilePath } = require("../utils/fileUtils.js");
 const LAST_GREETING_TIMES_FILE = getFilePath("lastGreetingTimes.json");
 const COOLDOWN_HOURS = 1;
 
-async function handleHello(message, logger) {
+async function handleHello(discordClient, message, logger) {
   const userId = message.author.id;
   const userName = message.author.username;
   const userMention = `<@${message.author.id}>`;

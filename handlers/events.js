@@ -2,18 +2,18 @@ const { readdirSync } = require("fs");
 
 const messageCreateHandler = require("../events/messageCreate");
 
-module.exports = (client, logger) => {
+module.exports = (discordClient, logger) => {
   const eventFiles = readdirSync("./events").filter((file) => file.endsWith(".js"));
 
-  client.on("messageCreate", (message) => messageCreateHandler(client, message, logger));
+  discordClient.on("messageCreate", (message) => messageCreateHandler(discordClient, message, logger));
 
   for (const file of eventFiles) {
     try {
       const event = require(`../events/${file}`);
       if (event.once) {
-        client.once(event.name, (...args) => event.execute(client, logger, ...args));
+        discordClient.once(event.name, (...args) => event.execute(discordClient, logger, ...args));
       } else {
-        client.on(event.name, (...args) => event.execute(client, logger, ...args));
+        discordClient.on(event.name, (...args) => event.execute(discordClient, logger, ...args));
       }
     } catch (error) {
       console.log(error);

@@ -17,7 +17,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setContexts(InteractionContextType.Guild),
 
-  async execute(client, interaction, logger) {
+  async execute(discordClient, interaction, logger) {
     const usuario = interaction.options.getUser("usuario");
 
     if (usuario) {
@@ -32,7 +32,7 @@ module.exports = {
         await usuario.send({ embeds: [reminderEmbed] });
         logger.info(`Recordatorio de normas enviado a ${usuario.tag} por ${interaction.user.tag}`);
       } catch (error) {
-        const channel = await client.channels.fetch("1080660073858220150");
+        const channel = await discordClient.channels.fetch("1080660073858220150");
         const mentionEmbed = new EmbedBuilder()
           .setColor(0x800080)
           .setTitle(`Recordatorio para ${usuario.username}`)

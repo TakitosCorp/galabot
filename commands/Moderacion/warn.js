@@ -17,7 +17,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setContexts(InteractionContextType.Guild),
 
-  async execute(client, interaction, logger) {
+  async execute(discordClient, interaction, logger) {
     const usuario = interaction.options.getUser("usuario");
     const motivo = interaction.options.getString("motivo");
     const guildMember = interaction.guild.members.cache.get(usuario.id);

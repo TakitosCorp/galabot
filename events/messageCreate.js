@@ -2,7 +2,7 @@ const { handlePing } = require("../messages/handlePing");
 const { handleHello } = require("../messages/handleHello");
 const resources = require("../data/resources.json");
 
-module.exports = async (client, message, logger) => {
+module.exports = async (discordClient, message, logger) => {
   if (message.content.includes("<@1080658502177001562>") && !message.author.bot) {
     await handlePing(message, logger);
   }

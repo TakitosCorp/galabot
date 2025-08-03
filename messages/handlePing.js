@@ -5,7 +5,7 @@ const emojis = require("../data/emojis.json");
 
 const warnsFilePath = path.join(__dirname, "../data/warns.json");
 
-async function handlePing(message, logger) {
+async function handlePing(discordClient, message, logger) {
   try {
     await message.delete();
 

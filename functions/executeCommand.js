@@ -1,11 +1,11 @@
 const { MessageFlags } = require("discord.js");
 
-async function executeCommand(client, interaction, logger) {
-  const command = client.commands.get(interaction.commandName);
+async function executeCommand(discordClient, interaction, logger) {
+  const command = discordClient.commands.get(interaction.commandName);
   if (!command) return;
 
   try {
-    await command.execute(client, interaction, logger);
+    await command.execute(discordClient, interaction, logger);
   } catch (error) {
     console.error(error);
     console.log(interaction.options);

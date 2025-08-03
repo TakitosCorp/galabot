@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const twitch = require("tmi.js");
 const dotenv = require("dotenv");
 const registerEvents = require("./handlers/events.js");
 const registerCommands = require("./handlers/commands.js");
@@ -13,7 +14,7 @@ if (!fs.existsSync(logDirectory)) {
   fs.mkdirSync(logDirectory);
 }
 
-const client = new Client({
+const discordClient = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -22,11 +23,13 @@ const client = new Client({
   ],
 });
 
-client.commands = new Collection();
 
-registerEvents(client, systemLogger);
-registerCommands(client, systemLogger);
 
-client.login(process.env.GALAYAKI_TOKEN).catch((error) => {
+discordClient.commands = new Collection();
+
+registerEvents(discordClient, systemLogger);
+registerCommands(discordClient, systemLogger);
+
+discordClient.login(process.env.GALAYAKI_TOKEN).catch((error) => {
   systemLogger.error("Error connecting the bot:", error);
 });

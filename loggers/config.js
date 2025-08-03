@@ -9,7 +9,7 @@ const createCustomLogger = (label, logFile) => {
   });
 
   return createLogger({
-    level: "info", // Nivel predeterminado
+    level: "info",
     format: combine(colorize(), timestamp(), logFormat),
     transports: [
       new transports.Console(),

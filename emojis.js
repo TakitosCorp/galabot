@@ -13,7 +13,6 @@ client.once("ready", async () => {
   console.log("Bot listo");
 
   try {
-    // Eliminar emojis existentes del bot
     const existingEmojis = await client.application.emojis.fetch();
     for (const emoji of existingEmojis.values()) {
       try {

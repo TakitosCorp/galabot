@@ -4,11 +4,15 @@ const tmi = require("tmi.js");
 const { getValidTwitchConfig } = require("./utils/twitchToken");
 const bootstrap = require("./handlers/discord/startup").bootstrap;
 const twitchLog = require("./utils/loggers").twitchLog;
+const { initialize: dbInitialize } = require("./db/database");
 
 let discordClient;
 let twitchClient;
 
 (async () => {
+  // Initialize the database
+  await dbInitialize();
+
   // Initialize Discord client
   discordClient = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],

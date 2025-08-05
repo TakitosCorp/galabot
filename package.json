@@ -5,11 +5,15 @@
   "scripts": {
     "start": "node main.js"
   },
+  "type": "commonjs",
   "dependencies": {
     "@discordjs/rest": "^2.5.1",
     "axios": "^1.11.0",
     "discord-api-types": "^0.38.18",
     "discord.js": "^14.21.0",
-    "tmi.js": "^1.8.5"
+    "dotenv": "^17.2.1",
+    "kysely": "^0.28.4",
+    "tmi.js": "^1.8.5",
+    "winston": "^3.17.0"
   }
 }

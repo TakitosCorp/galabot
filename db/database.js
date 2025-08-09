@@ -1,17 +1,17 @@
 const { Kysely, SqliteDialect } = require("kysely");
-const { Database } = require("sqlite3");
 const path = require("path");
 const fs = require("fs");
+const Database = require("better-sqlite3");
 
 const dataDir = path.resolve(__dirname, "../data");
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Initialize the database connection
+const dbFile = path.join(dataDir, "galabot.sqlite");
 const db = new Kysely({
   dialect: new SqliteDialect({
-    database: new Database(path.join(dataDir, "galabot.db")),
+    database: new Database(dbFile),
   }),
 });
 
@@ -24,6 +24,15 @@ async function initialize() {
       .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
       .addColumn("userId", "text", (col) => col.notNull())
       .addColumn("timestamp", "datetime", (col) => col.notNull())
+      .execute();
+
+    await trx.schema
+      .createTable("warns")
+      .ifNotExists()
+      .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+      .addColumn("userId", "text", (col) => col.notNull())
+      .addColumn("timestamp", "datetime", (col) => col.notNull())
+      .addColumn("reason", "text", (col) => col.notNull())
       .execute();
   });
 }

@@ -2,6 +2,7 @@ const fs = require("fs");
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const dotenv = require("dotenv");
+const path = require("path");
 
 dotenv.config({ path: require("path").resolve(process.cwd(), ".env") });
 
@@ -22,10 +23,11 @@ async function resetGlobalCommands() {
 
     // Prepare new global commands from files
     const globalCommands = [];
-    const commandFiles = fs.readdirSync("./commands/discord").filter((archivo) => archivo.endsWith(".js"));
+    const commandsDir = path.join(__dirname, "../commands/discord");
+    const commandFiles = fs.readdirSync(commandsDir).filter((archivo) => archivo.endsWith(".js"));
     for (const archivo of commandFiles) {
-      // Import each command and add its data to the list
-      const command = require(`./commands/discord/${archivo}`);
+      const commandPath = path.join(commandsDir, archivo);
+      const command = require(commandPath);
       globalCommands.push(command.data.toJSON());
     }
 

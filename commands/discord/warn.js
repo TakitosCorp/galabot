@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, InteractionContextType } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+  MessageFlags,
+} = require("discord.js");
 const { addWarn, getWarnCount } = require("../../db/warns");
 const discordLog = require("../../utils/loggers").discordLog;
 
@@ -15,25 +21,25 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setContexts(InteractionContextType.Guild),
 
-  async execute(client, interaction, logger) {
+  async execute(interaction, client, logger) {
     const user = interaction.options.getUser("usuario");
     const reason = interaction.options.getString("motivo");
     const guildMember = interaction.guild.members.cache.get(user.id);
-    const warnCount = await getWarnCount(usuario.id);
+    const warnCount = await getWarnCount(user.id);
 
     // Check if the user exists
     if (!guildMember) {
       return interaction.reply({
-        content: "El usuario no se encuentra en el servidor.",
-        ephemeral: true,
+        content: "El usuario no se encuentra en el servidor",
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     // Check if the user is an admin
     if (guildMember.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: "No puedes advertir a un administrador.",
-        ephemeral: true,
+        content: "No puedes advertir a un administrador",
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -52,11 +58,11 @@ async function handleBan(interaction, user, guildMember) {
   const banEmbed = new EmbedBuilder().setColor(0xff0000).setTitle(`Ban emitido para ${user.username}`).addFields(
     {
       name: "Motivo:",
-      value: "Este usuario ha acomulado 3 advertencias.",
+      value: "Este usuario ha acomulado 3 advertencias",
     },
     {
       name: "Acciones tomadas:",
-      value: "Se ha baneado al usuario del servidor permanentemente.",
+      value: "Se ha baneado al usuario del servidor permanentemente",
     }
   );
 
@@ -76,10 +82,13 @@ async function handleBan(interaction, user, guildMember) {
     try {
       await guildMember.ban({ reason: "Has acomulado más de 3 warns en el servidor" });
       discordLog("info", `Se ha intentado el envío del embed al usuario ${user.username}`);
-      await interaction.reply({ embeds: [banEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [banEmbed], flags: MessageFlags.Ephemeral });
     } catch (error) {
       discordLog("error", `El baneo del usuario ${user.username} ha fallado`);
-      await interaction.reply(`El baneo automático por acomulación de warns del usuario ${user.username} ha fallado`);
+      await interaction.reply({
+        content: `El baneo automático por acomulación de warns del usuario ${user.username} ha fallado`,
+        flags: MessageFlags.Ephemeral,
+      });
     }
   }
 }
@@ -118,12 +127,12 @@ async function handleWarn(interaction, user, guildMember, reason) {
     try {
       await guildMember.timeout(timeoutDuration, reason);
       discordLog("info", `Timeout de ${timeoutDuration / 60000} minutos aplicado a ${user.username}`);
-      await interaction.reply({ embeds: [warnTimeoutEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [warnTimeoutEmbed], flags: MessageFlags.Ephemeral });
     } catch (error) {
       discordLog("error", `El timeout del usuario ${user.username} ha fallado`);
       await interaction.reply({
-        content: `El timeout automático del usuario ${user.username} ha fallado.`,
-        ephemeral: true,
+        content: `El timeout automático del usuario ${user.username} ha fallado`,
+        flags: MessageFlags.Ephemeral,
       });
     }
   }

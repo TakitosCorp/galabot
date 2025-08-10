@@ -17,7 +17,6 @@ async function executeCommand(interaction, client, logger) {
 module.exports = {
   name: "interactionCreate",
   async execute(interaction, client, logger) {
-    console.log("Interaction received:", interaction);
     if (!interaction) return;
     if (interaction.type === InteractionType.ApplicationCommand) {
       await executeCommand(interaction, client, logger);

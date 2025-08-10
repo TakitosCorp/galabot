@@ -1,16 +1,15 @@
+// Disable the debug logs to prevent clutter in the console from Comfy.js
+console.debug = () => {};
+
 require("dotenv").config({ debug: false });
 const { Client, GatewayIntentBits } = require("discord.js");
-const { getValidTwitchConfig } = require("./utils/twitchToken");
-const bootstrap = require("./handlers/discord/startup").bootstrap;
-const twitchLog = require("./utils/loggers").twitchLog;
+const bootstrapDiscord = require("./handlers/discord/startup").bootstrap;
+const bootstrapTwitch = require("./handlers/twitch/startup").bootstrap;
 const { initialize: dbInitialize } = require("./db/database");
-const ComfyJS = require("comfy.js");
 
 let discordClient;
-let twitchClient;
 
 (async () => {
-  // Initialize the database
   await dbInitialize();
 
   // Initialize Discord client
@@ -18,26 +17,16 @@ let twitchClient;
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
   });
 
+  // Login to Discord
   await discordClient.login(process.env.DISCORD_TOKEN);
 
-  // Bootstrap Discord client to register commands and event handlers
-  await bootstrap(discordClient);
+  // Bootstrap Discord client
+  await bootstrapDiscord(discordClient);
 
-  // Obtain valid Twitch tokens before initializing ComfyJS
-  const twitchConfig = await getValidTwitchConfig();
-
-  // Create the onConnected handler for twitch bot
-  ComfyJS.onConnected = (address, port) => {
-    twitchLog("info", `Twitch client authenticated and ready at ${address}:${port}`);
-  };
-
-  // Initialize the bot
-  ComfyJS.Init(process.env.TWITCH_USERNAME, `oauth:${twitchConfig.ACCESS_TOKEN}`, process.env.TWITCH_CHANNEL);
-
-  twitchClient = ComfyJS;
+  // Create and bootstrap Twitch client
+  await bootstrapTwitch();
 
   module.exports = {
     discordClient,
-    twitchClient,
   };
 })();

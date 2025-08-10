@@ -20,9 +20,9 @@ async function registerEvents(discordClient) {
       const event = require(path.join(eventDir, file));
       // Use 'once' for one-time events, otherwise use 'on'
       if (event.once) {
-        discordClient.once(event.name, (...args) => event.execute(...args, discordClient));
+        discordClient.once(event.name, async (...args) => await event.execute(...args, discordClient));
       } else {
-        discordClient.on(event.name, (...args) => event.execute(...args, discordClient));
+        discordClient.on(event.name, async (...args) => await event.execute(...args, discordClient));
       }
     }
   }

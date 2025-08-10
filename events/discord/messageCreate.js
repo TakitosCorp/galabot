@@ -10,7 +10,7 @@ module.exports = {
 
     // Handle pings to Gala
     if (message.content.includes("<@1080658502177001562>") && !message.author.bot) {
-      msgPing(message, client);
+      await msgPing(message, client);
     }
 
     // Handle greetings (match whole words only)

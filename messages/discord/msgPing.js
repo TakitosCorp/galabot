@@ -5,12 +5,12 @@ const discordLog = require("../../utils/loggers").discordLog;
 
 module.exports = async function (message, client) {
   const user = message.author;
-  const guildMember = message.guild.members.cache.get(user.id);
+  const guildMember = await message.guild.members.fetch(user.id);
   const warnCount = await getWarnCount(user.id);
 
   // Check if the user exists
   if (!guildMember) {
-    return interaction.reply({
+    return await message.reply({
       content: "El usuario no se encuentra en el servidor",
       ephemeral: true,
     });
@@ -23,9 +23,9 @@ module.exports = async function (message, client) {
 
   // Handle the ping
   if (warnCount >= 3) {
-    handleBan(message, user, guildMember);
+    await handleBan(message, user, guildMember);
   } else {
-    handleWarn(message, user, guildMember);
+    await handleWarn(message, user, guildMember);
   }
 };
 

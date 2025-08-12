@@ -34,6 +34,18 @@ async function initialize() {
       .addColumn("timestamp", "datetime", (col) => col.notNull())
       .addColumn("reason", "text", (col) => col.notNull())
       .execute();
+
+    await trx.schema
+      .createTable("streams")
+      .ifNotExists()
+      .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("timestamp", "datetime", (col) => col.notNull())
+      .addColumn("title", "text", (col) => col.notNull())
+      .addColumn("viewers", "integer", (col) => col.notNull())
+      .addColumn("category", "text", (col) => col.notNull())
+      .addColumn("tags", "text", (col) => col.notNull())
+      .addColumn("end", "datetime", (col) => col.nullable())
+      .execute();
   });
 }
 

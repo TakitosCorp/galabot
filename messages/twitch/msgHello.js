@@ -2,44 +2,54 @@ const resources = require("../../data/resources.json");
 const twitchLog = require("../../utils/loggers").twitchLog;
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
 
-module.exports = async function (user, message, flags, self, extra, client) {
-  const userName = user;
-  const userMention = `@${userName}`;
+module.exports = async function (userName, extra, client) {
+  const userMention = `@${extra.displayName || userName}`;
   const userId = extra && extra.userId ? extra.userId : null;
 
   // Check if the user has been greeted recently
   if (userId) {
     const lastGreeting = await getLastGreeting(userId);
     if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
-      twitchLog("info", `El usuario ${userName} (${userId}) ya fue saludado recientemente en Twitch.`);
+      twitchLog("info", `User ${userName} (${userId}) was already greeted recently on Twitch.`);
       return;
     }
   }
 
   // Prepare the greeting response
-  const greetings = resources.greetingResponses.map((greeting) => {
-    // Replace placeholders with user information
-    let replacedGreeting = greeting
-      .replace("{userName}", userName)
-      .replace("{userMention}", userMention)
-      .replace(/\{emojis\.[^}]+\}/g, "");
+  const greetingResponses = Array.isArray(resources.greetingResponses) ? resources.greetingResponses : [];
+  const greetings = greetingResponses
+    .filter((greeting) => typeof greeting === "string" && greeting.trim().length > 0)
+    .map((greeting) => {
+      let replacedGreeting = greeting
+        .replace("{userName}", userName)
+        .replace("{userMention}", userMention)
+        .replace(/\{emojis\.[^}]+\}/g, "");
 
-    return replacedGreeting;
-  });
+      return replacedGreeting;
+    });
 
   // Get a random greeting from the list
-  const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+  const randomGreeting =
+    greetings.length > 0
+      ? greetings[Math.floor(Math.random() * greetings.length)]
+      : `Hello ${userMention}! Welcome to the channel.`;
 
   try {
-    const channelName = extra && extra.channel ? extra.channel.toLowerCase() : undefined;
-    // Send the greeting message to the Twitch chat
-    await client.Say(randomGreeting, channelName);
+    let channelName = extra && extra.channel ? extra.channel : undefined;
+    if (!channelName) {
+      twitchLog("error", "Could not send greeting on Twitch: channelName is undefined");
+      return;
+    }
+
+    console.log(`Sending greeting to ${userName} on Twitch: ${randomGreeting}`);
+
+    await client.say(channelName, randomGreeting);
     if (userId) {
       const timestamp = new Date().toISOString();
       await updateGreeting(userId, timestamp);
     }
-    twitchLog("info", `Saludo enviado a ${userName} en Twitch.`);
+    twitchLog("info", `Greeting sent to ${userName} on Twitch.`);
   } catch (error) {
-    twitchLog("error", `No se pudo enviar el saludo en Twitch: ${error.message}`);
+    twitchLog("error", `Could not send greeting on Twitch: ${error.message}`);
   }
 };

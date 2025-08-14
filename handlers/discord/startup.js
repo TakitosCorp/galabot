@@ -32,7 +32,8 @@ async function registerCommands(discordClient) {
 
   for (const file of commandFiles.filter((f) => f.endsWith(".js"))) {
     const command = require(path.join(commandDir, file));
-    discordClient.commands.set(command.data.name, command);  }
+    discordClient.commands.set(command.data.name, command);
+  }
 }
 
 module.exports = {

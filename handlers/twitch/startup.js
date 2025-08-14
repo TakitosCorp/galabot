@@ -1,60 +1,55 @@
-const { getValidTwitchConfig } = require("../../utils/twitchToken");
 const twitchLog = require("../../utils/loggers").twitchLog;
-const interactionCreate = require("../../events/twitch/interactionCreate");
-const messageCreate = require("../../events/twitch/messageCreate");
-const { ChatClient } = require("@twurple/chat");
-const { StaticAuthProvider } = require("@twurple/auth");
+const streamStartHandler = require("../../events/twitch/streamStart");
+const messageHandler = require("../../events/twitch/messageCreate");
+const interactionHandler = require("../../events/twitch/interactionCreate");
+const { createEventData } = require("./eventData");
 
-// Bootstrap the Twitch client by registering events and initializing the connection
-async function bootstrap() {
-  const twitchConfig = await getValidTwitchConfig();
-  const username = process.env.TWITCH_USERNAME;
-  let channel = process.env.TWITCH_CHANNEL;
+async function bootstrap(clientManager) {
+    const { twitchChatClient, twitchApiClient, twitchEventSubListener } = clientManager;
+    const channelName = process.env.TWITCH_CHANNEL;
+    const username = process.env.TWITCH_USERNAME;
 
-  const authProvider = new StaticAuthProvider(twitchConfig.CLIENT_ID, twitchConfig.ACCESS_TOKEN);
-  const chatClient = new ChatClient({ authProvider, channels: [channel] });
+    twitchChatClient.onConnect(() => {
+        twitchLog("info", `Cliente de chat de Twitch conectado como ${username}`);
+    });
 
-  chatClient.onConnect(() => {
-    twitchLog("info", `Twitch client authenticated and ready as ${username}`);
-  });
+    twitchChatClient.onDisconnect((manually, reason) => {
+        const reasonMsg = reason ? `${reason.message || "Sin mensaje"} (${reason.name})` : "Razón desconocida";
+        twitchLog("warn", `Cliente de Twitch desconectado: ${manually ? "Manualmente" : "Automáticamente"} - Razón: ${reasonMsg}`);
+        if (!manually) {
+            twitchLog("info", "El cliente intentará reconectar automáticamente...");
+        }
+    });
 
-  chatClient.onMessage(async (channel, user, message, msg) => {
-    // Extract all available information from the message
-    const eventData = {
-      channel: channel,
-      user: {
-        name: user,
-        id: msg.userInfo.userId,
-        displayName: msg.userInfo.displayName,
-      },
-      message: {
-        content: message,
-        id: msg.id,
-        isCheer: msg.isCheer,
-        bits: msg.bits || 0,
-        emotes: msg.emotes,
-      },
-      flags: {
-        mod: msg.userInfo.isMod,
-        broadcaster: msg.userInfo.isBroadcaster,
-        subscriber: msg.userInfo.isSubscriber,
-        vip: msg.userInfo.isVip,
-        founder: msg.userInfo.isFounder,
-        staff: msg.userInfo.isStaff,
-      },
-      timestamp: new Date(),
-      rawData: msg,
-    };
+    twitchChatClient.onMessage(async (channel, user, message, msg) => {
+        const eventData = createEventData(channel, user, message, msg);
+        if (message.startsWith("!") || message.startsWith("g!")) {
+            await interactionHandler(eventData, clientManager);
+        } else {
+            await messageHandler(eventData, clientManager);
+        }
+    });
 
-    // Route to appropriate handler
-    if (message.startsWith("!") || message.startsWith("g!")) {
-      await interactionCreate(eventData, chatClient);
-    } else {
-      await messageCreate(eventData, chatClient);
+    try {
+        const user = await twitchApiClient.users.getUserByName(channelName.replace("#", ""));
+        if (user) {
+            twitchEventSubListener.onStreamOnline(user.id, (event) => {
+                streamStartHandler(event, clientManager);
+            });
+
+            twitchEventSubListener.onStreamOffline(user.id, (event) => {
+                twitchLog("info", `El stream de ${event.broadcasterDisplayName} ha terminado.`);
+            });
+
+            twitchLog("info", `EventSub suscrito a los eventos de ${user.displayName}.`);
+        } else {
+            twitchLog("error", `No se pudo encontrar el usuario de Twitch: ${channelName}`);
+        }
+    } catch (error) {
+        twitchLog("error", `Error configurando los listeners de EventSub: ${error.message}`);
     }
-  });
 
-  await chatClient.connect();
+    twitchLog("info", "Bootstrap de Twitch completado.");
 }
 
 module.exports = { bootstrap };

@@ -1,6 +1,5 @@
 const { db } = require("./database");
 
-// Obtain the last greeting for a user
 async function getLastGreeting(userId, trx = db) {
   return await trx
     .selectFrom("greetings")
@@ -11,7 +10,6 @@ async function getLastGreeting(userId, trx = db) {
     .executeTakeFirst();
 }
 
-// Update or insert a greeting for a user
 async function updateGreeting(userId, timestamp) {
   await db.transaction().execute(async (trx) => {
     const existing = await getLastGreeting(userId, trx);

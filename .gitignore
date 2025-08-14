@@ -5,3 +5,4 @@ logs
 .env.alt
 .env.prod
 test.js
+concat.sh

@@ -1,22 +1,24 @@
-const msgHello = require("../../messages/discord/msgHello");
-const msgPing = require("../../messages/discord/msgPing");
-const greetings = require("../../data/resources.json").greetings;
+const resources = require("../../data/resources.json");
+const { handleHello } = require("../../messages/discord/msgHello");
+const { handlePing } = require("../../messages/discord/msgPing");
 
 module.exports = {
   name: "messageCreate",
-  async execute(message, client) {
-    // Ignore self messages and bot messages
-    if (message.author.bot) return;
+  async execute(message, client, clientManager) {
+    if (message.author.bot || !message.guild) return;
 
-    // Handle pings to Gala
-    if (message.content.includes("<@1080658502177001562>") && !message.author.bot) {
-      await msgPing(message, client);
+    if (message.content.includes(`<@${process.env.GALA_DISCORD_ID}>`)) {
+      await handlePing(message);
+      return;
     }
 
-    // Handle greetings (match whole words only)
-    const content = message.content.toLowerCase();
-    if (greetings.some((greet) => new RegExp(`\\b${greet}\\b`, "i").test(content))) {
-      await msgHello(message, client);
+    const content = message.content.toLowerCase().trim();
+    const isGreeting = resources.greetings.some(
+      (greet) => new RegExp(`^${greet}$`, "i").test(content) || new RegExp(`\\b${greet}\\b`, "i").test(content)
+    );
+
+    if (isGreeting) {
+      await handleHello(message);
     }
   },
   once: false,

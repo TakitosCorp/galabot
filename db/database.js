@@ -15,7 +15,6 @@ const db = new Kysely({
   }),
 });
 
-// Function to initialize the database schema
 async function initialize() {
   await db.transaction().execute(async (trx) => {
     await trx.schema
@@ -44,7 +43,7 @@ async function initialize() {
       .addColumn("viewers", "integer", (col) => col.notNull())
       .addColumn("category", "text", (col) => col.notNull())
       .addColumn("tags", "text", (col) => col.notNull())
-      .addColumn("end", "datetime", (col) => col.nullable())
+      .addColumn("end", "datetime")
       .execute();
   });
 }

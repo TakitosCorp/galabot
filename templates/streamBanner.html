@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stream Banner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="w-full h-screen bg-gradient-to-br from-purple-600 to-pink-500 relative overflow-hidden">
+
+  <div class="absolute top-0 left-0">
+    <div class="bg-white/95 backdrop-blur-sm rounded-br-[50px] px-8 py-4 shadow-xl">
+      <div class="flex items-center space-x-3">
+        <div class="w-3.5 h-3.5 bg-red-500 rounded-full animate-pulse"></div>
+        <span class="text-gray-900 font-bold text-xl tracking-wider">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-center h-full px-8">
+    <div class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-2xl p-8 max-w-5xl w-full border border-white/60 hover:bg-white/70 transition-all duration-300">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+
+        <div class="lg:col-span-2 flex justify-center">
+          <div class="relative group">
+            <img id="gameImage" src="{{GAME_IMAGE_URL}}" alt="Imagen del juego" class="rounded-xl shadow-2xl w-full max-w-xs h-auto object-cover transition-all duration-300 group-hover:scale-105 group-hover:shadow-purple-500/25">
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-t from-purple-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+          <h1 id="streamTitle" class="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight drop-shadow-sm">
+            {{STREAM_TITLE}}
+          </h1>
+
+          <div class="flex items-center">
+            <span class="inline-block bg-gradient-to-r from-purple-600 to-pink-500 text-white px-5 py-2 rounded-full text-lg font-semibold shadow-lg hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105" id="streamCategory">
+              {{STREAM_CATEGORY}}
+            </span>
+          </div>
+
+          <div class="mt-4 bg-white/25 backdrop-blur-sm rounded-lg p-4 border border-white/40 hover:bg-white/35 transition-all duration-300 inline-block max-w-max">
+            <div class="flex items-center text-gray-800 text-base">
+              <svg class="w-5 h-5 mr-2 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+              </svg>
+              <span class="font-mono pr-4">https://www.twitch.tv/galayaki</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function filterCommands(title) {
+      return title.split(' ')
+        .filter(word => !word.startsWith('!'))
+        .join(' ')
+        .trim();
+    }
+
+    function updateTitle() {
+      const titleElement = document.getElementById('streamTitle');
+      if (titleElement) {
+        const originalTitle = titleElement.textContent;
+        const filteredTitle = filterCommands(originalTitle);
+        titleElement.textContent = filteredTitle;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateTitle);
+
+    const titleElement = document.getElementById('streamTitle');
+  </script>
+</body>
+
+</html>

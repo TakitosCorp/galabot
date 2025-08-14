@@ -63,6 +63,21 @@ const dbLogger = winston.createLogger({
   ],
 });
 
+// Logger for system events/messages.
+const sysLogger = winston.createLogger({
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `[${timestamp}] [SYS] ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    consoleTransport,
+    new winston.transports.File({ filename: path.join(logsDir, "system.log") }),
+    combinedFileTransport,
+  ],
+});
+
 // Logs a message to the Twitch logger.
 function twitchLog(level, message) {
   twitchLogger.log({ level, message });
@@ -75,10 +90,15 @@ function discordLog(level, message) {
 function dbLog(level, message) {
   dbLogger.log({ level, message });
 }
+// Logs a message to the System logger.
+function sysLog(level, message) {
+  sysLogger.log({ level, message });
+}
 
 module.exports = {
   ensureLogsFolder,
   twitchLog,
   discordLog,
   dbLog,
+  sysLog,
 };

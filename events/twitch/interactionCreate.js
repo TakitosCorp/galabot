@@ -1,21 +1,18 @@
 const twitchLog = require("../../utils/loggers").twitchLog;
 
-/**
- * Handles command interactions from Twitch chat
- * @param {Object} eventData - All data about the event
- * @param {Object} client - The Twitch chat client
- */
-module.exports = async function (eventData, client) {
-  // Ignore self messages
+module.exports = async function (eventData, clientManager) {
   if (eventData.self) return;
 
   const { message, channel, user } = eventData;
+  const { twitchChatClient } = clientManager;
 
-  // Parse command and arguments
-  const commandBody = message.content.startsWith("g!")
-    ? message.content.slice(2).trim()
-    : message.content.slice(1).trim();
-
+  const prefix = message.content.startsWith("g!") ? "g!" : "!";
+  const commandBody = message.content.slice(prefix.length).trim();
   const args = commandBody.split(/\s+/);
   const commandName = args.shift().toLowerCase();
+
+  if (commandName === "ping") {
+    await twitchChatClient.say(channel, `@${user.displayName}, Pong!`);
+    twitchLog("info", `Comando !ping ejecutado por ${user.name}`);
+  }
 };

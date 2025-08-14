@@ -1,34 +1,49 @@
-const twitchLog = require("../../utils/loggers").twitchLog;
-const greetings = require("../../data/resources.json").greetings;
-const handleHello = require("../../messages/twitch/msgHello");
+const { twitchLog } = require("../../utils/loggers");
+const resources = require("../../data/resources.json");
+const { getLastGreeting, updateGreeting } = require("../../db/greetings");
 
-/**
- * Handles regular messages from Twitch chat
- * @param {Object} eventData - All data about the event
- * @param {Object} client - The Twitch chat client
- */
-module.exports = async function (eventData, client) {
-  // Ignore self messages
+async function handleHello(eventData, clientManager) {
+  const { user, channel } = eventData;
+  const { twitchChatClient } = clientManager;
+  
+  const lastGreeting = await getLastGreeting(user.id);
+  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
+    twitchLog("info", `Usuario ${user.name} (${user.id}) ya fue saludado recientemente en Twitch.`);
+    return;
+  }
+
+  const userMention = `@${user.displayName || user.name}`;
+  const greetingResponses = resources.greetingResponses || [];
+  
+  const greetings = greetingResponses
+    .filter((greeting) => typeof greeting === "string" && greeting.trim().length > 0)
+    .map((greeting) => {
+      return greeting
+        .replace("{userName}", user.name)
+        .replace("{userMention}", userMention)
+        .replace(/\{emojis\.[^}]+\}/g, ""); 
+    });
+
+  const randomGreeting = greetings.length > 0
+      ? greetings[Math.floor(Math.random() * greetings.length)]
+      : `¡Hola ${userMention}! ¡Bienvenido/a al canal!`;
+
+  try {
+    await twitchChatClient.say(channel, randomGreeting);
+    await updateGreeting(user.id, new Date().toISOString());
+    twitchLog("info", `Saludo enviado a ${user.name} en Twitch.`);
+  } catch (error) {
+    twitchLog("error", `No se pudo enviar el saludo en Twitch: ${error.message}`);
+  }
+}
+
+module.exports = async function (eventData, clientManager) {
   if (eventData.self) return;
 
-  const { message, channel, user, flags } = eventData;
-
-  // Process message content
-  const content = message.content.toLowerCase();
-
-  // Check for greetings
-  const isGreeting = greetings.some((greeting) => content.includes(greeting.toLowerCase()));
+  const content = eventData.message.content.toLowerCase().trim();
+  const isGreeting = resources.greetings.some((greeting) => new RegExp(`^${greeting}$`, "i").test(content) || new RegExp(`\\b${greeting}\\b`, "i").test(content));
 
   if (isGreeting) {
-    await handleHello(
-      user.name,
-      {
-        userId: user.id,
-        channel: channel,
-        displayName: user.displayName || user.name,
-      },
-      client
-    );
-    return;
+    await handleHello(eventData, clientManager);
   }
 };

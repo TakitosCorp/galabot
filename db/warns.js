@@ -1,6 +1,5 @@
 const { db } = require("./database");
 
-// Obtain all the warnings for a user
 async function getUserWarns(userId) {
   return await db.transaction().execute(async (trx) => {
     return await trx
@@ -12,7 +11,6 @@ async function getUserWarns(userId) {
   });
 }
 
-// Get the total number of warnings for a user
 async function getWarnCount(userId) {
   return await db.transaction().execute(async (trx) => {
     const warns = await trx
@@ -25,7 +23,6 @@ async function getWarnCount(userId) {
   });
 }
 
-// Save a new warning for a user
 async function addWarn(userId, reason) {
   const timestamp = new Date().toISOString();
   await db.transaction().execute(async (trx) => {

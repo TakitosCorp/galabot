@@ -1,5 +1,6 @@
 const twitchLog = require("../../utils/loggers").twitchLog;
 const streamStartHandler = require("../../events/twitch/streamStart");
+const streamEndHandler = require("../../events/twitch/streamEnd");
 const messageHandler = require("../../events/twitch/messageCreate");
 const interactionHandler = require("../../events/twitch/interactionCreate");
 const { createEventData } = require("./eventData");
@@ -42,6 +43,7 @@ async function bootstrap(clientManager) {
 
       twitchEventSubListener.onStreamOffline(user.id, (event) => {
         twitchLog("info", `El stream de ${event.broadcasterDisplayName} ha terminado.`);
+        streamEndHandler(event, clientManager);
       });
 
       twitchLog("info", `EventSub suscrito a los eventos de ${user.displayName}.`);

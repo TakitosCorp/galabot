@@ -11,8 +11,17 @@ async function insertStream(streamData) {
         viewers: streamData.viewers,
         category: streamData.category,
         tags: streamData.tags,
+        discMsgId: streamData.discMsgId || "",
       })
       .execute();
+  });
+}
+
+async function getMostRecentStream() {
+  return await db.transaction().execute(async (trx) => {
+    const result = await trx.selectFrom("streams").selectAll().orderBy("timestamp", "desc").executeTakeFirst();
+
+    return result || null;
   });
 }
 
@@ -42,7 +51,21 @@ async function updateStreamEnd(streamId, endTime) {
   return await db.transaction().execute(async (trx) => {
     const result = await trx.updateTable("streams").set({ end: endTime }).where("id", "=", streamId).execute();
 
-    return result.numUpdatedRows > 0;
+    const numUpdatedRows =
+      result.numUpdatedRows !== undefined ? result.numUpdatedRows : Array.isArray(result) ? result.length : 0;
+
+    return numUpdatedRows > 0;
+  });
+}
+
+async function updateStreamDiscordMessage(streamId, discMsgId) {
+  return await db.transaction().execute(async (trx) => {
+    const result = await trx.updateTable("streams").set({ discMsgId }).where("id", "=", streamId).execute();
+
+    const numUpdatedRows =
+      result.numUpdatedRows !== undefined ? result.numUpdatedRows : Array.isArray(result) ? result.length : 0;
+
+    return numUpdatedRows > 0;
   });
 }
 
@@ -51,4 +74,6 @@ module.exports = {
   streamExists,
   updateStreamViewers,
   updateStreamEnd,
+  getMostRecentStream,
+  updateStreamDiscordMessage,
 };

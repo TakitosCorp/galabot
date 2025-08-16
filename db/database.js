@@ -43,6 +43,7 @@ async function initialize() {
       .addColumn("viewers", "integer", (col) => col.notNull())
       .addColumn("category", "text", (col) => col.notNull())
       .addColumn("tags", "text", (col) => col.notNull())
+      .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
       .addColumn("end", "datetime")
       .execute();
   });

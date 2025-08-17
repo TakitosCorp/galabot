@@ -20,7 +20,17 @@ async function streamEnd(event, clientManager) {
     try {
       const twitchUsername = process.env.TWITCH_CHANNEL;
       if (twitchUsername) {
-        const scheduleThisWeek = await getStreamerScheduleThisWeek(twitchUsername, twitchApiClient);
+        let scheduleThisWeek;
+        try {
+          scheduleThisWeek = await getStreamerScheduleThisWeek(twitchUsername, twitchApiClient);
+        } catch (imgErr) {
+          if (imgErr.isAxiosError && imgErr.response?.status === 404) {
+            twitchLog("info", "El usuario no tiene schedule, usando array vacío para la imagen de próximos streams.");
+            scheduleThisWeek = [];
+          } else {
+            throw imgErr;
+          }
+        }
         imageBuffer = await generateNextStreamsImage(scheduleThisWeek);
       }
     } catch (imgErr) {

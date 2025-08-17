@@ -1,0 +1,11 @@
+services:
+  bot:
+    build: .
+    container_name: galabot
+    restart: always
+    env_file:
+      - .env
+    shm_size: '2gb'
+    volumes:
+      - ./data:/usr/src/app/data
+      - ./.env:/usr/src/app/.env

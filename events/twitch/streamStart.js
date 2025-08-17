@@ -3,6 +3,7 @@ const { insertStream, streamExists, updateStreamDiscordMessage } = require("../.
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require("discord.js");
 const { streamTitles } = require("../../data/resources.json");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
+const { startViewersAverage } = require("../../utils/twitchViews");
 
 async function streamStart(event, clientManager) {
   try {
@@ -115,6 +116,10 @@ async function streamStart(event, clientManager) {
         twitchLog("info", `Stream guardado en la base de datos con ID: ${event.id}.`);
       } else {
         await updateStreamDiscordMessage(event.id, discMsgId);
+      }
+
+      if (twitchApiClient && process.env.TWITCH_CHANNEL) {
+        startViewersAverage(event.id, twitchApiClient, process.env.TWITCH_CHANNEL);
       }
     } else {
       twitchLog("error", `No se encontró el canal de notificaciones (${channelId}) o no es un canal de texto.`);

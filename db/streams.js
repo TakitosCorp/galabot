@@ -35,13 +35,27 @@ async function streamExists(streamId) {
 
 async function updateStreamViewers(streamId, currentViewers) {
   return await db.transaction().execute(async (trx) => {
-    const stream = await trx.selectFrom("streams").select("viewers").where("id", "=", streamId).executeTakeFirst();
+    const stream = await trx
+      .selectFrom("streams")
+      .select(["viewers", "viewerSamples"])
+      .where("id", "=", streamId)
+      .executeTakeFirst();
 
     if (!stream) return false;
 
-    const newAverage = stream.viewers === 0 ? currentViewers : (stream.viewers + currentViewers) / 2;
+    const samples = stream.viewerSamples;
+    const oldAvg = stream.viewers;
 
-    await trx.updateTable("streams").set({ viewers: newAverage }).where("id", "=", streamId).execute();
+    const newAverage = Math.round((oldAvg * samples + currentViewers) / (samples + 1));
+
+    await trx
+      .updateTable("streams")
+      .set({
+        viewers: newAverage,
+        viewerSamples: samples + 1,
+      })
+      .where("id", "=", streamId)
+      .execute();
 
     return true;
   });

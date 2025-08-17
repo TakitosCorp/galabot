@@ -3,6 +3,7 @@ const { updateStreamEnd, getMostRecentStream } = require("../../db/streams");
 const axios = require("axios");
 const { getStreamerScheduleThisWeek } = require("../../utils/twitchSchedule");
 const { generateNextStreamsImage } = require("../../utils/imageGenerator");
+const { stopViewersAverage } = require("../../utils/twitchViews"); // <-- Añadido
 
 async function streamEnd(event, clientManager) {
   try {
@@ -14,6 +15,9 @@ async function streamEnd(event, clientManager) {
     }
     const streamId = recentStream.id;
     const endTime = event.endDate ? event.endDate.toISOString() : new Date().toISOString();
+
+    stopViewersAverage(streamId);
+
     const updated = await updateStreamEnd(streamId, endTime);
 
     let imageBuffer = null;

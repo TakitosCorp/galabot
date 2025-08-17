@@ -9,7 +9,6 @@ const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
 const { bootstrap: bootstrapTwitch } = require("./handlers/twitch/startup");
 const { getValidTwitchConfig } = require("./utils/twitchToken");
 const { discordLog, twitchLog, sysLog } = require("./utils/loggers");
-const { getStreamerScheduleThisWeek } = require("./utils/twitchSchedule");
 
 class clientManager {
   constructor() {

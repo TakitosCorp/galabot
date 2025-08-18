@@ -7,8 +7,11 @@ let browser;
 
 async function getBrowser() {
   if (!browser) {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
+
     browser = await puppeteer.launch({
       headless: "new",
+      executablePath,
       devtools: false,
       args: [
         "--no-sandbox",
@@ -33,7 +36,7 @@ async function generateStreamBanner(streamData, options = {}) {
   let page;
   try {
     twitchLog("info", "Generando banner...");
- 
+
     const templateName = options.templateName || "streamBanner.html";
     const templatePath = path.join(__dirname, "..", "templates", templateName);
 
@@ -66,7 +69,6 @@ async function generateStreamBanner(streamData, options = {}) {
         .replace("{{STREAM_TITLE}}", filteredTitle)
         .replace("{{STREAM_CATEGORY}}", streamData.category || "Sin categoría")
         .replace("{{GAME_IMAGE_URL}}", gameImageUrl);
-
     }
 
     if (templateName === "nextStreams.html" && options.streamsJson) {

@@ -25,8 +25,12 @@ RUN apt-get update && apt-get install -y \
   libpango-1.0-0 \
   libpangocairo-1.0-0 \
   libxss1 \
+  chromium \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY package*.json ./
 

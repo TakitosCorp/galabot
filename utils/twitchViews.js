@@ -18,7 +18,7 @@ function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
     } catch (err) {
       twitchLog("error", `No se pudo actualizar la media de espectadores para el stream ${streamId}: ${err.message}`);
     }
-  }, 60 * 1000);
+  }, 500); // 0.5 s
   viewersIntervals.set(streamId, interval);
 }
 

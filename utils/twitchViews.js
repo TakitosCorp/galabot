@@ -1,4 +1,5 @@
 const { updateStreamViewers } = require("../db/streams");
+const { twitchLog } = require("./loggers");
 
 const viewersIntervals = new Map();
 
@@ -11,11 +12,13 @@ function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
       if (!user) return;
       const stream = await twitchApiClient.streams.getStreamByUserId(user.id);
       if (stream && stream.viewers !== undefined) {
+        twitchLog("info", `Actualizando media para el stream ${streamId}: ${stream.viewers}`);
         await updateStreamViewers(streamId, stream.viewers);
       }
     } catch (err) {
+      twitchLog("error", `No se pudo actualizar la media de espectadores para el stream ${streamId}: ${err.message}`);
     }
-  }, 60 * 1000); 
+  }, 60 * 1000);
   viewersIntervals.set(streamId, interval);
 }
 

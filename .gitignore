@@ -6,3 +6,5 @@ logs
 .env.prod
 test.js
 concat.sh
+full_project_context.txt
+full_project_context.md

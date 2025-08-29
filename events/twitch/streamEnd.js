@@ -3,23 +3,32 @@ const { updateStreamEnd, getMostRecentStream } = require("../../db/streams");
 const axios = require("axios");
 const { getStreamerScheduleThisWeek } = require("../../utils/twitchSchedule");
 const { generateNextStreamsImage } = require("../../utils/imageGenerator");
-const { stopViewersAverage } = require("../../utils/twitchViews"); // <-- Añadido
+const { stopViewersAverage } = require("../../utils/twitchViews");
 
 async function streamEnd(event, clientManager) {
   try {
     const { discordClient, twitchApiClient } = clientManager;
-    const recentStream = await getMostRecentStream();
-    if (!recentStream) {
+
+    const initialStreamInfo = await getMostRecentStream();
+    if (!initialStreamInfo) {
       twitchLog("warn", "No se encontró ningún stream activo para marcar como finalizado.");
       return;
     }
-    const streamId = recentStream.id;
+    const streamId = initialStreamInfo.id;
+    const discMsgId = initialStreamInfo.discMsgId;
+
     const endTime = event.endDate ? event.endDate.toISOString() : new Date().toISOString();
 
     stopViewersAverage(streamId);
 
     const updated = await updateStreamEnd(streamId, endTime);
 
+    const finalStreamData = await getMostRecentStream();
+    if (!finalStreamData) {
+      twitchLog("error", `No se pudo obtener la información final del stream con ID ${streamId}.`);
+      return;
+    }
+    
     let imageBuffer = null;
     try {
       const twitchUsername = process.env.TWITCH_CHANNEL;
@@ -50,10 +59,10 @@ async function streamEnd(event, clientManager) {
 
     try {
       const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
-      if (channelId && recentStream.discMsgId && discordClient && discordClient.isReady()) {
+      if (channelId && discMsgId && discordClient && discordClient.isReady()) {
         const channel = await discordClient.channels.fetch(channelId);
         if (channel && channel.isTextBased()) {
-          const message = await channel.messages.fetch(recentStream.discMsgId);
+          const message = await channel.messages.fetch(discMsgId);
           if (message) {
             const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
             let user = null;
@@ -74,7 +83,8 @@ async function streamEnd(event, clientManager) {
                 url: twitchUrl || undefined,
               })
               .addFields(
-                { name: "📝 Título", value: recentStream.title || "Sin título", inline: false },
+                { name: "📝 Título", value: finalStreamData.title || "Sin título", inline: false },
+                { name: "🎮 Categoría", value: `*${finalStreamData.category || "Sin categoría"}*`, inline: false },
                 { name: "📺 Estado", value: "El stream ha finalizado, ¡te veo en el siguiente!", inline: false }
               )
               .setFooter({ text: "Gracias por pasarte por el directo 💜" })
@@ -85,8 +95,8 @@ async function streamEnd(event, clientManager) {
             }
             if (attachment) {
               embed.setImage("attachment://next-streams.png");
-            } else if (recentStream.getThumbnailUrl) {
-              embed.setImage(recentStream.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`);
+            } else if (finalStreamData.getThumbnailUrl) {
+              embed.setImage(finalStreamData.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`);
             }
             const editOptions = {
               embeds: [embed],
@@ -106,12 +116,12 @@ async function streamEnd(event, clientManager) {
       twitchLog("info", `Stream más reciente con ID ${streamId} marcado como finalizado en la base de datos.`);
       try {
         await axios.post(process.env.POST_DATA_WEBHOOK, {
-          id: recentStream.id,
-          timestamp: recentStream.timestamp ? new Date(recentStream.timestamp).toISOString() : null,
-          title: recentStream.title,
-          viewers: recentStream.viewers || 0,
-          category: recentStream.category,
-          tags: recentStream.tags || [],
+          id: finalStreamData.id,
+          timestamp: finalStreamData.timestamp ? new Date(finalStreamData.timestamp).toISOString() : null,
+          title: finalStreamData.title,
+          viewers: finalStreamData.viewers || 0,
+          category: finalStreamData.category,
+          tags: finalStreamData.tags ? JSON.parse(finalStreamData.tags) : [],
           end: endTime,
         });
         twitchLog("info", "Webhook de fin de stream enviado correctamente.");

@@ -1,4 +1,5 @@
 const { db } = require("./database");
+const { twitchLog } = require("../utils/loggers");
 
 async function insertStream(streamData) {
   return await db.transaction().execute(async (trx) => {
@@ -47,6 +48,8 @@ async function updateStreamViewers(streamId, currentViewers) {
     const oldAvg = stream.viewers;
 
     const newAverage = Math.round((oldAvg * samples + currentViewers) / (samples + 1));
+
+    twitchLog("info", `Calculando promedio para stream ${streamId}: oldAvg=${oldAvg}, samples=${samples}, current=${currentViewers} -> newAvg=${newAverage} (valor a guardar)`);
 
     await trx
       .updateTable("streams")

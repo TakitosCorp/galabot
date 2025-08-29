@@ -12,7 +12,6 @@ function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
       if (!user) return;
       const stream = await twitchApiClient.streams.getStreamByUserId(user.id);
       if (stream && stream.viewers !== undefined) {
-        twitchLog("info", `Actualizando media para el stream ${streamId}: ${stream.viewers}`);
         await updateStreamViewers(streamId, stream.viewers);
       }
     } catch (err) {

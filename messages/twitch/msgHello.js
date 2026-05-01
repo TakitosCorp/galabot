@@ -1,13 +1,14 @@
 const { twitchLog } = require("../../utils/loggers");
 const resources = require("../../data/resources.json");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
+const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
 
 async function handleHello(eventData, clientManager) {
   const { user, channel } = eventData;
   const { twitchChatClient } = clientManager;
 
   const lastGreeting = await getLastGreeting(user.id);
-  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
+  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - GREETING_COOLDOWN_MS) {
     twitchLog("info", `User ${user.name} (${user.id}) was greeted recently on Twitch, skipping.`);
     return;
   }

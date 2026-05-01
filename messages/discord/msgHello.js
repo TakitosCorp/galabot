@@ -2,11 +2,12 @@ const resources = require("../../data/resources.json");
 const emojis = require("../../data/emojis.json");
 const { discordLog } = require("../../utils/loggers");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
+const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
 
 async function handleHello(message, lang) {
   const lastGreeting = await getLastGreeting(message.author.id);
 
-  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
+  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - GREETING_COOLDOWN_MS) {
     discordLog("info", `User ${message.author.username} (${message.author.id}) was greeted recently, skipping.`);
     return;
   }

@@ -2,10 +2,34 @@ const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
 const { twitchLog } = require("./loggers");
+const {
+  PUPPETEER_PAGE_TIMEOUT_MS,
+  PUPPETEER_GOTO_TIMEOUT_MS,
+  PUPPETEER_SCREENSHOT_TIMEOUT_MS,
+  PUPPETEER_SELECTOR_TIMEOUT_MS,
+  NEXT_STREAMS_SETTLE_MS,
+  BANNER_SETTLE_MS,
+} = require("./constants");
 
 let browser;
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 async function getBrowser() {
+  if (browser) {
+    try {
+      await browser.version();
+    } catch {
+      twitchLog("warn", "Puppeteer browser became unavailable; relaunching.");
+      browser = null;
+    }
+  }
   if (!browser) {
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
 
@@ -66,9 +90,9 @@ async function generateStreamBanner(streamData, options = {}) {
         .trim();
 
       htmlContent = htmlContent
-        .replace("{{STREAM_TITLE}}", filteredTitle)
-        .replace("{{STREAM_CATEGORY}}", streamData.category || "No category")
-        .replace("{{GAME_IMAGE_URL}}", gameImageUrl);
+        .replace("{{STREAM_TITLE}}", escapeHtml(filteredTitle))
+        .replace("{{STREAM_CATEGORY}}", escapeHtml(streamData.category || "No category"))
+        .replace("{{GAME_IMAGE_URL}}", escapeHtml(gameImageUrl));
     }
 
     if (templateName === "nextStreams.html" && options.streamsJson) {
@@ -93,8 +117,8 @@ async function generateStreamBanner(streamData, options = {}) {
       }
     });
 
-    await page.setDefaultNavigationTimeout(45000);
-    await page.setDefaultTimeout(45000);
+    await page.setDefaultNavigationTimeout(PUPPETEER_PAGE_TIMEOUT_MS);
+    await page.setDefaultTimeout(PUPPETEER_PAGE_TIMEOUT_MS);
 
     await page.setViewport({ width: 1280, height: 720 });
 
@@ -102,7 +126,7 @@ async function generateStreamBanner(streamData, options = {}) {
     twitchLog("debug", "Navigating to data URI to render banner...");
     await page.goto(dataUri, {
       waitUntil: "networkidle0",
-      timeout: 15000,
+      timeout: PUPPETEER_GOTO_TIMEOUT_MS,
     });
 
     const bodyContent = await page.evaluate(() => document.body.innerHTML);
@@ -110,7 +134,7 @@ async function generateStreamBanner(streamData, options = {}) {
       twitchLog("warn", "Body content is empty after first attempt, retrying with setContent...");
       await page.setContent(htmlContent, {
         waitUntil: ["load", "domcontentloaded"],
-        timeout: 15000,
+        timeout: PUPPETEER_GOTO_TIMEOUT_MS,
       });
       const bodyContentRetry = await page.evaluate(() => document.body.innerHTML);
       if (!bodyContentRetry || bodyContentRetry.trim().length === 0) {
@@ -119,22 +143,22 @@ async function generateStreamBanner(streamData, options = {}) {
     }
 
     if (templateName === "nextStreams.html") {
-      await page.waitForSelector("#streamsContainer", { timeout: 5000 }).catch(() => {});
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await page.waitForSelector("#streamsContainer", { timeout: PUPPETEER_SELECTOR_TIMEOUT_MS }).catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, NEXT_STREAMS_SETTLE_MS));
     } else {
       try {
-        await page.waitForSelector("#gameImage", { timeout: 5000 });
+        await page.waitForSelector("#gameImage", { timeout: PUPPETEER_SELECTOR_TIMEOUT_MS });
       } catch (error) {
         twitchLog("warn", `Image not loaded in expected time, continuing: ${error.message}`);
       }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, BANNER_SETTLE_MS));
     }
 
     twitchLog("debug", "Taking banner screenshot...");
     const screenshot = await page.screenshot({
       type: "png",
       fullPage: false,
-      timeout: 5000,
+      timeout: PUPPETEER_SCREENSHOT_TIMEOUT_MS,
     });
 
     await page.close();

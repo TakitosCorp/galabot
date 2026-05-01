@@ -1,5 +1,6 @@
 const { updateStreamViewers } = require("../db/streams");
 const { twitchLog } = require("./loggers");
+const { VIEWER_POLL_INTERVAL_MS } = require("./constants");
 
 const viewersIntervals = new Map();
 
@@ -17,7 +18,7 @@ function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
     } catch (err) {
       twitchLog("error", `Failed to update viewer average for stream ${streamId}: ${err.message}`);
     }
-  }, 500); // 0.5 s
+  }, VIEWER_POLL_INTERVAL_MS);
   viewersIntervals.set(streamId, interval);
 }
 
@@ -29,7 +30,13 @@ function stopViewersAverage(streamId) {
   }
 }
 
+function stopAllViewersIntervals() {
+  for (const interval of viewersIntervals.values()) clearInterval(interval);
+  viewersIntervals.clear();
+}
+
 module.exports = {
   startViewersAverage,
   stopViewersAverage,
+  stopAllViewersIntervals,
 };

@@ -3,6 +3,7 @@ const { addWarn, getWarnCount } = require("../../db/warns");
 const { discordLog } = require("../../utils/loggers");
 const { getLanguage } = require("../../utils/language");
 const strings = require("../../lang/warn");
+const { WARN_TIMEOUT_BASE_MS, MAX_WARN_BEFORE_BAN, MAX_WARN_REASON_LENGTH } = require("../../utils/constants");
 
 async function handleBan(interaction, user, guildMember, t) {
   const banEmbed = new EmbedBuilder()
@@ -36,7 +37,7 @@ async function handleBan(interaction, user, guildMember, t) {
 async function handleWarn(interaction, user, guildMember, reason, t) {
   await addWarn(user.id, reason);
   const newWarnCount = await getWarnCount(user.id);
-  const timeoutDuration = newWarnCount * 10 * 60 * 1000;
+  const timeoutDuration = newWarnCount * WARN_TIMEOUT_BASE_MS;
 
   const warnEmbed = new EmbedBuilder()
     .setColor(0xffa500)
@@ -85,6 +86,13 @@ module.exports = {
     const reason = interaction.options.getString("reason");
     const guildMember = await interaction.guild.members.fetch(user.id).catch(() => null);
 
+    if (reason.length > MAX_WARN_REASON_LENGTH) {
+      return interaction.reply({
+        content: `Reason too long (${reason.length} chars). Maximum is ${MAX_WARN_REASON_LENGTH}.`,
+        ephemeral: true,
+      });
+    }
+
     if (!guildMember) {
       return interaction.reply({ content: t.errNotInServer, ephemeral: true });
     }
@@ -100,7 +108,7 @@ module.exports = {
 
     const currentWarns = await getWarnCount(user.id);
 
-    if (currentWarns >= 3) {
+    if (currentWarns >= MAX_WARN_BEFORE_BAN) {
       await handleBan(interaction, user, guildMember, t);
     } else {
       await handleWarn(interaction, user, guildMember, reason, t);

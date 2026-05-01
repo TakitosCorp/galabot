@@ -34,6 +34,9 @@ class clientManager {
     if (!discordEnabled && !twitchEnabled) {
       sysLog("warn", "All platforms are disabled. Bot has nothing to do.");
     }
+
+    process.once("SIGTERM", () => this.shutdown("SIGTERM"));
+    process.once("SIGINT", () => this.shutdown("SIGINT"));
   }
 
   async initializeDiscord() {
@@ -93,6 +96,27 @@ class clientManager {
     } catch (error) {
       sysLog("error", `Failed to initialize Twitch client: ${error.stack}`);
       throw error;
+    }
+  }
+
+  async shutdown(signal) {
+    sysLog("info", `Received ${signal}. Shutting down gracefully…`);
+    try {
+      const { stopAllViewersIntervals } = require("./utils/twitchViews");
+      const { closeBrowser } = require("./utils/imageGenerator");
+
+      stopAllViewersIntervals();
+      await closeBrowser();
+
+      if (this.discordClient) this.discordClient.destroy();
+      if (this.twitchChatClient) await this.twitchChatClient.quit().catch(() => {});
+      if (this.twitchEventSubListener) this.twitchEventSubListener.stop();
+
+      sysLog("info", "Shutdown complete.");
+      process.exit(0);
+    } catch (err) {
+      sysLog("error", `Error during shutdown: ${err.stack}`);
+      process.exit(1);
     }
   }
 }

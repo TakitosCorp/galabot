@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node main.js",
+    "generate-cmds": "node utils/generateCmds.js",
+    "sync-emojis": "node utils/botEmojis.js"
   },
   "type": "commonjs",
   "dependencies": {

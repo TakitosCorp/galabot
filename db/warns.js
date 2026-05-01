@@ -12,15 +12,12 @@ async function getUserWarns(userId) {
 }
 
 async function getWarnCount(userId) {
-  return await db.transaction().execute(async (trx) => {
-    const warns = await trx
-      .selectFrom("warns")
-      .selectAll()
-      .where("userId", "=", userId)
-      .orderBy("timestamp", "desc")
-      .execute();
-    return warns.length;
-  });
+  const result = await db
+    .selectFrom("warns")
+    .select((eb) => eb.fn.countAll().as("count"))
+    .where("userId", "=", userId)
+    .executeTakeFirst();
+  return Number(result?.count ?? 0);
 }
 
 async function addWarn(userId, reason) {

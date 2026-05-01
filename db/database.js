@@ -41,7 +41,9 @@ async function initialize() {
       .addColumn("timestamp", "datetime", (col) => col.notNull())
       .addColumn("title", "text", (col) => col.notNull())
       .addColumn("viewers", "real", (col) => col.notNull())
-      .addColumn("viewerSamples", "integer", (col) => col.notNull().defaultTo(0))
+      .addColumn("viewerSamples", "integer", (col) =>
+        col.notNull().defaultTo(0),
+      )
       .addColumn("category", "text", (col) => col.notNull())
       .addColumn("tags", "text", (col) => col.notNull())
       .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))

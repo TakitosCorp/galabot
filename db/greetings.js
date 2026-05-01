@@ -15,7 +15,11 @@ async function updateGreeting(userId, timestamp) {
     const existing = await getLastGreeting(userId, trx);
 
     if (existing) {
-      await trx.updateTable("greetings").set({ timestamp }).where("id", "=", existing.id).execute();
+      await trx
+        .updateTable("greetings")
+        .set({ timestamp })
+        .where("id", "=", existing.id)
+        .execute();
     } else {
       await trx.insertInto("greetings").values({ userId, timestamp }).execute();
     }

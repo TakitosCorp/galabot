@@ -1,9 +1,18 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, InteractionContextType } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+} = require("discord.js");
 const { addWarn, getWarnCount } = require("../../db/warns");
 const { discordLog } = require("../../utils/loggers");
 const { getLanguage } = require("../../utils/language");
 const strings = require("../../lang/warn");
-const { WARN_TIMEOUT_BASE_MS, MAX_WARN_BEFORE_BAN, MAX_WARN_REASON_LENGTH } = require("../../utils/constants");
+const {
+  WARN_TIMEOUT_BASE_MS,
+  MAX_WARN_BEFORE_BAN,
+  MAX_WARN_REASON_LENGTH,
+} = require("../../utils/constants");
 
 async function handleBan(interaction, user, guildMember, t) {
   const banEmbed = new EmbedBuilder()
@@ -11,10 +20,12 @@ async function handleBan(interaction, user, guildMember, t) {
     .setTitle(t.banTitle(user.username))
     .addFields(
       { name: "Reason:", value: t.banReason },
-      { name: "Actions taken:", value: t.banAction }
+      { name: "Actions taken:", value: t.banAction },
     );
 
-  if (interaction.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+  if (
+    interaction.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)
+  ) {
     try {
       await user.send({ embeds: [banEmbed] });
     } catch (error) {
@@ -27,7 +38,10 @@ async function handleBan(interaction, user, guildMember, t) {
       discordLog("info", t.logBanned(user.username, interaction.user.username));
     } catch (error) {
       discordLog("error", t.logBanFailed(user.username, error.message));
-      await interaction.reply({ content: t.errBanFailed(user.username), ephemeral: true });
+      await interaction.reply({
+        content: t.errBanFailed(user.username),
+        ephemeral: true,
+      });
     }
   } else {
     await interaction.reply({ content: t.errNoBanPerms, ephemeral: true });
@@ -45,10 +59,17 @@ async function handleWarn(interaction, user, guildMember, reason, t) {
     .addFields(
       { name: "Reason:", value: reason },
       { name: t.warnCount, value: `${newWarnCount}` },
-      { name: t.timeoutDuration, value: t.timeoutMinutes(timeoutDuration / 60000) }
+      {
+        name: t.timeoutDuration,
+        value: t.timeoutMinutes(timeoutDuration / 60000),
+      },
     );
 
-  if (interaction.guild.members.me.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+  if (
+    interaction.guild.members.me.permissions.has(
+      PermissionFlagsBits.ModerateMembers,
+    )
+  ) {
     try {
       await user.send({ embeds: [warnEmbed] });
     } catch (error) {
@@ -58,10 +79,20 @@ async function handleWarn(interaction, user, guildMember, reason, t) {
     try {
       await guildMember.timeout(timeoutDuration, reason);
       await interaction.reply({ embeds: [warnEmbed] });
-      discordLog("info", t.logTimeout(user.username, timeoutDuration / 60000, interaction.user.username));
+      discordLog(
+        "info",
+        t.logTimeout(
+          user.username,
+          timeoutDuration / 60000,
+          interaction.user.username,
+        ),
+      );
     } catch (error) {
       discordLog("error", t.logTimeoutFailed(user.username, error.message));
-      await interaction.reply({ content: t.errTimeoutFailed(user.username), ephemeral: true });
+      await interaction.reply({
+        content: t.errTimeoutFailed(user.username),
+        ephemeral: true,
+      });
     }
   } else {
     await interaction.reply({ content: t.errNoTimeoutPerms, ephemeral: true });
@@ -72,9 +103,17 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("warn")
     .setDescription("Adds a warning to a user and applies a timeout.")
-    .addUserOption((option) => option.setName("user").setDescription("The user to warn.").setRequired(true))
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("The user to warn.")
+        .setRequired(true),
+    )
     .addStringOption((option) =>
-      option.setName("reason").setDescription("The reason for the warning.").setRequired(true)
+      option
+        .setName("reason")
+        .setDescription("The reason for the warning.")
+        .setRequired(true),
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setContexts(InteractionContextType.Guild),
@@ -84,7 +123,9 @@ module.exports = {
     const t = strings[lang];
     const user = interaction.options.getUser("user");
     const reason = interaction.options.getString("reason");
-    const guildMember = await interaction.guild.members.fetch(user.id).catch(() => null);
+    const guildMember = await interaction.guild.members
+      .fetch(user.id)
+      .catch(() => null);
 
     if (reason.length > MAX_WARN_REASON_LENGTH) {
       return interaction.reply({

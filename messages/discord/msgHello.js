@@ -7,8 +7,15 @@ const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
 async function handleHello(message, lang) {
   const lastGreeting = await getLastGreeting(message.author.id);
 
-  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - GREETING_COOLDOWN_MS) {
-    discordLog("info", `User ${message.author.username} (${message.author.id}) was greeted recently, skipping.`);
+  if (
+    lastGreeting &&
+    new Date(lastGreeting.timestamp).getTime() >
+      Date.now() - GREETING_COOLDOWN_MS
+  ) {
+    discordLog(
+      "info",
+      `User ${message.author.username} (${message.author.id}) was greeted recently, skipping.`,
+    );
     return;
   }
 
@@ -16,7 +23,9 @@ async function handleHello(message, lang) {
   const userMention = `<@${message.author.id}>`;
 
   const greetings = resources[lang].greetingResponses.map((greeting) => {
-    let replacedGreeting = greeting.replace("{userName}", userName).replace("{userMention}", userMention);
+    let replacedGreeting = greeting
+      .replace("{userName}", userName)
+      .replace("{userMention}", userMention);
     for (const emojiName in emojis) {
       const regex = new RegExp(`\\{emojis\\.${emojiName}\\}`, "g");
       replacedGreeting = replacedGreeting.replace(regex, emojis[emojiName]);
@@ -24,7 +33,8 @@ async function handleHello(message, lang) {
     return replacedGreeting;
   });
 
-  const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+  const randomGreeting =
+    greetings[Math.floor(Math.random() * greetings.length)];
 
   try {
     await message.reply(randomGreeting);

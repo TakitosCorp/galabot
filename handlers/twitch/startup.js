@@ -6,7 +6,8 @@ const interactionHandler = require("../../events/twitch/interactionCreate");
 const { createEventData } = require("./eventData");
 
 async function bootstrap(clientManager) {
-  const { twitchChatClient, twitchApiClient, twitchEventSubListener } = clientManager;
+  const { twitchChatClient, twitchApiClient, twitchEventSubListener } =
+    clientManager;
   const channelName = process.env.TWITCH_CHANNEL;
   const username = process.env.TWITCH_USERNAME;
 
@@ -15,10 +16,12 @@ async function bootstrap(clientManager) {
   });
 
   twitchChatClient.onDisconnect((manually, reason) => {
-    const reasonMsg = reason ? `${reason.message || "No message"} (${reason.name})` : "Unknown reason";
+    const reasonMsg = reason
+      ? `${reason.message || "No message"} (${reason.name})`
+      : "Unknown reason";
     twitchLog(
       "warn",
-      `Twitch client disconnected: ${manually ? "Manually" : "Automatically"} - Reason: ${reasonMsg}`
+      `Twitch client disconnected: ${manually ? "Manually" : "Automatically"} - Reason: ${reasonMsg}`,
     );
     if (!manually) {
       twitchLog("info", "Client will attempt to reconnect automatically...");
@@ -35,18 +38,26 @@ async function bootstrap(clientManager) {
   });
 
   try {
-    const user = await twitchApiClient.users.getUserByName(channelName.replace("#", ""));
+    const user = await twitchApiClient.users.getUserByName(
+      channelName.replace("#", ""),
+    );
     if (user) {
       twitchEventSubListener.onStreamOnline(user.id, (event) => {
         streamStartHandler(event, clientManager);
       });
 
       twitchEventSubListener.onStreamOffline(user.id, (event) => {
-        twitchLog("info", `Stream for ${event.broadcasterDisplayName} has ended.`);
+        twitchLog(
+          "info",
+          `Stream for ${event.broadcasterDisplayName} has ended.`,
+        );
         streamEndHandler(event, clientManager);
       });
 
-      twitchLog("info", `EventSub subscribed to events for ${user.displayName}.`);
+      twitchLog(
+        "info",
+        `EventSub subscribed to events for ${user.displayName}.`,
+      );
     } else {
       twitchLog("error", `Could not find Twitch user: ${channelName}`);
     }

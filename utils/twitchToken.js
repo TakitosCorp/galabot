@@ -4,7 +4,9 @@ const axios = require("axios");
 const twitchConfigPath = fileUtils.getFilePath("twitch.json");
 
 async function refreshToken(token) {
-  const response = await axios.get(`https://twitchtokengenerator.com/api/refresh/${token}`);
+  const response = await axios.get(
+    `https://twitchtokengenerator.com/api/refresh/${token}`,
+  );
   return response.data;
 }
 
@@ -52,11 +54,13 @@ async function getValidTwitchConfig() {
       twitchConfig.REFRESH_TOKEN = response.refresh;
       twitchConfig.CLIENT_ID = response.client_id;
       const { TOKEN_VALIDITY_MS } = require("./constants");
-      twitchConfig.VALID_UNTIL = new Date(now + TOKEN_VALIDITY_MS).toISOString();
+      twitchConfig.VALID_UNTIL = new Date(
+        now + TOKEN_VALIDITY_MS,
+      ).toISOString();
       fileUtils.writeJSON(twitchConfigPath, twitchConfig);
     } else {
       throw new Error(
-        `Twitch token refresh failed. The refresh token may be invalid or expired. Response: ${JSON.stringify(response)}`
+        `Twitch token refresh failed. The refresh token may be invalid or expired. Response: ${JSON.stringify(response)}`,
       );
     }
   }

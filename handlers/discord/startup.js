@@ -19,9 +19,13 @@ async function registerEvents(discordClient, clientManager) {
     const eventName = event.name;
 
     if (event.once) {
-      discordClient.once(eventName, (...args) => event.execute(...args, discordClient, clientManager));
+      discordClient.once(eventName, (...args) =>
+        event.execute(...args, discordClient, clientManager),
+      );
     } else {
-      discordClient.on(eventName, (...args) => event.execute(...args, discordClient, clientManager));
+      discordClient.on(eventName, (...args) =>
+        event.execute(...args, discordClient, clientManager),
+      );
     }
   }
 }

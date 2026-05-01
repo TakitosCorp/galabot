@@ -5,7 +5,8 @@ module.exports = {
     dmSuccess: (tag) => `✅ Reminder sent to ${tag} via DM.`,
     dmFallback: (id) =>
       `Hey <@${id}>! I couldn't send you a DM, but I've been asked to remind you to read the rules in <#1080660073858220147>.`,
-    dmFallbackReply: (tag) => `⚠️ Couldn't send DM to ${tag}, notified here instead.`,
+    dmFallbackReply: (tag) =>
+      `⚠️ Couldn't send DM to ${tag}, notified here instead.`,
     rulesTitle: "RULES!",
     rulesFields: [
       {
@@ -50,10 +51,14 @@ module.exports = {
         value: "⋆ Keep everyone's privacy protected.",
       },
       { name: "​", value: "​" },
-      { name: "≡;- ꒰ ° 3 WARNINGS = BAN ° ꒱", value: "This is not negotiable!" },
+      {
+        name: "≡;- ꒰ ° 3 WARNINGS = BAN ° ꒱",
+        value: "This is not negotiable!",
+      },
     ],
     rulesFooter: "Thank you for reading the rules, takito 💜",
-    logSent: (username) => `Server rules sent in channel by request of ${username}`,
+    logSent: (username) =>
+      `Server rules sent in channel by request of ${username}`,
     logDmSent: (tag, by) => `Rules reminder sent to ${tag} by ${by}`,
     logDmFail: (tag) => `Could not send DM to ${tag}, notified in channel.`,
     logChannelFail: (msg) => `Failed to notify in fallback channel: ${msg}`,
@@ -64,7 +69,8 @@ module.exports = {
     dmSuccess: (tag) => `✅ Recordatorio enviado a ${tag} por DM.`,
     dmFallback: (id) =>
       `¡Hola <@${id}>! No he podido enviarte un DM, pero me han pedido que te recuerde leer las normas en <#1080660073858220147>.`,
-    dmFallbackReply: (tag) => `⚠️ No se pudo enviar DM a ${tag}, se le notificó aquí.`,
+    dmFallbackReply: (tag) =>
+      `⚠️ No se pudo enviar DM a ${tag}, se le notificó aquí.`,
     rulesTitle: "¡REGLAS!",
     rulesFields: [
       {
@@ -109,12 +115,18 @@ module.exports = {
         value: "⋆ Protege la privacidad de todos.",
       },
       { name: "​", value: "​" },
-      { name: "≡;- ꒰ ° 3 ADVERTENCIAS = BAN ° ꒱", value: "¡Esto no es negociable!" },
+      {
+        name: "≡;- ꒰ ° 3 ADVERTENCIAS = BAN ° ꒱",
+        value: "¡Esto no es negociable!",
+      },
     ],
     rulesFooter: "Muchas gracias por leer las reglas, takito 💜",
-    logSent: (username) => `Normas del servidor enviadas en el canal por petición de ${username}`,
+    logSent: (username) =>
+      `Normas del servidor enviadas en el canal por petición de ${username}`,
     logDmSent: (tag, by) => `Recordatorio de normas enviado a ${tag} por ${by}`,
-    logDmFail: (tag) => `No se pudo enviar DM a ${tag}, notificando en el canal.`,
-    logChannelFail: (msg) => `Fallo al intentar notificar en el canal alternativo: ${msg}`,
+    logDmFail: (tag) =>
+      `No se pudo enviar DM a ${tag}, notificando en el canal.`,
+    logChannelFail: (msg) =>
+      `Fallo al intentar notificar en el canal alternativo: ${msg}`,
   },
 };

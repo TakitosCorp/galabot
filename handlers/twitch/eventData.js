@@ -22,7 +22,9 @@ function createEventData(channel, user, message, msg) {
       staff: msg.userInfo.isStaff,
     },
     timestamp: new Date(),
-    self: msg.userInfo.userName.toLowerCase() === process.env.TWITCH_USERNAME.toLowerCase(),
+    self:
+      msg.userInfo.userName.toLowerCase() ===
+      process.env.TWITCH_USERNAME.toLowerCase(),
     rawData: msg,
   };
 }

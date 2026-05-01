@@ -15,7 +15,9 @@ const REQUIRED_ENV = [
 function validateEnv() {
   const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
   if (missing.length) {
-    console.error(`FATAL: Missing required environment variables: ${missing.join(", ")}`);
+    console.error(
+      `FATAL: Missing required environment variables: ${missing.join(", ")}`,
+    );
     process.exit(1);
   }
 }
@@ -25,6 +27,9 @@ validateEnv();
 const manager = new clientManager();
 
 manager.initialize().catch((error) => {
-  sysLog("error", `Critical failure initializing clientManager: ${error.stack}`);
+  sysLog(
+    "error",
+    `Critical failure initializing clientManager: ${error.stack}`,
+  );
   process.exit(1);
 });

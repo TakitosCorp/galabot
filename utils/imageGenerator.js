@@ -31,7 +31,8 @@ async function getBrowser() {
     }
   }
   if (!browser) {
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
+    const executablePath =
+      process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
 
     browser = await puppeteer.launch({
       headless: "new",
@@ -91,14 +92,17 @@ async function generateStreamBanner(streamData, options = {}) {
 
       htmlContent = htmlContent
         .replace("{{STREAM_TITLE}}", escapeHtml(filteredTitle))
-        .replace("{{STREAM_CATEGORY}}", escapeHtml(streamData.category || "No category"))
+        .replace(
+          "{{STREAM_CATEGORY}}",
+          escapeHtml(streamData.category || "No category"),
+        )
         .replace("{{GAME_IMAGE_URL}}", escapeHtml(gameImageUrl));
     }
 
     if (templateName === "nextStreams.html" && options.streamsJson) {
       htmlContent = htmlContent.replace(
         /const streams = \[[\s\S]*?\];/,
-        `const streams = ${JSON.stringify(options.streamsJson, null, 2)};`
+        `const streams = ${JSON.stringify(options.streamsJson, null, 2)};`,
       );
     }
 
@@ -109,11 +113,17 @@ async function generateStreamBanner(streamData, options = {}) {
       twitchLog("error", `[Browser Error] ${error.message}`);
     });
     page.on("requestfailed", (request) => {
-      twitchLog("warn", `[Request Failed] ${request.url()} - ${request.failure().errorText}`);
+      twitchLog(
+        "warn",
+        `[Request Failed] ${request.url()} - ${request.failure().errorText}`,
+      );
     });
     page.on("response", (response) => {
       if (response.status() >= 400) {
-        twitchLog("warn", `[HTTP Error] ${response.url()} - ${response.status()}`);
+        twitchLog(
+          "warn",
+          `[HTTP Error] ${response.url()} - ${response.status()}`,
+        );
       }
     });
 
@@ -131,25 +141,41 @@ async function generateStreamBanner(streamData, options = {}) {
 
     const bodyContent = await page.evaluate(() => document.body.innerHTML);
     if (!bodyContent || bodyContent.trim().length === 0) {
-      twitchLog("warn", "Body content is empty after first attempt, retrying with setContent...");
+      twitchLog(
+        "warn",
+        "Body content is empty after first attempt, retrying with setContent...",
+      );
       await page.setContent(htmlContent, {
         waitUntil: ["load", "domcontentloaded"],
         timeout: PUPPETEER_GOTO_TIMEOUT_MS,
       });
-      const bodyContentRetry = await page.evaluate(() => document.body.innerHTML);
+      const bodyContentRetry = await page.evaluate(
+        () => document.body.innerHTML,
+      );
       if (!bodyContentRetry || bodyContentRetry.trim().length === 0) {
         throw new Error("HTML content did not load correctly in the page");
       }
     }
 
     if (templateName === "nextStreams.html") {
-      await page.waitForSelector("#streamsContainer", { timeout: PUPPETEER_SELECTOR_TIMEOUT_MS }).catch(() => {});
-      await new Promise((resolve) => setTimeout(resolve, NEXT_STREAMS_SETTLE_MS));
+      await page
+        .waitForSelector("#streamsContainer", {
+          timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
+        })
+        .catch(() => {});
+      await new Promise((resolve) =>
+        setTimeout(resolve, NEXT_STREAMS_SETTLE_MS),
+      );
     } else {
       try {
-        await page.waitForSelector("#gameImage", { timeout: PUPPETEER_SELECTOR_TIMEOUT_MS });
+        await page.waitForSelector("#gameImage", {
+          timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
+        });
       } catch (error) {
-        twitchLog("warn", `Image not loaded in expected time, continuing: ${error.message}`);
+        twitchLog(
+          "warn",
+          `Image not loaded in expected time, continuing: ${error.message}`,
+        );
       }
       await new Promise((resolve) => setTimeout(resolve, BANNER_SETTLE_MS));
     }
@@ -176,7 +202,10 @@ async function generateStreamBanner(streamData, options = {}) {
 }
 
 async function generateNextStreamsImage(streamsJson) {
-  return generateStreamBanner({}, { templateName: "nextStreams.html", streamsJson });
+  return generateStreamBanner(
+    {},
+    { templateName: "nextStreams.html", streamsJson },
+  );
 }
 
 async function closeBrowser() {

@@ -17,7 +17,9 @@ module.exports = {
 
     const content = message.content.toLowerCase().trim();
     const isGreeting = resources[lang].greetings.some(
-      (greet) => new RegExp(`^${greet}$`, "i").test(content) || new RegExp(`\\b${greet}\\b`, "i").test(content)
+      (greet) =>
+        new RegExp(`^${greet}$`, "i").test(content) ||
+        new RegExp(`\\b${greet}\\b`, "i").test(content),
     );
 
     if (isGreeting) {

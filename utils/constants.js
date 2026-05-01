@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   // Greeting cooldown applied per-user across Discord and Twitch

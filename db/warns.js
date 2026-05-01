@@ -23,7 +23,10 @@ async function getWarnCount(userId) {
 async function addWarn(userId, reason) {
   const timestamp = new Date().toISOString();
   await db.transaction().execute(async (trx) => {
-    await trx.insertInto("warns").values({ userId, timestamp, reason }).execute();
+    await trx
+      .insertInto("warns")
+      .values({ userId, timestamp, reason })
+      .execute();
   });
 }
 

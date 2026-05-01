@@ -8,7 +8,10 @@ async function handlePing(message, lang) {
   const user = message.author;
   const guildMember = await message.guild.members.fetch(user.id);
 
-  if (!guildMember || guildMember.permissions.has(PermissionFlagsBits.Administrator)) {
+  if (
+    !guildMember ||
+    guildMember.permissions.has(PermissionFlagsBits.Administrator)
+  ) {
     return;
   }
 
@@ -20,10 +23,12 @@ async function handlePing(message, lang) {
       .setTitle(t.banTitle(user.username))
       .addFields(
         { name: "Reason:", value: t.banReason },
-        { name: "Actions taken:", value: t.banAction }
+        { name: "Actions taken:", value: t.banAction },
       );
 
-    if (message.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+    if (
+      message.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)
+    ) {
       try {
         await user.send({ embeds: [banEmbed] });
       } catch (e) {
@@ -32,7 +37,10 @@ async function handlePing(message, lang) {
       try {
         await guildMember.ban({ reason: t.banReason });
         await message.channel.send({ embeds: [banEmbed] });
-        discordLog("info", `User ${user.username} banned for accumulated warns.`);
+        discordLog(
+          "info",
+          `User ${user.username} banned for accumulated warns.`,
+        );
       } catch (error) {
         discordLog("error", `Failed to ban ${user.username}: ${error.message}`);
       }
@@ -49,10 +57,17 @@ async function handlePing(message, lang) {
       .addFields(
         { name: "Reason:", value: reason },
         { name: t.warnCount, value: `${newWarnCount}` },
-        { name: t.timeoutDuration, value: t.timeoutMinutes(timeoutDuration / 60000) }
+        {
+          name: t.timeoutDuration,
+          value: t.timeoutMinutes(timeoutDuration / 60000),
+        },
       );
 
-    if (message.guild.members.me.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+    if (
+      message.guild.members.me.permissions.has(
+        PermissionFlagsBits.ModerateMembers,
+      )
+    ) {
       try {
         await user.send({ embeds: [warnEmbed] });
       } catch (e) {
@@ -61,9 +76,15 @@ async function handlePing(message, lang) {
       try {
         await guildMember.timeout(timeoutDuration, reason);
         await message.channel.send({ embeds: [warnEmbed] });
-        discordLog("info", `Timeout applied to ${user.username} for ${timeoutDuration / 60000} minutes.`);
+        discordLog(
+          "info",
+          `Timeout applied to ${user.username} for ${timeoutDuration / 60000} minutes.`,
+        );
       } catch (error) {
-        discordLog("error", `Failed to apply timeout to ${user.username}: ${error.message}`);
+        discordLog(
+          "error",
+          `Failed to apply timeout to ${user.username}: ${error.message}`,
+        );
       }
     }
   }

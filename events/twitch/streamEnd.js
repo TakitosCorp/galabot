@@ -17,7 +17,9 @@ async function streamEnd(event, clientManager) {
     const streamId = initialStreamInfo.id;
     const discMsgId = initialStreamInfo.discMsgId;
 
-    const endTime = event.endDate ? event.endDate.toISOString() : new Date().toISOString();
+    const endTime = event.endDate
+      ? event.endDate.toISOString()
+      : new Date().toISOString();
 
     stopViewersAverage(streamId);
 
@@ -35,10 +37,16 @@ async function streamEnd(event, clientManager) {
       if (twitchUsername) {
         let scheduleThisWeek;
         try {
-          scheduleThisWeek = await getStreamerScheduleThisWeek(twitchUsername, twitchApiClient);
+          scheduleThisWeek = await getStreamerScheduleThisWeek(
+            twitchUsername,
+            twitchApiClient,
+          );
         } catch (imgErr) {
           if (imgErr.isAxiosError && imgErr.response?.status === 404) {
-            twitchLog("info", "User has no schedule, using empty array for next streams image.");
+            twitchLog(
+              "info",
+              "User has no schedule, using empty array for next streams image.",
+            );
             scheduleThisWeek = [];
           } else {
             throw imgErr;
@@ -51,10 +59,13 @@ async function streamEnd(event, clientManager) {
         const status = imgErr.response?.status;
         twitchLog(
           "error",
-          `Axios error fetching schedule: ${imgErr.message}${status ? ` (status: ${status})` : ""}`
+          `Axios error fetching schedule: ${imgErr.message}${status ? ` (status: ${status})` : ""}`,
         );
       }
-      twitchLog("error", `Error generating next streams image: ${imgErr.stack}`);
+      twitchLog(
+        "error",
+        `Error generating next streams image: ${imgErr.stack}`,
+      );
     }
 
     try {
@@ -69,11 +80,16 @@ async function streamEnd(event, clientManager) {
             let twitchUrl = null;
             try {
               if (twitchApiClient && process.env.TWITCH_CHANNEL) {
-                user = await twitchApiClient.users.getUserByName(process.env.TWITCH_CHANNEL);
+                user = await twitchApiClient.users.getUserByName(
+                  process.env.TWITCH_CHANNEL,
+                );
                 twitchUrl = `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`;
               }
             } catch (userErr) {
-              twitchLog("warn", `Could not get Twitch user for author: ${userErr.message}`);
+              twitchLog(
+                "warn",
+                `Could not get Twitch user for author: ${userErr.message}`,
+              );
             }
             const embed = new EmbedBuilder()
               .setColor(0x800080)
@@ -83,20 +99,36 @@ async function streamEnd(event, clientManager) {
                 url: twitchUrl || undefined,
               })
               .addFields(
-                { name: "📝 Title", value: finalStreamData.title || "No title", inline: false },
-                { name: "🎮 Category", value: `*${finalStreamData.category || "No category"}*`, inline: false },
-                { name: "📺 Status", value: "The stream has ended — see you next time!", inline: false }
+                {
+                  name: "📝 Title",
+                  value: finalStreamData.title || "No title",
+                  inline: false,
+                },
+                {
+                  name: "🎮 Category",
+                  value: `*${finalStreamData.category || "No category"}*`,
+                  inline: false,
+                },
+                {
+                  name: "📺 Status",
+                  value: "The stream has ended — see you next time!",
+                  inline: false,
+                },
               )
               .setFooter({ text: "Thanks for stopping by the stream 💜" })
               .setTimestamp(new Date(endTime));
             let attachment = null;
             if (imageBuffer) {
-              attachment = new AttachmentBuilder(imageBuffer, { name: "next-streams.png" });
+              attachment = new AttachmentBuilder(imageBuffer, {
+                name: "next-streams.png",
+              });
             }
             if (attachment) {
               embed.setImage("attachment://next-streams.png");
             } else if (finalStreamData.getThumbnailUrl) {
-              embed.setImage(finalStreamData.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`);
+              embed.setImage(
+                finalStreamData.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`,
+              );
             }
             const editOptions = {
               embeds: [embed],
@@ -117,7 +149,9 @@ async function streamEnd(event, clientManager) {
       try {
         await axios.post(process.env.POST_DATA_WEBHOOK, {
           id: finalStreamData.id,
-          timestamp: finalStreamData.timestamp ? new Date(finalStreamData.timestamp).toISOString() : null,
+          timestamp: finalStreamData.timestamp
+            ? new Date(finalStreamData.timestamp).toISOString()
+            : null,
           title: finalStreamData.title,
           viewers: finalStreamData.viewers || 0,
           category: finalStreamData.category,
@@ -126,7 +160,10 @@ async function streamEnd(event, clientManager) {
         });
         twitchLog("info", "Stream end webhook sent successfully.");
       } catch (webhookErr) {
-        twitchLog("error", `Error sending stream end webhook: ${webhookErr.stack}`);
+        twitchLog(
+          "error",
+          `Error sending stream end webhook: ${webhookErr.stack}`,
+        );
       }
     } else {
       twitchLog("warn", `Stream ${streamId} not found to mark as ended.`);

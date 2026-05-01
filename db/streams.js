@@ -20,7 +20,11 @@ async function insertStream(streamData) {
 
 async function getMostRecentStream() {
   return await db.transaction().execute(async (trx) => {
-    const result = await trx.selectFrom("streams").selectAll().orderBy("timestamp", "desc").executeTakeFirst();
+    const result = await trx
+      .selectFrom("streams")
+      .selectAll()
+      .orderBy("timestamp", "desc")
+      .executeTakeFirst();
 
     return result || null;
   });
@@ -28,7 +32,11 @@ async function getMostRecentStream() {
 
 async function streamExists(streamId) {
   return await db.transaction().execute(async (trx) => {
-    const result = await trx.selectFrom("streams").select("id").where("id", "=", streamId).executeTakeFirst();
+    const result = await trx
+      .selectFrom("streams")
+      .select("id")
+      .where("id", "=", streamId)
+      .executeTakeFirst();
 
     return result !== undefined;
   });
@@ -47,9 +55,14 @@ async function updateStreamViewers(streamId, currentViewers) {
     const samples = stream.viewerSamples;
     const oldAvg = stream.viewers;
 
-    const newAverage = Math.round((oldAvg * samples + currentViewers) / (samples + 1));
+    const newAverage = Math.round(
+      (oldAvg * samples + currentViewers) / (samples + 1),
+    );
 
-    twitchLog("info", `Calculando promedio para stream ${streamId}: oldAvg=${oldAvg}, samples=${samples}, current=${currentViewers} -> newAvg=${newAverage} (valor a guardar)`);
+    twitchLog(
+      "info",
+      `Calculando promedio para stream ${streamId}: oldAvg=${oldAvg}, samples=${samples}, current=${currentViewers} -> newAvg=${newAverage} (valor a guardar)`,
+    );
 
     await trx
       .updateTable("streams")
@@ -66,10 +79,18 @@ async function updateStreamViewers(streamId, currentViewers) {
 
 async function updateStreamEnd(streamId, endTime) {
   return await db.transaction().execute(async (trx) => {
-    const result = await trx.updateTable("streams").set({ end: endTime }).where("id", "=", streamId).execute();
+    const result = await trx
+      .updateTable("streams")
+      .set({ end: endTime })
+      .where("id", "=", streamId)
+      .execute();
 
     const numUpdatedRows =
-      result.numUpdatedRows !== undefined ? result.numUpdatedRows : Array.isArray(result) ? result.length : 0;
+      result.numUpdatedRows !== undefined
+        ? result.numUpdatedRows
+        : Array.isArray(result)
+          ? result.length
+          : 0;
 
     return numUpdatedRows > 0;
   });
@@ -77,10 +98,18 @@ async function updateStreamEnd(streamId, endTime) {
 
 async function updateStreamDiscordMessage(streamId, discMsgId) {
   return await db.transaction().execute(async (trx) => {
-    const result = await trx.updateTable("streams").set({ discMsgId }).where("id", "=", streamId).execute();
+    const result = await trx
+      .updateTable("streams")
+      .set({ discMsgId })
+      .where("id", "=", streamId)
+      .execute();
 
     const numUpdatedRows =
-      result.numUpdatedRows !== undefined ? result.numUpdatedRows : Array.isArray(result) ? result.length : 0;
+      result.numUpdatedRows !== undefined
+        ? result.numUpdatedRows
+        : Array.isArray(result)
+          ? result.length
+          : 0;
 
     return numUpdatedRows > 0;
   });

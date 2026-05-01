@@ -3,25 +3,32 @@ const { getValidTwitchConfig } = require("./twitchToken");
 
 async function getBroadcasterId(username, clientId, accessToken) {
   if (typeof username !== "string") {
-    throw new Error(`El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`);
+    throw new Error(
+      `El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`,
+    );
   }
   const url = `https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`;
   try {
     const res = await axios.get(url, {
-      headers: { "Client-Id": clientId, Authorization: `Bearer ${accessToken}` },
+      headers: {
+        "Client-Id": clientId,
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
     const data = res.data;
-    if (!data.data.length) throw new Error(`Usuario no encontrado: ${username}`);
+    if (!data.data.length)
+      throw new Error(`Usuario no encontrado: ${username}`);
     return data.data[0].id;
   } catch (err) {
     if (err.response) {
       const twitchError = err.response.data;
-      throw new Error(`Error al obtener broadcasterId para "${username}": ${JSON.stringify(twitchError)}`);
+      throw new Error(
+        `Error al obtener broadcasterId para "${username}": ${JSON.stringify(twitchError)}`,
+      );
     }
     throw err;
   }
 }
-
 
 async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
   if (!twitchApiClient || !categoryName) return null;
@@ -38,7 +45,9 @@ async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
 
 async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   if (typeof username !== "string") {
-    throw new Error(`El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`);
+    throw new Error(
+      `El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`,
+    );
   }
   const twitchConfig = await getValidTwitchConfig();
   const clientId = twitchConfig.CLIENT_ID;
@@ -70,7 +79,10 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
     const category = seg.category?.name || "Sin categoría";
     let gameBoxArtUrl = null;
     if (category !== "Sin categoría" && twitchApiClient) {
-      gameBoxArtUrl = await getGameBoxArtUrlByCategoryName(twitchApiClient, category);
+      gameBoxArtUrl = await getGameBoxArtUrlByCategoryName(
+        twitchApiClient,
+        category,
+      );
     }
     result.push({
       title: seg.title,

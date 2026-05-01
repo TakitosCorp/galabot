@@ -7,7 +7,9 @@ module.exports = async function (eventData, clientManager) {
 
   const content = eventData.message.content.toLowerCase().trim();
   const isGreeting = resources.en.greetings.some(
-    (greeting) => new RegExp(`^${greeting}$`, "i").test(content) || new RegExp(`\\b${greeting}\\b`, "i").test(content)
+    (greeting) =>
+      new RegExp(`^${greeting}$`, "i").test(content) ||
+      new RegExp(`\\b${greeting}\\b`, "i").test(content),
   );
 
   if (isGreeting) {

@@ -41,14 +41,21 @@ class clientManager {
 
   async initializeDiscord() {
     this.discordClient = new DiscordClient({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+      ],
     });
 
     await bootstrapDiscord(this.discordClient, this);
 
     return new Promise((resolve, reject) => {
       this.discordClient.once("ready", () => {
-        discordLog("info", `Discord client connected as ${this.discordClient.user.tag}`);
+        discordLog(
+          "info",
+          `Discord client connected as ${this.discordClient.user.tag}`,
+        );
         resolve();
       });
 
@@ -69,7 +76,10 @@ class clientManager {
 
     try {
       const twitchConfig = await getValidTwitchConfig();
-      const authProvider = new StaticAuthProvider(twitchConfig.CLIENT_ID, twitchConfig.ACCESS_TOKEN);
+      const authProvider = new StaticAuthProvider(
+        twitchConfig.CLIENT_ID,
+        twitchConfig.ACCESS_TOKEN,
+      );
 
       this.twitchApiClient = new ApiClient({ authProvider });
 
@@ -85,14 +95,19 @@ class clientManager {
         },
       });
 
-      this.twitchEventSubListener = new EventSubWsListener({ apiClient: this.twitchApiClient });
+      this.twitchEventSubListener = new EventSubWsListener({
+        apiClient: this.twitchApiClient,
+      });
 
       await bootstrapTwitch(this);
 
       await this.twitchChatClient.connect();
       await this.twitchEventSubListener.start();
 
-      twitchLog("info", "Twitch client and EventSub initialized and connected.");
+      twitchLog(
+        "info",
+        "Twitch client and EventSub initialized and connected.",
+      );
     } catch (error) {
       sysLog("error", `Failed to initialize Twitch client: ${error.stack}`);
       throw error;
@@ -109,7 +124,8 @@ class clientManager {
       await closeBrowser();
 
       if (this.discordClient) this.discordClient.destroy();
-      if (this.twitchChatClient) await this.twitchChatClient.quit().catch(() => {});
+      if (this.twitchChatClient)
+        await this.twitchChatClient.quit().catch(() => {});
       if (this.twitchEventSubListener) this.twitchEventSubListener.stop();
 
       sysLog("info", "Shutdown complete.");

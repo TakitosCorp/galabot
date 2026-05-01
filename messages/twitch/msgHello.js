@@ -8,8 +8,15 @@ async function handleHello(eventData, clientManager) {
   const { twitchChatClient } = clientManager;
 
   const lastGreeting = await getLastGreeting(user.id);
-  if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - GREETING_COOLDOWN_MS) {
-    twitchLog("info", `User ${user.name} (${user.id}) was greeted recently on Twitch, skipping.`);
+  if (
+    lastGreeting &&
+    new Date(lastGreeting.timestamp).getTime() >
+      Date.now() - GREETING_COOLDOWN_MS
+  ) {
+    twitchLog(
+      "info",
+      `User ${user.name} (${user.id}) was greeted recently on Twitch, skipping.`,
+    );
     return;
   }
 
@@ -17,7 +24,9 @@ async function handleHello(eventData, clientManager) {
   const greetingResponses = resources.en.greetingResponses || [];
 
   const greetings = greetingResponses
-    .filter((greeting) => typeof greeting === "string" && greeting.trim().length > 0)
+    .filter(
+      (greeting) => typeof greeting === "string" && greeting.trim().length > 0,
+    )
     .map((greeting) => {
       return greeting
         .replace("{userName}", user.name)

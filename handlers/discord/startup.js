@@ -7,7 +7,7 @@ async function bootstrap(discordClient, clientManager) {
   discordClient.commands = new Collection();
   await registerEvents(discordClient, clientManager);
   await registerCommands(discordClient);
-  log("info", "Bootstrap de Discord completado.");
+  log("info", "Discord bootstrap complete.");
 }
 
 async function registerEvents(discordClient, clientManager) {

@@ -35,7 +35,7 @@ async function getBrowser() {
 async function generateStreamBanner(streamData, options = {}) {
   let page;
   try {
-    twitchLog("info", "Generando banner...");
+    twitchLog("info", "Generating banner...");
 
     const templateName = options.templateName || "streamBanner.html";
     const templatePath = path.join(__dirname, "..", "templates", templateName);
@@ -43,14 +43,14 @@ async function generateStreamBanner(streamData, options = {}) {
     try {
       await fs.access(templatePath);
     } catch (error) {
-      twitchLog("error", `Archivo HTML no encontrado: ${templatePath}`);
-      throw new Error(`Template HTML no encontrado en: ${templatePath}`);
+      twitchLog("error", `HTML file not found: ${templatePath}`);
+      throw new Error(`HTML template not found at: ${templatePath}`);
     }
 
     let htmlContent = await fs.readFile(templatePath, "utf8");
     if (!htmlContent || htmlContent.trim().length === 0) {
-      twitchLog("error", "El archivo HTML está vacío");
-      throw new Error("El archivo HTML está vacío");
+      twitchLog("error", "HTML file is empty");
+      throw new Error("HTML file is empty");
     }
 
     if (templateName === "streamBanner.html") {
@@ -60,14 +60,14 @@ async function generateStreamBanner(streamData, options = {}) {
           ? `https://static-cdn.jtvnw.net/ttv-boxart/${streamData.gameId}-432x576.jpg`
           : "https://static-cdn.jtvnw.net/ttv-static/404_boxart-432x576.jpg");
 
-      let filteredTitle = (streamData.title || "Sin título")
+      let filteredTitle = (streamData.title || "No title")
         .replace(/!\w+\b/g, "")
         .replace(/\s{2,}/g, " ")
         .trim();
 
       htmlContent = htmlContent
         .replace("{{STREAM_TITLE}}", filteredTitle)
-        .replace("{{STREAM_CATEGORY}}", streamData.category || "Sin categoría")
+        .replace("{{STREAM_CATEGORY}}", streamData.category || "No category")
         .replace("{{GAME_IMAGE_URL}}", gameImageUrl);
     }
 
@@ -99,7 +99,7 @@ async function generateStreamBanner(streamData, options = {}) {
     await page.setViewport({ width: 1280, height: 720 });
 
     const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    twitchLog("debug", "Navegando a data URI para renderizar el banner...");
+    twitchLog("debug", "Navigating to data URI to render banner...");
     await page.goto(dataUri, {
       waitUntil: "networkidle0",
       timeout: 15000,
@@ -107,14 +107,14 @@ async function generateStreamBanner(streamData, options = {}) {
 
     const bodyContent = await page.evaluate(() => document.body.innerHTML);
     if (!bodyContent || bodyContent.trim().length === 0) {
-      twitchLog("warn", "El contenido del body está vacío tras el primer intento, reintentando con setContent...");
+      twitchLog("warn", "Body content is empty after first attempt, retrying with setContent...");
       await page.setContent(htmlContent, {
         waitUntil: ["load", "domcontentloaded"],
         timeout: 15000,
       });
       const bodyContentRetry = await page.evaluate(() => document.body.innerHTML);
       if (!bodyContentRetry || bodyContentRetry.trim().length === 0) {
-        throw new Error("El contenido HTML no se cargó correctamente en la página");
+        throw new Error("HTML content did not load correctly in the page");
       }
     }
 
@@ -125,12 +125,12 @@ async function generateStreamBanner(streamData, options = {}) {
       try {
         await page.waitForSelector("#gameImage", { timeout: 5000 });
       } catch (error) {
-        twitchLog("warn", `Imagen no cargada en tiempo esperado, continuando: ${error.message}`);
+        twitchLog("warn", `Image not loaded in expected time, continuing: ${error.message}`);
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    twitchLog("debug", "Tomando screenshot del banner...");
+    twitchLog("debug", "Taking banner screenshot...");
     const screenshot = await page.screenshot({
       type: "png",
       fullPage: false,
@@ -139,13 +139,13 @@ async function generateStreamBanner(streamData, options = {}) {
 
     await page.close();
 
-    twitchLog("info", "Banner generado correctamente.");
+    twitchLog("info", "Banner generated successfully.");
     return screenshot;
   } catch (error) {
     if (page) {
       await page.close().catch(() => {});
     }
-    twitchLog("error", `Error generando imagen del banner: ${error.message}`);
+    twitchLog("error", `Error generating banner image: ${error.message}`);
     twitchLog("error", `Stack trace: ${error.stack}`);
     throw error;
   }

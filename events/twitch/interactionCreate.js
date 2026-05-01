@@ -13,6 +13,6 @@ module.exports = async function (eventData, clientManager) {
 
   if (commandName === "ping") {
     await twitchChatClient.say(channel, `@${user.displayName}, Pong!`);
-    twitchLog("info", `Comando !ping ejecutado por ${user.name}`);
+    twitchLog("info", `Command !ping executed by ${user.name}`);
   }
 };

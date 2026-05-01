@@ -2,7 +2,6 @@ const winston = require("winston");
 const fs = require("fs");
 const path = require("path");
 
-// Ensures that the logs directory exists, creates it if not.
 function ensureLogsFolder() {
   const logsDir = path.join(__dirname, "..", "logs");
   if (!fs.existsSync(logsDir)) {
@@ -13,18 +12,17 @@ function ensureLogsFolder() {
 
 const logsDir = ensureLogsFolder();
 
-// Transport for writing combined logs to file.
-const combinedFileTransport = new winston.transports.File({ filename: path.join(logsDir, "combined.log") });
-// Transport for logging to console.
+const combinedFileTransport = new winston.transports.File({
+  filename: path.join(logsDir, "combined.log"),
+});
 const consoleTransport = new winston.transports.Console();
 
-// Logger for Twitch events/messages.
 const twitchLogger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => {
       return `[${timestamp}] [Twitch] ${level}: ${message}`;
-    })
+    }),
   ),
   transports: [
     consoleTransport,
@@ -33,28 +31,28 @@ const twitchLogger = winston.createLogger({
   ],
 });
 
-// Logger for Discord events/messages.
 const discordLogger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => {
       return `[${timestamp}] [Discord] ${level}: ${message}`;
-    })
+    }),
   ),
   transports: [
     consoleTransport,
-    new winston.transports.File({ filename: path.join(logsDir, "discord.log") }),
+    new winston.transports.File({
+      filename: path.join(logsDir, "discord.log"),
+    }),
     combinedFileTransport,
   ],
 });
 
-// Logger for database events/messages.
 const dbLogger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => {
       return `[${timestamp}] [DB] ${level}: ${message}`;
-    })
+    }),
   ),
   transports: [
     consoleTransport,
@@ -63,13 +61,12 @@ const dbLogger = winston.createLogger({
   ],
 });
 
-// Logger for system events/messages.
 const sysLogger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => {
       return `[${timestamp}] [SYS] ${level}: ${message}`;
-    })
+    }),
   ),
   transports: [
     consoleTransport,
@@ -78,19 +75,15 @@ const sysLogger = winston.createLogger({
   ],
 });
 
-// Logs a message to the Twitch logger.
 function twitchLog(level, message) {
   twitchLogger.log({ level, message });
 }
-// Logs a message to the Discord logger.
 function discordLog(level, message) {
   discordLogger.log({ level, message });
 }
-// Logs a message to the DB logger.
 function dbLog(level, message) {
   dbLogger.log({ level, message });
 }
-// Logs a message to the System logger.
 function sysLog(level, message) {
   sysLogger.log({ level, message });
 }

@@ -10,28 +10,30 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 async function resetGlobalCommands() {
   try {
-    // Fetch all global commands for the application
-    const commands = await rest.get(Routes.applicationCommands(process.env.DISCORD_ID));
-    // Delete each command found
+    const commands = await rest.get(
+      Routes.applicationCommands(process.env.DISCORD_ID),
+    );
     const deletePromises = commands.map((command) => {
       const deleteUrl = `${Routes.applicationCommands(process.env.DISCORD_ID)}/${command.id}`;
-      console.log(`[❎] Eliminando comando: ${command.name} (ID: ${command.id})`);
+      console.log(
+        `[❎] Eliminando comando: ${command.name} (ID: ${command.id})`,
+      );
       return rest.delete(deleteUrl);
     });
     await Promise.all(deletePromises);
     console.log(`[✅] Todos los comandos han sido eliminados correctamente.`);
 
-    // Prepare new global commands from files
     const globalCommands = [];
     const commandsDir = path.join(__dirname, "../commands/discord");
-    const commandFiles = fs.readdirSync(commandsDir).filter((archivo) => archivo.endsWith(".js"));
+    const commandFiles = fs
+      .readdirSync(commandsDir)
+      .filter((archivo) => archivo.endsWith(".js"));
     for (const archivo of commandFiles) {
       const commandPath = path.join(commandsDir, archivo);
       const command = require(commandPath);
       globalCommands.push(command.data.toJSON());
     }
 
-    // Publish the new set of global commands
     await rest.put(Routes.applicationCommands(process.env.DISCORD_ID), {
       body: globalCommands,
     });

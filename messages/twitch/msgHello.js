@@ -8,12 +8,12 @@ async function handleHello(eventData, clientManager) {
 
   const lastGreeting = await getLastGreeting(user.id);
   if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
-    twitchLog("info", `Usuario ${user.name} (${user.id}) ya fue saludado recientemente en Twitch.`);
+    twitchLog("info", `User ${user.name} (${user.id}) was greeted recently on Twitch, skipping.`);
     return;
   }
 
   const userMention = `@${user.displayName || user.name}`;
-  const greetingResponses = resources.greetingResponses || [];
+  const greetingResponses = resources.en.greetingResponses || [];
 
   const greetings = greetingResponses
     .filter((greeting) => typeof greeting === "string" && greeting.trim().length > 0)
@@ -27,14 +27,14 @@ async function handleHello(eventData, clientManager) {
   const randomGreeting =
     greetings.length > 0
       ? greetings[Math.floor(Math.random() * greetings.length)]
-      : `¡Hola ${userMention}! ¡Bienvenido/a al canal!`;
+      : `Hey ${userMention}! Welcome to the channel!`;
 
   try {
     await twitchChatClient.say(channel, randomGreeting);
     await updateGreeting(user.id, new Date().toISOString());
-    twitchLog("info", `Saludo enviado a ${user.name} en Twitch.`);
+    twitchLog("info", `Greeting sent to ${user.name} on Twitch.`);
   } catch (error) {
-    twitchLog("error", `No se pudo enviar el saludo en Twitch: ${error.message}`);
+    twitchLog("error", `Failed to send greeting on Twitch: ${error.message}`);
   }
 }
 

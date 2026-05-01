@@ -1,13 +1,7 @@
 const { Client: DiscordClient, GatewayIntentBits } = require("discord.js");
-const { ChatClient: TwitchChatClient } = require("@twurple/chat");
-const { StaticAuthProvider } = require("@twurple/auth");
-const { ApiClient } = require("@twurple/api");
-const { EventSubWsListener } = require("@twurple/eventsub-ws");
 
 const { initialize: dbInitialize } = require("./db/database");
 const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
-const { bootstrap: bootstrapTwitch } = require("./handlers/twitch/startup");
-const { getValidTwitchConfig } = require("./utils/twitchToken");
 const { discordLog, twitchLog, sysLog } = require("./utils/loggers");
 
 class clientManager {
@@ -20,11 +14,26 @@ class clientManager {
 
   async initialize() {
     await dbInitialize();
-    sysLog("info", "Base de datos inicializada.");
+    sysLog("info", "Database initialized.");
 
-    await this.initializeDiscord();
+    const discordEnabled = process.env.ENABLE_DISCORD !== "false";
+    const twitchEnabled = process.env.ENABLE_TWITCH !== "false";
 
-    await this.initializeTwitch();
+    if (discordEnabled) {
+      await this.initializeDiscord();
+    } else {
+      sysLog("info", "Discord platform disabled, skipping.");
+    }
+
+    if (twitchEnabled) {
+      await this.initializeTwitch();
+    } else {
+      sysLog("info", "Twitch platform disabled, skipping.");
+    }
+
+    if (!discordEnabled && !twitchEnabled) {
+      sysLog("warn", "All platforms are disabled. Bot has nothing to do.");
+    }
   }
 
   async initializeDiscord() {
@@ -36,18 +45,25 @@ class clientManager {
 
     return new Promise((resolve, reject) => {
       this.discordClient.once("ready", () => {
-        discordLog("info", `Cliente de Discord conectado como ${this.discordClient.user.tag}`);
+        discordLog("info", `Discord client connected as ${this.discordClient.user.tag}`);
         resolve();
       });
 
       this.discordClient.login(process.env.DISCORD_TOKEN).catch((err) => {
-        sysLog("error", `Fallo en el login de Discord: ${err}`);
+        sysLog("error", `Discord login failed: ${err}`);
         reject(err);
       });
     });
   }
 
   async initializeTwitch() {
+    const { ChatClient: TwitchChatClient } = require("@twurple/chat");
+    const { StaticAuthProvider } = require("@twurple/auth");
+    const { ApiClient } = require("@twurple/api");
+    const { EventSubWsListener } = require("@twurple/eventsub-ws");
+    const { bootstrap: bootstrapTwitch } = require("./handlers/twitch/startup");
+    const { getValidTwitchConfig } = require("./utils/twitchToken");
+
     try {
       const twitchConfig = await getValidTwitchConfig();
       const authProvider = new StaticAuthProvider(twitchConfig.CLIENT_ID, twitchConfig.ACCESS_TOKEN);
@@ -73,9 +89,9 @@ class clientManager {
       await this.twitchChatClient.connect();
       await this.twitchEventSubListener.start();
 
-      twitchLog("info", "Cliente de Twitch y EventSub inicializados y conectados.");
+      twitchLog("info", "Twitch client and EventSub initialized and connected.");
     } catch (error) {
-      sysLog("error", `No se pudo inicializar el cliente de Twitch: ${error.stack}`);
+      sysLog("error", `Failed to initialize Twitch client: ${error.stack}`);
       throw error;
     }
   }

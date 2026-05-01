@@ -5,6 +5,6 @@ const { sysLog } = require("./utils/loggers");
 const manager = new clientManager();
 
 manager.initialize().catch((error) => {
-  sysLog("error", `Fallo crítico al inicializar clientManager: ${error.stack}`);
+  sysLog("error", `Critical failure initializing clientManager: ${error.stack}`);
   process.exit(1);
 });

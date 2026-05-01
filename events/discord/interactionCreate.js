@@ -1,4 +1,4 @@
-const { InteractionType, MessageFlags } = require("discord.js");
+const { InteractionType } = require("discord.js");
 const { discordLog } = require("../../utils/loggers");
 
 async function executeCommand(interaction, client, clientManager) {
@@ -8,7 +8,10 @@ async function executeCommand(interaction, client, clientManager) {
   try {
     await command.execute(interaction, client, clientManager);
   } catch (error) {
-    discordLog("error", `Error ejecutando el comando '${interaction.commandName}': ${error.stack}`);
+    discordLog(
+      "error",
+      `Error ejecutando el comando '${interaction.commandName}': ${error.stack}`,
+    );
 
     const replyOptions = {
       content: "Hubo un error al ejecutar este comando.",

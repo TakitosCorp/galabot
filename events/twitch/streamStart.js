@@ -1,7 +1,6 @@
 const { twitchLog } = require("../../utils/loggers");
 const { insertStream, streamExists, updateStreamDiscordMessage } = require("../../db/streams");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require("discord.js");
-const { streamTitles } = require("../../data/resources.json");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { startViewersAverage } = require("../../utils/twitchViews");
 
@@ -10,15 +9,18 @@ async function streamStart(event, clientManager) {
     const { discordClient, twitchApiClient } = clientManager;
 
     if (!discordClient || !discordClient.isReady()) {
-      twitchLog("error", "El cliente de Discord no está listo. Omitiendo notificación de inicio de stream.");
+      twitchLog("error", "Discord client is not ready. Skipping stream start notification.");
       return;
     }
 
     const stream = await event.getStream();
     if (!stream) {
-      twitchLog("warn", "No se pudo obtener información adicional del stream para marcar como iniciado.");
+      twitchLog("warn", "Could not get additional stream info to mark as started.");
       return;
     }
+
+    const resources = require("../../data/resources.json");
+    const streamTitles = resources.en.streamTitles;
 
     const user = await event.getBroadcaster();
 
@@ -26,13 +28,13 @@ async function streamStart(event, clientManager) {
     if (stream.gameId && twitchApiClient) {
       try {
         gameInfo = await twitchApiClient.games.getGameById(stream.gameId);
-        twitchLog("info", `Información del juego obtenida: ${gameInfo?.name || "Desconocido"}`);
+        twitchLog("info", `Game info retrieved: ${gameInfo?.name || "Unknown"}`);
       } catch (error) {
-        twitchLog("warn", `No se pudo obtener información del juego: ${error.message}`);
+        twitchLog("warn", `Could not get game info: ${error.message}`);
       }
     }
 
-    twitchLog("info", `Stream más reciente iniciado por ${event.broadcasterDisplayName}. Título: ${stream.title}`);
+    twitchLog("info", `Stream started by ${event.broadcasterDisplayName}. Title: ${stream.title}`);
 
     const twitchUrl = `https://www.twitch.tv/${event.broadcasterName}`;
     const randomTitle = streamTitles[Math.floor(Math.random() * streamTitles.length)];
@@ -40,17 +42,17 @@ async function streamStart(event, clientManager) {
     let attachment;
     try {
       const bannerData = {
-        title: stream.title || "Sin título",
-        category: stream.gameName || "Sin categoría",
+        title: stream.title || "No title",
+        category: stream.gameName || "No category",
         gameId: stream.gameId,
         gameBoxArtUrl: gameInfo ? gameInfo.getBoxArtUrl(432, 576) : null,
       };
 
       const bannerBuffer = await generateStreamBanner(bannerData);
       attachment = new AttachmentBuilder(bannerBuffer, { name: "stream-banner.png" });
-      twitchLog("info", "Banner personalizado generado exitosamente.");
+      twitchLog("info", "Custom banner generated successfully.");
     } catch (error) {
-      twitchLog("error", `Error al generar el banner personalizado: ${error.message}`);
+      twitchLog("error", `Error generating custom banner: ${error.message}`);
       attachment = null;
     }
 
@@ -63,27 +65,27 @@ async function streamStart(event, clientManager) {
       })
       .setURL(twitchUrl)
       .addFields(
-        { name: "📝 Título", value: stream.title || "Sin título", inline: false },
-        { name: "🎮 Categoría", value: `*${stream.gameName || "Sin categoría"}*`, inline: false },
+        { name: "📝 Title", value: stream.title || "No title", inline: false },
+        { name: "🎮 Category", value: `*${stream.gameName || "No category"}*`, inline: false },
         {
-          name: "🏷️ Etiquetas",
-          value: stream.tags && stream.tags.length > 0 ? stream.tags.map((tag) => `\`${tag}\``).join(" ") : "Ninguna",
+          name: "🏷️ Tags",
+          value: stream.tags && stream.tags.length > 0 ? stream.tags.map((tag) => `\`${tag}\``).join(" ") : "None",
           inline: false,
         }
       )
       .setImage(attachment ? "attachment://stream-banner.png" : stream.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`)
       .setTimestamp(event.startDate)
       .setFooter({
-        text: `${stream.isMature ? "🔞 Contenido para adultos | " : ""}¡Pásate a saludar! ^^`,
+        text: `${stream.isMature ? "🔞 Mature content | " : ""}Come say hi! ^^`,
       });
 
     const button = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setLabel("Ver directo :3").setStyle(ButtonStyle.Link).setURL(twitchUrl)
+      new ButtonBuilder().setLabel("Watch stream :3").setStyle(ButtonStyle.Link).setURL(twitchUrl)
     );
 
     const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
     if (!channelId) {
-      twitchLog("error", "La variable de entorno DISCORD_NOTIFICATION_CHANNEL no está definida.");
+      twitchLog("error", "DISCORD_NOTIFICATION_CHANNEL env var is not set.");
       return;
     }
 
@@ -96,9 +98,9 @@ async function streamStart(event, clientManager) {
         components: [button],
         ...(attachment ? { files: [attachment] } : {}),
       };
-      
+
       const sentMessage = await channel.send(messageOptions);
-      twitchLog("info", "Mensaje de Discord enviado para notificar el inicio del stream.");
+      twitchLog("info", "Discord message sent to notify stream start.");
 
       const discMsgId = sentMessage.id;
 
@@ -106,14 +108,14 @@ async function streamStart(event, clientManager) {
         const streamData = {
           id: event.id,
           timestamp: event.startDate.toISOString(),
-          title: stream.title || "Sin título",
+          title: stream.title || "No title",
           viewers: 0,
-          category: stream.gameName || "Sin categoría",
+          category: stream.gameName || "No category",
           tags: JSON.stringify(stream.tags || []),
           discMsgId,
         };
         await insertStream(streamData);
-        twitchLog("info", `Stream guardado en la base de datos con ID: ${event.id}.`);
+        twitchLog("info", `Stream saved to database with ID: ${event.id}.`);
       } else {
         await updateStreamDiscordMessage(event.id, discMsgId);
       }
@@ -122,10 +124,10 @@ async function streamStart(event, clientManager) {
         startViewersAverage(event.id, twitchApiClient, process.env.TWITCH_CHANNEL);
       }
     } else {
-      twitchLog("error", `No se encontró el canal de notificaciones (${channelId}) o no es un canal de texto.`);
+      twitchLog("error", `Notification channel (${channelId}) not found or is not a text channel.`);
     }
   } catch (error) {
-    twitchLog("error", `Error al marcar el inicio del stream: ${error.stack}`);
+    twitchLog("error", `Error handling stream start: ${error.stack}`);
   }
 }
 module.exports = streamStart;

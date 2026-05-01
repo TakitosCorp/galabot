@@ -11,17 +11,17 @@ async function bootstrap(clientManager) {
   const username = process.env.TWITCH_USERNAME;
 
   twitchChatClient.onConnect(() => {
-    twitchLog("info", `Cliente de chat de Twitch conectado como ${username}`);
+    twitchLog("info", `Twitch chat client connected as ${username}`);
   });
 
   twitchChatClient.onDisconnect((manually, reason) => {
-    const reasonMsg = reason ? `${reason.message || "Sin mensaje"} (${reason.name})` : "Razón desconocida";
+    const reasonMsg = reason ? `${reason.message || "No message"} (${reason.name})` : "Unknown reason";
     twitchLog(
       "warn",
-      `Cliente de Twitch desconectado: ${manually ? "Manualmente" : "Automáticamente"} - Razón: ${reasonMsg}`
+      `Twitch client disconnected: ${manually ? "Manually" : "Automatically"} - Reason: ${reasonMsg}`
     );
     if (!manually) {
-      twitchLog("info", "El cliente intentará reconectar automáticamente...");
+      twitchLog("info", "Client will attempt to reconnect automatically...");
     }
   });
 
@@ -42,19 +42,19 @@ async function bootstrap(clientManager) {
       });
 
       twitchEventSubListener.onStreamOffline(user.id, (event) => {
-        twitchLog("info", `El stream de ${event.broadcasterDisplayName} ha terminado.`);
+        twitchLog("info", `Stream for ${event.broadcasterDisplayName} has ended.`);
         streamEndHandler(event, clientManager);
       });
 
-      twitchLog("info", `EventSub suscrito a los eventos de ${user.displayName}.`);
+      twitchLog("info", `EventSub subscribed to events for ${user.displayName}.`);
     } else {
-      twitchLog("error", `No se pudo encontrar el usuario de Twitch: ${channelName}`);
+      twitchLog("error", `Could not find Twitch user: ${channelName}`);
     }
   } catch (error) {
-    twitchLog("error", `Error configurando los listeners de EventSub: ${error.message}`);
+    twitchLog("error", `Error setting up EventSub listeners: ${error.message}`);
   }
 
-  twitchLog("info", "Bootstrap de Twitch completado.");
+  twitchLog("info", "Twitch bootstrap complete.");
 }
 
 module.exports = { bootstrap };

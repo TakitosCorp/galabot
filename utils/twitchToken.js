@@ -3,7 +3,6 @@ const axios = require("axios");
 
 const twitchConfigPath = fileUtils.getFilePath("twitch.json");
 
-// Refreshes the Twitch token using the refresh token.
 async function refreshToken(refreshToken) {
   const url = `https://twitchtokengenerator.com/api/refresh/${refreshToken}`;
   try {
@@ -14,7 +13,6 @@ async function refreshToken(refreshToken) {
   }
 }
 
-// Validates the Twitch access token.
 async function validateToken(accessToken) {
   try {
     const response = await axios.get("https://id.twitch.tv/oauth2/validate", {
@@ -29,7 +27,6 @@ async function validateToken(accessToken) {
   }
 }
 
-// Gets a valid Twitch config, refreshing the token if needed.
 async function getValidTwitchConfig() {
   let twitchConfig = fileUtils.readJSON(twitchConfigPath, {
     ACCESS_TOKEN: "",
@@ -39,15 +36,21 @@ async function getValidTwitchConfig() {
   });
 
   const now = Date.now();
-  let validUntil = twitchConfig.VALID_UNTIL ? new Date(twitchConfig.VALID_UNTIL).getTime() : 0;
+  let validUntil = twitchConfig.VALID_UNTIL
+    ? new Date(twitchConfig.VALID_UNTIL).getTime()
+    : 0;
 
   let tokenValid = false;
   if (twitchConfig.ACCESS_TOKEN) {
     tokenValid = await validateToken(twitchConfig.ACCESS_TOKEN);
   }
 
-  // If token is missing, expired, or invalid, refresh it.
-  if (!twitchConfig.ACCESS_TOKEN || !twitchConfig.REFRESH_TOKEN || now >= validUntil || !tokenValid) {
+  if (
+    !twitchConfig.ACCESS_TOKEN ||
+    !twitchConfig.REFRESH_TOKEN ||
+    now >= validUntil ||
+    !tokenValid
+  ) {
     const response = await refreshToken(twitchConfig.REFRESH_TOKEN);
     if (response.success) {
       twitchConfig.ACCESS_TOKEN = response.token;

@@ -3,18 +3,18 @@ const emojis = require("../../data/emojis.json");
 const { discordLog } = require("../../utils/loggers");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
 
-async function handleHello(message) {
+async function handleHello(message, lang) {
   const lastGreeting = await getLastGreeting(message.author.id);
 
   if (lastGreeting && new Date(lastGreeting.timestamp).getTime() > Date.now() - 4 * 60 * 60 * 1000) {
-    discordLog("info", `User ${message.author.username} (${message.author.id}) ya fue saludado recientemente.`);
+    discordLog("info", `User ${message.author.username} (${message.author.id}) was greeted recently, skipping.`);
     return;
   }
 
   const userName = message.member?.displayName || message.author.username;
   const userMention = `<@${message.author.id}>`;
 
-  const greetings = resources.greetingResponses.map((greeting) => {
+  const greetings = resources[lang].greetingResponses.map((greeting) => {
     let replacedGreeting = greeting.replace("{userName}", userName).replace("{userMention}", userMention);
     for (const emojiName in emojis) {
       const regex = new RegExp(`\\{emojis\\.${emojiName}\\}`, "g");
@@ -30,7 +30,7 @@ async function handleHello(message) {
     const timestamp = new Date().toISOString();
     await updateGreeting(message.author.id, timestamp);
   } catch (error) {
-    discordLog("error", `Fallo al enviar el saludo: ${error.message}`);
+    discordLog("error", `Failed to send greeting: ${error.message}`);
   }
 }
 

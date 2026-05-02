@@ -9,3 +9,4 @@ concat.sh
 full_project_context.txt
 full_project_context.md
 concat.ps1
+.claude/settings.local.json

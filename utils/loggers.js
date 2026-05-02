@@ -75,6 +75,22 @@ const sysLogger = winston.createLogger({
   ],
 });
 
+const youtubeLogger = winston.createLogger({
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `[${timestamp}] [YouTube] ${level}: ${message}`;
+    }),
+  ),
+  transports: [
+    consoleTransport,
+    new winston.transports.File({
+      filename: path.join(logsDir, "youtube.log"),
+    }),
+    combinedFileTransport,
+  ],
+});
+
 function twitchLog(level, message) {
   twitchLogger.log({ level, message });
 }
@@ -87,6 +103,9 @@ function dbLog(level, message) {
 function sysLog(level, message) {
   sysLogger.log({ level, message });
 }
+function youtubeLog(level, message) {
+  youtubeLogger.log({ level, message });
+}
 
 module.exports = {
   ensureLogsFolder,
@@ -94,4 +113,5 @@ module.exports = {
   discordLog,
   dbLog,
   sysLog,
+  youtubeLog,
 };

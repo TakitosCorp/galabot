@@ -10,6 +10,7 @@ class clientManager {
     this.twitchChatClient = null;
     this.twitchApiClient = null;
     this.twitchEventSubListener = null;
+    this.youtubeIntervals = [];
   }
 
   async initialize() {
@@ -18,6 +19,7 @@ class clientManager {
 
     const discordEnabled = process.env.ENABLE_DISCORD !== "false";
     const twitchEnabled = process.env.ENABLE_TWITCH !== "false";
+    const youtubeEnabled = process.env.ENABLE_YOUTUBE !== "false";
 
     if (discordEnabled) {
       await this.initializeDiscord();
@@ -31,7 +33,13 @@ class clientManager {
       sysLog("info", "Twitch platform disabled, skipping.");
     }
 
-    if (!discordEnabled && !twitchEnabled) {
+    if (youtubeEnabled) {
+      await this.initializeYoutube();
+    } else {
+      sysLog("info", "YouTube platform disabled, skipping.");
+    }
+
+    if (!discordEnabled && !twitchEnabled && !youtubeEnabled) {
       sysLog("warn", "All platforms are disabled. Bot has nothing to do.");
     }
 
@@ -114,6 +122,20 @@ class clientManager {
     }
   }
 
+  async initializeYoutube() {
+    const {
+      bootstrap: bootstrapYoutube,
+    } = require("./handlers/youtube/startup");
+    const { youtubeLog } = require("./utils/loggers");
+    try {
+      await bootstrapYoutube(this);
+      youtubeLog("info", "YouTube client initialized.");
+    } catch (error) {
+      sysLog("error", `Failed to initialize YouTube client: ${error.stack}`);
+      throw error;
+    }
+  }
+
   async shutdown(signal) {
     sysLog("info", `Received ${signal}. Shutting down gracefully…`);
     try {
@@ -122,6 +144,9 @@ class clientManager {
 
       stopAllViewersIntervals();
       await closeBrowser();
+
+      for (const interval of this.youtubeIntervals) clearInterval(interval);
+      this.youtubeIntervals = [];
 
       if (this.discordClient) this.discordClient.destroy();
       if (this.twitchChatClient)

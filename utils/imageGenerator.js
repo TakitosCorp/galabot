@@ -1,7 +1,7 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
-const { twitchLog } = require("./loggers");
+const { twitchLog, youtubeLog } = require("./loggers");
 const {
   PUPPETEER_PAGE_TIMEOUT_MS,
   PUPPETEER_GOTO_TIMEOUT_MS,
@@ -99,6 +99,12 @@ async function generateStreamBanner(streamData, options = {}) {
         .replace("{{GAME_IMAGE_URL}}", escapeHtml(gameImageUrl));
     }
 
+    if (templateName === "youtubeStreamBanner.html") {
+      htmlContent = htmlContent
+        .replace("{{STREAM_TITLE}}", escapeHtml(streamData.title || "No title"))
+        .replace("{{THUMBNAIL_URL}}", escapeHtml(streamData.thumbnail || ""));
+    }
+
     if (templateName === "nextStreams.html" && options.streamsJson) {
       htmlContent = htmlContent.replace(
         /const streams = \[[\s\S]*?\];/,
@@ -166,6 +172,18 @@ async function generateStreamBanner(streamData, options = {}) {
       await new Promise((resolve) =>
         setTimeout(resolve, NEXT_STREAMS_SETTLE_MS),
       );
+    } else if (templateName === "youtubeStreamBanner.html") {
+      try {
+        await page.waitForSelector("#thumbnailImage", {
+          timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
+        });
+      } catch (error) {
+        youtubeLog(
+          "warn",
+          `Thumbnail not loaded in expected time, continuing: ${error.message}`,
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, BANNER_SETTLE_MS));
     } else {
       try {
         await page.waitForSelector("#gameImage", {
@@ -208,6 +226,12 @@ async function generateNextStreamsImage(streamsJson) {
   );
 }
 
+async function generateYoutubeBanner(streamData) {
+  return generateStreamBanner(streamData, {
+    templateName: "youtubeStreamBanner.html",
+  });
+}
+
 async function closeBrowser() {
   if (browser) {
     await browser.close();
@@ -218,5 +242,6 @@ async function closeBrowser() {
 module.exports = {
   generateStreamBanner,
   generateNextStreamsImage,
+  generateYoutubeBanner,
   closeBrowser,
 };

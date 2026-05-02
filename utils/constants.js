@@ -27,4 +27,12 @@ module.exports = {
   PUPPETEER_SELECTOR_TIMEOUT_MS: 5_000,
   NEXT_STREAMS_SETTLE_MS: 800,
   BANNER_SETTLE_MS: 500,
+
+  // Fast poll uses videos.list (1 unit/call) — safe to run every minute
+  YOUTUBE_FAST_POLL_MS: 60 * 1000,
+  // Slow poll uses search.list (100 units/call) — run every 3 hours to stay well within quota
+  YOUTUBE_SLOW_POLL_MS: 3 * 60 * 60 * 1000,
+  YOUTUBE_STREAM_VALID_HOURS: 12,
+  YOUTUBE_QUOTA_COOLDOWN_MS: 24 * 60 * 60 * 1000,
+  YOUTUBE_RETRY_MAX: 3,
 };

@@ -49,6 +49,21 @@ async function initialize() {
       .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
       .addColumn("end", "datetime")
       .execute();
+
+    await trx.schema
+      .createTable("youtube_streams")
+      .ifNotExists()
+      .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("timestamp", "datetime", (col) => col.notNull())
+      .addColumn("title", "text", (col) => col.notNull())
+      .addColumn("viewers", "real", (col) => col.notNull())
+      .addColumn("viewerSamples", "integer", (col) =>
+        col.notNull().defaultTo(0),
+      )
+      .addColumn("thumbnail", "text", (col) => col.notNull())
+      .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
+      .addColumn("end", "datetime")
+      .execute();
   });
 }
 

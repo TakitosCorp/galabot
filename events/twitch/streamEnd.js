@@ -1,5 +1,9 @@
 const { twitchLog } = require("../../utils/loggers");
-const { updateStreamEnd, getMostRecentStream } = require("../../db/streams");
+const {
+  getActiveStream,
+  getStreamById,
+  updateStreamEnd,
+} = require("../../db/streams");
 const axios = require("axios");
 const { getStreamerScheduleThisWeek } = require("../../utils/twitchSchedule");
 const { generateNextStreamsImage } = require("../../utils/imageGenerator");
@@ -9,25 +13,26 @@ async function streamEnd(event, clientManager) {
   try {
     const { discordClient, twitchApiClient } = clientManager;
 
-    const initialStreamInfo = await getMostRecentStream();
-    if (!initialStreamInfo) {
-      twitchLog("warn", "No active stream found to mark as ended.");
+    const activeStream = await getActiveStream("twitch");
+    if (!activeStream) {
+      twitchLog("warn", "No active Twitch stream found to mark as ended.");
       return;
     }
-    const streamId = initialStreamInfo.id;
-    const discMsgId = initialStreamInfo.discMsgId;
 
+    const { id: streamId, discMsgId } = activeStream;
     const endTime = event.endDate
       ? event.endDate.toISOString()
       : new Date().toISOString();
 
     stopViewersAverage(streamId);
-
     const updated = await updateStreamEnd(streamId, endTime);
 
-    const finalStreamData = await getMostRecentStream();
-    if (!finalStreamData) {
-      twitchLog("error", `Could not get final stream data for ID ${streamId}.`);
+    const finalStream = await getStreamById(streamId);
+    if (!finalStream) {
+      twitchLog(
+        "error",
+        `Could not read final stream data for ID ${streamId}.`,
+      );
       return;
     }
 
@@ -41,30 +46,23 @@ async function streamEnd(event, clientManager) {
             twitchUsername,
             twitchApiClient,
           );
-        } catch (imgErr) {
-          if (imgErr.isAxiosError && imgErr.response?.status === 404) {
+        } catch (schedErr) {
+          if (schedErr.isAxiosError && schedErr.response?.status === 404) {
             twitchLog(
               "info",
-              "User has no schedule, using empty array for next streams image.",
+              "No Twitch schedule found, skipping next-streams image.",
             );
             scheduleThisWeek = [];
           } else {
-            throw imgErr;
+            throw schedErr;
           }
         }
         imageBuffer = await generateNextStreamsImage(scheduleThisWeek);
       }
     } catch (imgErr) {
-      if (imgErr.isAxiosError) {
-        const status = imgErr.response?.status;
-        twitchLog(
-          "error",
-          `Axios error fetching schedule: ${imgErr.message}${status ? ` (status: ${status})` : ""}`,
-        );
-      }
       twitchLog(
         "error",
-        `Error generating next streams image: ${imgErr.stack}`,
+        `Error generating next-streams image: ${imgErr.stack}`,
       );
     }
 
@@ -76,6 +74,7 @@ async function streamEnd(event, clientManager) {
           const message = await channel.messages.fetch(discMsgId);
           if (message) {
             const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+
             let user = null;
             let twitchUrl = null;
             try {
@@ -91,6 +90,7 @@ async function streamEnd(event, clientManager) {
                 `Could not get Twitch user for author: ${userErr.message}`,
               );
             }
+
             const embed = new EmbedBuilder()
               .setColor(0x800080)
               .setAuthor({
@@ -101,12 +101,12 @@ async function streamEnd(event, clientManager) {
               .addFields(
                 {
                   name: "📝 Title",
-                  value: finalStreamData.title || "No title",
+                  value: finalStream.title || "No title",
                   inline: false,
                 },
                 {
                   name: "🎮 Category",
-                  value: `*${finalStreamData.category || "No category"}*`,
+                  value: `*${finalStream.category || "No category"}*`,
                   inline: false,
                 },
                 {
@@ -117,26 +117,19 @@ async function streamEnd(event, clientManager) {
               )
               .setFooter({ text: "Thanks for stopping by the stream 💜" })
               .setTimestamp(new Date(endTime));
-            let attachment = null;
-            if (imageBuffer) {
-              attachment = new AttachmentBuilder(imageBuffer, {
-                name: "next-streams.png",
-              });
-            }
-            if (attachment) {
-              embed.setImage("attachment://next-streams.png");
-            } else if (finalStreamData.getThumbnailUrl) {
-              embed.setImage(
-                finalStreamData.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`,
-              );
-            }
-            const editOptions = {
+
+            const attachment = imageBuffer
+              ? new AttachmentBuilder(imageBuffer, { name: "next-streams.png" })
+              : null;
+
+            if (attachment) embed.setImage("attachment://next-streams.png");
+
+            await message.edit({
               embeds: [embed],
               components: [],
               ...(attachment ? { files: [attachment] } : {}),
-            };
-            await message.edit(editOptions);
-            twitchLog("info", "Discord message edited to reflect stream end.");
+            });
+            twitchLog("info", "Discord message updated for stream end.");
           }
         }
       }
@@ -145,20 +138,21 @@ async function streamEnd(event, clientManager) {
     }
 
     if (updated) {
-      twitchLog("info", `Stream ${streamId} marked as ended in the database.`);
+      twitchLog("info", `Stream ${streamId} marked as ended.`);
       try {
         await axios.post(process.env.POST_DATA_WEBHOOK, {
-          id: finalStreamData.id,
-          timestamp: finalStreamData.timestamp
-            ? new Date(finalStreamData.timestamp).toISOString()
+          id: finalStream.id,
+          provider: finalStream.provider,
+          timestamp: finalStream.timestamp
+            ? new Date(finalStream.timestamp).toISOString()
             : null,
-          title: finalStreamData.title,
-          viewers: finalStreamData.viewers || 0,
-          category: finalStreamData.category,
-          tags: finalStreamData.tags ? JSON.parse(finalStreamData.tags) : [],
+          title: finalStream.title,
+          viewers: finalStream.viewers || 0,
+          category: finalStream.category,
+          tags: finalStream.tags ? JSON.parse(finalStream.tags) : null,
           end: endTime,
         });
-        twitchLog("info", "Stream end webhook sent successfully.");
+        twitchLog("info", "Stream end webhook sent.");
       } catch (webhookErr) {
         twitchLog(
           "error",
@@ -166,7 +160,10 @@ async function streamEnd(event, clientManager) {
         );
       }
     } else {
-      twitchLog("warn", `Stream ${streamId} not found to mark as ended.`);
+      twitchLog(
+        "warn",
+        `Stream ${streamId} was not found in DB to mark as ended.`,
+      );
     }
   } catch (error) {
     twitchLog("error", `Error handling stream end: ${error.stack}`);

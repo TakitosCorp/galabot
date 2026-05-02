@@ -1,5 +1,5 @@
 const { db } = require("./database");
-const { twitchLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/loggers");
 
 async function insertStream(streamData) {
   return await db.transaction().execute(async (trx) => {
@@ -7,23 +7,52 @@ async function insertStream(streamData) {
       .insertInto("streams")
       .values({
         id: streamData.id,
+        provider: streamData.provider,
         timestamp: streamData.timestamp,
         title: streamData.title,
-        viewers: streamData.viewers,
-        category: streamData.category,
-        tags: streamData.tags,
+        viewers: streamData.viewers ?? 0,
+        category: streamData.category ?? null,
+        tags: streamData.tags ?? null,
+        thumbnail: streamData.thumbnail ?? null,
         discMsgId: streamData.discMsgId || "",
       })
       .execute();
   });
 }
 
-async function getMostRecentStream() {
+async function getActiveStream(provider) {
   return await db.transaction().execute(async (trx) => {
     const result = await trx
       .selectFrom("streams")
       .selectAll()
+      .where("provider", "=", provider)
+      .where("end", "is", null)
       .orderBy("timestamp", "desc")
+      .executeTakeFirst();
+
+    return result || null;
+  });
+}
+
+async function getMostRecentStream(provider) {
+  return await db.transaction().execute(async (trx) => {
+    const result = await trx
+      .selectFrom("streams")
+      .selectAll()
+      .where("provider", "=", provider)
+      .orderBy("timestamp", "desc")
+      .executeTakeFirst();
+
+    return result || null;
+  });
+}
+
+async function getStreamById(streamId) {
+  return await db.transaction().execute(async (trx) => {
+    const result = await trx
+      .selectFrom("streams")
+      .selectAll()
+      .where("id", "=", streamId)
       .executeTakeFirst();
 
     return result || null;
@@ -54,22 +83,18 @@ async function updateStreamViewers(streamId, currentViewers) {
 
     const samples = stream.viewerSamples;
     const oldAvg = stream.viewers;
-
     const newAverage = Math.round(
       (oldAvg * samples + currentViewers) / (samples + 1),
     );
 
-    twitchLog(
+    dbLog(
       "info",
-      `Calculando promedio para stream ${streamId}: oldAvg=${oldAvg}, samples=${samples}, current=${currentViewers} -> newAvg=${newAverage} (valor a guardar)`,
+      `Viewer average for ${streamId}: oldAvg=${oldAvg}, samples=${samples}, current=${currentViewers} -> newAvg=${newAverage}`,
     );
 
     await trx
       .updateTable("streams")
-      .set({
-        viewers: newAverage,
-        viewerSamples: samples + 1,
-      })
+      .set({ viewers: newAverage, viewerSamples: samples + 1 })
       .where("id", "=", streamId)
       .execute();
 
@@ -117,9 +142,11 @@ async function updateStreamDiscordMessage(streamId, discMsgId) {
 
 module.exports = {
   insertStream,
+  getActiveStream,
+  getMostRecentStream,
+  getStreamById,
   streamExists,
   updateStreamViewers,
   updateStreamEnd,
-  getMostRecentStream,
   updateStreamDiscordMessage,
 };

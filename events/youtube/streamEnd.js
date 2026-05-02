@@ -1,8 +1,5 @@
 const { youtubeLog } = require("../../utils/loggers");
-const {
-  getMostRecentYoutubeStream,
-  updateYoutubeStreamEnd,
-} = require("../../db/youtubeStreams");
+const { getActiveStream, updateStreamEnd } = require("../../db/streams");
 const { EmbedBuilder } = require("discord.js");
 const { setState } = require("../../utils/youtubePoller");
 const axios = require("axios");
@@ -11,7 +8,7 @@ async function streamEnd(clientManager, endTime) {
   try {
     const { discordClient } = clientManager;
 
-    const streamData = await getMostRecentYoutubeStream();
+    const streamData = await getActiveStream("youtube");
     if (!streamData) {
       youtubeLog(
         "warn",
@@ -21,7 +18,7 @@ async function streamEnd(clientManager, endTime) {
     }
 
     const resolvedEndTime = endTime || new Date().toISOString();
-    await updateYoutubeStreamEnd(streamData.id, resolvedEndTime);
+    await updateStreamEnd(streamData.id, resolvedEndTime);
     youtubeLog(
       "info",
       `YouTube stream ${streamData.id} marked as ended in DB.`,

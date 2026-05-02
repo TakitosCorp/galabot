@@ -146,6 +146,7 @@ async function streamStart(event, clientManager) {
       if (!(await streamExists(event.id))) {
         const streamData = {
           id: event.id,
+          provider: "twitch",
           timestamp: event.startDate.toISOString(),
           title: stream.title || "No title",
           viewers: 0,

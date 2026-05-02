@@ -6,10 +6,7 @@ const {
 } = require("../../utils/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
-const {
-  updateYoutubeStreamViewers,
-  getMostRecentYoutubeStream,
-} = require("../../db/youtubeStreams");
+const { updateStreamViewers, getActiveStream } = require("../../db/streams");
 const { youtubeLog } = require("../../utils/loggers");
 const {
   YOUTUBE_FAST_POLL_MS,
@@ -50,7 +47,7 @@ async function runFastPoll(clientManager) {
     if (result.isLive) {
       if (state.status === "live" && state.embedSent) {
         if (result.viewers > 0) {
-          await updateYoutubeStreamViewers(state.videoId, result.viewers);
+          await updateStreamViewers(state.videoId, result.viewers);
         }
         return;
       }
@@ -83,8 +80,8 @@ async function runFastPoll(clientManager) {
 async function bootstrap(clientManager) {
   youtubeLog("info", "Bootstrapping YouTube provider...");
 
-  const activeStream = await getMostRecentYoutubeStream();
-  if (activeStream && !activeStream.end) {
+  const activeStream = await getActiveStream("youtube");
+  if (activeStream) {
     setState({
       videoId: activeStream.id,
       title: activeStream.title,

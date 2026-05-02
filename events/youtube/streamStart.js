@@ -1,8 +1,5 @@
 const { youtubeLog } = require("../../utils/loggers");
-const {
-  insertYoutubeStream,
-  youtubeStreamExists,
-} = require("../../db/youtubeStreams");
+const { insertStream, streamExists } = require("../../db/streams");
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -27,7 +24,7 @@ async function streamStart(clientManager, streamState) {
       return;
     }
 
-    if (await youtubeStreamExists(videoId)) {
+    if (await streamExists(videoId)) {
       youtubeLog(
         "warn",
         `Stream ${videoId} already exists in DB — notification already sent. Skipping.`,
@@ -99,14 +96,15 @@ async function streamStart(clientManager, streamState) {
     const sentMessage = await channel.send(messageOptions);
     youtubeLog("info", "Discord notification sent for YouTube stream start.");
 
-    await insertYoutubeStream({
+    await insertStream({
       id: videoId,
+      provider: "youtube",
       timestamp: scheduledStart
         ? new Date(scheduledStart).toISOString()
         : new Date().toISOString(),
       title: title || "No title",
       viewers: 0,
-      thumbnail: thumbnail || "",
+      thumbnail: thumbnail || null,
       discMsgId: sentMessage.id,
     });
     youtubeLog("info", `YouTube stream saved to DB with ID: ${videoId}`);

@@ -34,33 +34,24 @@ async function initialize() {
       .addColumn("reason", "text", (col) => col.notNull())
       .execute();
 
+    // Unified stream table across all providers.
+    // provider: 'twitch' | 'youtube'
+    // category, tags  — Twitch only; NULL for other providers.
+    // thumbnail       — YouTube only; NULL for other providers.
     await trx.schema
       .createTable("streams")
       .ifNotExists()
       .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("provider", "text", (col) => col.notNull())
       .addColumn("timestamp", "datetime", (col) => col.notNull())
       .addColumn("title", "text", (col) => col.notNull())
-      .addColumn("viewers", "real", (col) => col.notNull())
+      .addColumn("viewers", "real", (col) => col.notNull().defaultTo(0))
       .addColumn("viewerSamples", "integer", (col) =>
         col.notNull().defaultTo(0),
       )
-      .addColumn("category", "text", (col) => col.notNull())
-      .addColumn("tags", "text", (col) => col.notNull())
-      .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
-      .addColumn("end", "datetime")
-      .execute();
-
-    await trx.schema
-      .createTable("youtube_streams")
-      .ifNotExists()
-      .addColumn("id", "text", (col) => col.primaryKey())
-      .addColumn("timestamp", "datetime", (col) => col.notNull())
-      .addColumn("title", "text", (col) => col.notNull())
-      .addColumn("viewers", "real", (col) => col.notNull())
-      .addColumn("viewerSamples", "integer", (col) =>
-        col.notNull().defaultTo(0),
-      )
-      .addColumn("thumbnail", "text", (col) => col.notNull())
+      .addColumn("category", "text")
+      .addColumn("tags", "text")
+      .addColumn("thumbnail", "text")
       .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
       .addColumn("end", "datetime")
       .execute();

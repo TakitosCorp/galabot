@@ -3,6 +3,7 @@ const {
   EmbedBuilder,
   PermissionFlagsBits,
   InteractionContextType,
+  MessageFlags,
 } = require("discord.js");
 const { addWarn, getWarnCount } = require("../../db/warns");
 const { discordLog } = require("../../utils/loggers");
@@ -14,7 +15,7 @@ const {
   MAX_WARN_REASON_LENGTH,
 } = require("../../utils/constants");
 
-async function handleBan(interaction, user, guildMember, t) {
+async function handleBan(interaction, user, guildMember, t, tEn) {
   const banEmbed = new EmbedBuilder()
     .setColor(0xff0000)
     .setTitle(t.banTitle(user.username))
@@ -29,26 +30,26 @@ async function handleBan(interaction, user, guildMember, t) {
     try {
       await user.send({ embeds: [banEmbed] });
     } catch (error) {
-      discordLog("warn", t.dmFailBan(user.username));
+      discordLog("warn", tEn.dmFailBan(user.username));
     }
 
     try {
       await guildMember.ban({ reason: t.banReason });
       await interaction.reply({ embeds: [banEmbed] });
-      discordLog("info", t.logBanned(user.username, interaction.user.username));
+      discordLog("info", tEn.logBanned(user.username, interaction.user.username));
     } catch (error) {
-      discordLog("error", t.logBanFailed(user.username, error.message));
+      discordLog("error", tEn.logBanFailed(user.username, error.message));
       await interaction.reply({
         content: t.errBanFailed(user.username),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else {
-    await interaction.reply({ content: t.errNoBanPerms, ephemeral: true });
+    await interaction.reply({ content: t.errNoBanPerms, flags: MessageFlags.Ephemeral });
   }
 }
 
-async function handleWarn(interaction, user, guildMember, reason, t) {
+async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
   await addWarn(user.id, reason);
   const newWarnCount = await getWarnCount(user.id);
   const timeoutDuration = newWarnCount * WARN_TIMEOUT_BASE_MS;
@@ -73,7 +74,7 @@ async function handleWarn(interaction, user, guildMember, reason, t) {
     try {
       await user.send({ embeds: [warnEmbed] });
     } catch (error) {
-      discordLog("warn", t.dmFailWarn(user.username));
+      discordLog("warn", tEn.dmFailWarn(user.username));
     }
 
     try {
@@ -81,21 +82,21 @@ async function handleWarn(interaction, user, guildMember, reason, t) {
       await interaction.reply({ embeds: [warnEmbed] });
       discordLog(
         "info",
-        t.logTimeout(
+        tEn.logTimeout(
           user.username,
           timeoutDuration / 60000,
           interaction.user.username,
         ),
       );
     } catch (error) {
-      discordLog("error", t.logTimeoutFailed(user.username, error.message));
+      discordLog("error", tEn.logTimeoutFailed(user.username, error.message));
       await interaction.reply({
         content: t.errTimeoutFailed(user.username),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else {
-    await interaction.reply({ content: t.errNoTimeoutPerms, ephemeral: true });
+    await interaction.reply({ content: t.errNoTimeoutPerms, flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -121,6 +122,7 @@ module.exports = {
   async execute(interaction, client, clientManager) {
     const lang = getLanguage(interaction.channelId);
     const t = strings[lang];
+    const tEn = strings.en;
     const user = interaction.options.getUser("user");
     const reason = interaction.options.getString("reason");
     const guildMember = await interaction.guild.members
@@ -130,29 +132,29 @@ module.exports = {
     if (reason.length > MAX_WARN_REASON_LENGTH) {
       return interaction.reply({
         content: `Reason too long (${reason.length} chars). Maximum is ${MAX_WARN_REASON_LENGTH}.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (!guildMember) {
-      return interaction.reply({ content: t.errNotInServer, ephemeral: true });
+      return interaction.reply({ content: t.errNotInServer, flags: MessageFlags.Ephemeral });
     }
     if (user.bot) {
-      return interaction.reply({ content: t.errBot, ephemeral: true });
+      return interaction.reply({ content: t.errBot, flags: MessageFlags.Ephemeral });
     }
     if (guildMember.permissions.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: t.errAdmin, ephemeral: true });
+      return interaction.reply({ content: t.errAdmin, flags: MessageFlags.Ephemeral });
     }
     if (user.id === interaction.user.id) {
-      return interaction.reply({ content: t.errSelf, ephemeral: true });
+      return interaction.reply({ content: t.errSelf, flags: MessageFlags.Ephemeral });
     }
 
     const currentWarns = await getWarnCount(user.id);
 
     if (currentWarns >= MAX_WARN_BEFORE_BAN) {
-      await handleBan(interaction, user, guildMember, t);
+      await handleBan(interaction, user, guildMember, t, tEn);
     } else {
-      await handleWarn(interaction, user, guildMember, reason, t);
+      await handleWarn(interaction, user, guildMember, reason, t, tEn);
     }
   },
 };

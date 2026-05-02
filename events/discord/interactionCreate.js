@@ -1,5 +1,6 @@
-const { InteractionType } = require("discord.js");
+const { InteractionType, MessageFlags } = require("discord.js");
 const { discordLog } = require("../../utils/loggers");
+const { getLanguage } = require("../../utils/language");
 
 async function executeCommand(interaction, client, clientManager) {
   const command = client.commands.get(interaction.commandName);
@@ -10,12 +11,18 @@ async function executeCommand(interaction, client, clientManager) {
   } catch (error) {
     discordLog(
       "error",
-      `Error ejecutando el comando '${interaction.commandName}': ${error.stack}`,
+      `Error executing command '${interaction.commandName}': ${error.stack}`,
     );
 
+    const lang = getLanguage(interaction.channelId);
+    const errorMessage =
+      lang === "es"
+        ? "Hubo un error al ejecutar este comando."
+        : "There was an error while executing this command.";
+
     const replyOptions = {
-      content: "Hubo un error al ejecutar este comando.",
-      ephemeral: true,
+      content: errorMessage,
+      flags: MessageFlags.Ephemeral,
     };
 
     if (interaction.replied || interaction.deferred) {

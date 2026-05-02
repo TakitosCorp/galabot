@@ -5,6 +5,7 @@ const strings = require("../../lang/ping");
 
 async function handlePing(message, lang) {
   const t = strings[lang];
+  const tEn = strings.en;
   const user = message.author;
   const guildMember = await message.guild.members.fetch(user.id);
 
@@ -32,7 +33,7 @@ async function handlePing(message, lang) {
       try {
         await user.send({ embeds: [banEmbed] });
       } catch (e) {
-        discordLog("warn", t.dmFailBan);
+        discordLog("warn", tEn.dmFailBan);
       }
       try {
         await guildMember.ban({ reason: t.banReason });
@@ -71,7 +72,7 @@ async function handlePing(message, lang) {
       try {
         await user.send({ embeds: [warnEmbed] });
       } catch (e) {
-        discordLog("warn", t.dmFailWarn);
+        discordLog("warn", tEn.dmFailWarn);
       }
       try {
         await guildMember.timeout(timeoutDuration, reason);

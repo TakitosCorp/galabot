@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, Events } = require("discord.js");
 const fs = require("fs");
 const fsp = require("fs").promises;
 const path = require("path");
@@ -10,7 +10,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-client.once("ready", async () => {
+client.once(Events.ClientReady, async () => {
   console.log("Bot ready");
 
   try {
@@ -24,7 +24,14 @@ client.once("ready", async () => {
       }
     }
 
-    const guild = await client.guilds.fetch("1080660073497505822");
+    const guildId = process.env.GALA_DISCORD_ID;
+    if (!guildId) {
+      console.error("Error: GALA_DISCORD_ID is not defined in your .env file.");
+      client.destroy();
+      return;
+    }
+
+    const guild = await client.guilds.fetch(guildId);
     const emojis = await guild.emojis.fetch();
 
     const tempFolder = path.join(__dirname, "temp-emojis");

@@ -1,4 +1,8 @@
-const { Client: DiscordClient, GatewayIntentBits } = require("discord.js");
+const {
+  Client: DiscordClient,
+  GatewayIntentBits,
+  Events,
+} = require("discord.js");
 
 const { initialize: dbInitialize } = require("./db/database");
 const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
@@ -59,7 +63,7 @@ class clientManager {
     await bootstrapDiscord(this.discordClient, this);
 
     return new Promise((resolve, reject) => {
-      this.discordClient.once("ready", () => {
+      this.discordClient.once(Events.ClientReady, () => {
         discordLog(
           "info",
           `Discord client connected as ${this.discordClient.user.tag}`,

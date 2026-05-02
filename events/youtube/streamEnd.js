@@ -38,7 +38,7 @@ async function streamEnd(clientManager, endTime) {
     });
 
     try {
-      const channelId = process.env.YOUTUBE_NOTIFICATION_CHANNEL;
+      const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
       if (
         channelId &&
         streamData.discMsgId &&

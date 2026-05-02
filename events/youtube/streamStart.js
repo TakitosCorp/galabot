@@ -73,9 +73,9 @@ async function streamStart(clientManager, streamState) {
         .setURL(streamUrl),
     );
 
-    const channelId = process.env.YOUTUBE_NOTIFICATION_CHANNEL;
+    const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
     if (!channelId) {
-      youtubeLog("error", "YOUTUBE_NOTIFICATION_CHANNEL env var is not set.");
+      youtubeLog("error", "DISCORD_NOTIFICATION_CHANNEL env var is not set.");
       return;
     }
 
@@ -88,7 +88,7 @@ async function streamStart(clientManager, streamState) {
       return;
     }
 
-    const roleToMention = process.env.YOUTUBE_NOTIFICATION_ROLE_ID;
+    const roleToMention = process.env.DISCORD_NOTIFICATION_ROLE_ID;
     const messageOptions = {
       content: roleToMention ? `<@&${roleToMention}>` : "",
       embeds: [embed],

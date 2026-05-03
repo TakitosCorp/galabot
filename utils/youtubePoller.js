@@ -77,7 +77,7 @@ async function fetchAndCacheCategories() {
       .get("https://www.googleapis.com/youtube/v3/videoCategories", {
         params: {
           part: "snippet",
-          regionCode: "US",
+          regionCode: "ES",
           key,
         },
       })

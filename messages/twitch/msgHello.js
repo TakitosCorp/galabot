@@ -1,11 +1,35 @@
+/**
+ * @module messages/twitch/msgHello
+ * @description
+ * Twitch-side greeting handler. Mirrors {@link module:messages/discord/msgHello}
+ * but writes back to Twitch chat via Twurple's `say()` and respects the same
+ * cross-platform greeting cooldown stored in the `greetings` table.
+ */
+
+"use strict";
+
 const { twitchLog } = require("../../utils/loggers");
 const resources = require("../../data/resources.json");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
 const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
 
+/**
+ * Send a greeting reply in Twitch chat if the user is past the cooldown window.
+ *
+ * @async
+ * @param {import('../../utils/types').TwitchEventData} eventData
+ * @param {import('../../clientManager')} clientManager
+ * @returns {Promise<void>}
+ */
 async function handleHello(eventData, clientManager) {
   const { user, channel } = eventData;
   const { twitchChatClient } = clientManager;
+
+  twitchLog("debug", "twitch:msgHello handleHello", {
+    user: user.name,
+    userId: user.id,
+    channel,
+  });
 
   const lastGreeting = await getLastGreeting(user.id);
   if (
@@ -13,10 +37,11 @@ async function handleHello(eventData, clientManager) {
     new Date(lastGreeting.timestamp).getTime() >
       Date.now() - GREETING_COOLDOWN_MS
   ) {
-    twitchLog(
-      "info",
-      `User ${user.name} (${user.id}) was greeted recently on Twitch, skipping.`,
-    );
+    twitchLog("info", "twitch:msgHello cooldown skip", {
+      user: user.name,
+      userId: user.id,
+      lastGreeting: lastGreeting.timestamp,
+    });
     return;
   }
 
@@ -42,9 +67,16 @@ async function handleHello(eventData, clientManager) {
   try {
     await twitchChatClient.say(channel, randomGreeting);
     await updateGreeting(user.id, new Date().toISOString());
-    twitchLog("info", `Greeting sent to ${user.name} on Twitch.`);
+    twitchLog("info", "twitch:msgHello sent", {
+      user: user.name,
+      userId: user.id,
+    });
   } catch (error) {
-    twitchLog("error", `Failed to send greeting on Twitch: ${error.message}`);
+    twitchLog("error", "twitch:msgHello failed", {
+      user: user.name,
+      err: error.message,
+      stack: error.stack,
+    });
   }
 }
 

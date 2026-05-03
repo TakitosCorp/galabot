@@ -1,3 +1,17 @@
+/**
+ * @module events/twitch/streamEnd
+ * @description
+ * Reacts to a Twitch `streamOffline` EventSub by:
+ *  1. Stopping the viewer-average poller for the active stream.
+ *  2. Recording the end timestamp on the matching stream row.
+ *  3. Editing the original Discord announcement embed in place to either
+ *     (a) a "next streams" follow-up if a weekly schedule is published, or
+ *     (b) a generic "stream ended" image otherwise.
+ *  4. Posting the final stream stats to the configured webhook.
+ */
+
+"use strict";
+
 const { twitchLog } = require("../../utils/loggers");
 const {
   getActiveStream,
@@ -12,12 +26,25 @@ const {
 } = require("../../utils/imageGenerator");
 const { stopViewersAverage } = require("../../utils/twitchViews");
 
+/**
+ * Process a `streamOffline` EventSub event. Errors are logged at every step but
+ * never thrown — the EventSub listener stays subscribed regardless.
+ *
+ * @async
+ * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event
+ * @param {import('../../clientManager')} clientManager
+ * @returns {Promise<void>}
+ */
 async function streamEnd(event, clientManager) {
+  twitchLog("debug", "twitch:streamEnd enter", {
+    broadcaster: event.broadcasterDisplayName,
+  });
   try {
     const { discordClient, twitchApiClient } = clientManager;
 
     const activeStream = await getActiveStream("twitch");
     if (!activeStream) {
+      twitchLog("warn", "twitch:streamEnd no-active-stream");
       return;
     }
 
@@ -27,10 +54,19 @@ async function streamEnd(event, clientManager) {
       : new Date().toISOString();
 
     stopViewersAverage(streamId);
+    twitchLog("debug", "twitch:streamEnd viewers-stopped", { streamId });
     const updated = await updateStreamEnd(streamId, endTime);
+    twitchLog("info", "twitch:streamEnd row marked ended", {
+      streamId,
+      endTime,
+      updated,
+    });
 
     const finalStream = await getStreamById(streamId);
     if (!finalStream) {
+      twitchLog("warn", "twitch:streamEnd row missing post-update", {
+        streamId,
+      });
       return;
     }
 
@@ -48,6 +84,7 @@ async function streamEnd(event, clientManager) {
           );
         } catch (schedErr) {
           if (schedErr.isAxiosError && schedErr.response?.status === 404) {
+            twitchLog("info", "twitch:streamEnd no-schedule (404)");
             scheduleThisWeek = [];
           } else {
             throw schedErr;
@@ -55,17 +92,24 @@ async function streamEnd(event, clientManager) {
         }
 
         if (scheduleThisWeek && scheduleThisWeek.length > 0) {
+          twitchLog("debug", "twitch:streamEnd generating followup", {
+            segments: scheduleThisWeek.length,
+          });
           imageBuffer = await generateFollowupImage(
             { provider: "twitch" },
             scheduleThisWeek,
           );
           isFollowup = true;
         } else {
+          twitchLog("debug", "twitch:streamEnd generating ended-image");
           imageBuffer = await generateEndedImage({ provider: "twitch" });
         }
       }
     } catch (imgErr) {
-      twitchLog("error", `Error generating end image: ${imgErr.message}`);
+      twitchLog("error", "twitch:streamEnd image-generation failed", {
+        err: imgErr.message,
+        stack: imgErr.stack,
+      });
     }
 
     try {
@@ -88,7 +132,11 @@ async function streamEnd(event, clientManager) {
                   process.env.TWITCH_URL ||
                   `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`;
               }
-            } catch (userErr) {}
+            } catch (userErr) {
+              twitchLog("warn", "twitch:streamEnd getUserByName failed", {
+                err: userErr.message,
+              });
+            }
 
             const embed = new EmbedBuilder()
               .setColor(0x800080)
@@ -131,11 +179,19 @@ async function streamEnd(event, clientManager) {
               components: [],
               ...(attachment ? { files: [attachment] } : {}),
             });
+            twitchLog("info", "twitch:streamEnd announcement edited", {
+              streamId,
+              isFollowup,
+              discMsgId,
+            });
           }
         }
       }
     } catch (editErr) {
-      twitchLog("error", `Could not edit Discord message: ${editErr.message}`);
+      twitchLog("error", "twitch:streamEnd edit-message failed", {
+        err: editErr.message,
+        stack: editErr.stack,
+      });
     }
 
     if (updated) {
@@ -152,10 +208,20 @@ async function streamEnd(event, clientManager) {
           tags: finalStream.tags ? JSON.parse(finalStream.tags) : null,
           end: endTime,
         });
-      } catch (webhookErr) {}
+        twitchLog("info", "twitch:streamEnd webhook posted", {
+          streamId: finalStream.id,
+        });
+      } catch (webhookErr) {
+        twitchLog("warn", "twitch:streamEnd webhook failed", {
+          err: webhookErr.message,
+        });
+      }
     }
   } catch (error) {
-    twitchLog("error", `Error handling stream end: ${error.stack}`);
+    twitchLog("error", "twitch:streamEnd failed", {
+      err: error.message,
+      stack: error.stack,
+    });
   }
 }
 

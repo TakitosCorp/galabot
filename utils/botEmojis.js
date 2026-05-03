@@ -1,3 +1,22 @@
+/**
+ * @module utils/botEmojis
+ * @description
+ * Standalone CLI script (`npm run sync-emojis`) that mirrors every custom emoji
+ * from the configured Discord guild into the bot application's emoji slots.
+ * Workflow:
+ *  1. Connects with the bot token.
+ *  2. Deletes every existing application emoji.
+ *  3. Downloads each guild emoji to a temp folder.
+ *  4. Re-uploads them as application emojis under a sanitised `galabot_<name>` prefix.
+ *  5. Writes the resulting `<name> → <discord-mention>` map to `data/emojis.json`
+ *     so message templates can substitute `{emojis.galabot_foo}` placeholders.
+ *
+ * This file is a script, not a module — it logs to the console (rather than
+ * Winston) because it runs outside the bot's normal lifecycle.
+ */
+
+"use strict";
+
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const fs = require("fs");
 const fsp = require("fs").promises;
@@ -6,6 +25,11 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 dotenv.config({ path: require("path").resolve(process.cwd(), ".env") });
 
+/**
+ * Discord client used only for the duration of the sync. Destroyed once the
+ * `ClientReady` handler completes.
+ * @type {import('discord.js').Client}
+ */
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
@@ -45,6 +69,12 @@ client.once(Events.ClientReady, async () => {
       await fsp.mkdir(dataFolder);
     }
 
+    /**
+     * Stream-download a remote image to disk.
+     * @param {string} url - Source URL.
+     * @param {string} filePath - Absolute target path.
+     * @returns {Promise<void>}
+     */
     const downloadImage = async (url, filePath) => {
       const response = await axios({
         url,
@@ -59,11 +89,18 @@ client.once(Events.ClientReady, async () => {
       });
     };
 
+    /**
+     * Strip every non-alphanumeric character and lowercase the rest. Used to
+     * derive valid Discord application-emoji names from arbitrary guild names.
+     * @param {string} name
+     * @returns {string}
+     */
     const sanitizeName = (name) => {
       return name.toLowerCase().replace(/[^a-z0-9]/g, "");
     };
 
     const createdEmojiNames = new Set();
+    /** @type {Record<string, string>} */
     const emojiData = {};
 
     for (const emoji of emojis.values()) {

@@ -1,3 +1,14 @@
+/**
+ * @module lang/rules
+ * @description
+ * Localised string tables consumed by {@link module:commands/discord/rules}.
+ * Provides the bilingual rules embed contents (`rulesTitle`, `rulesFields`,
+ * `rulesFooter`) plus DM/fallback copy used when the rules are sent to a
+ * specific user.
+ */
+
+"use strict";
+
 module.exports = {
   en: {
     reminderTitle: (username) => `Reminder for ${username}`,

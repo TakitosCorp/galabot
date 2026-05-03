@@ -1,3 +1,13 @@
+/**
+ * @module lang/ping
+ * @description
+ * Localised string tables for the streamer-ping warn/ban flow in
+ * {@link module:messages/discord/msgPing}. Each top-level key (`en`, `es`)
+ * holds the same shape — a mix of static strings and small formatter functions.
+ */
+
+"use strict";
+
 module.exports = {
   en: {
     banTitle: (username) => `Ban issued for ${username}`,

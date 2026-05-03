@@ -1,3 +1,17 @@
+/**
+ * @module events/twitch/streamStart
+ * @description
+ * Reacts to a Twitch `streamOnline` EventSub by:
+ *  1. Generating a custom banner image via Puppeteer.
+ *  2. Posting an embed announcement (with optional role mention) into the
+ *     configured Discord notification channel.
+ *  3. Persisting the stream row (or updating its Discord message id if it
+ *     already exists from a re-fired event).
+ *  4. Starting the rolling viewer-average poller.
+ */
+
+"use strict";
+
 const { twitchLog } = require("../../utils/loggers");
 const {
   insertStream,
@@ -14,16 +28,34 @@ const {
 const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { startViewersAverage } = require("../../utils/twitchViews");
 
+/**
+ * Process a `streamOnline` EventSub event. Failures at any step are logged but
+ * the function never throws — the EventSub listener should keep running.
+ *
+ * @async
+ * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event
+ * @param {import('../../clientManager')} clientManager
+ * @returns {Promise<void>}
+ */
 async function streamStart(event, clientManager) {
+  twitchLog("debug", "twitch:streamStart enter", {
+    broadcaster: event.broadcasterDisplayName,
+    broadcasterId: event.broadcasterId,
+    streamId: event.id,
+  });
   try {
     const { discordClient, twitchApiClient } = clientManager;
 
     if (!discordClient || !discordClient.isReady()) {
+      twitchLog("warn", "twitch:streamStart discord-not-ready");
       return;
     }
 
     const stream = await event.getStream();
     if (!stream) {
+      twitchLog("warn", "twitch:streamStart no-stream-data", {
+        streamId: event.id,
+      });
       return;
     }
 
@@ -35,7 +67,12 @@ async function streamStart(event, clientManager) {
     if (stream.gameId && twitchApiClient) {
       try {
         gameInfo = await twitchApiClient.games.getGameById(stream.gameId);
-      } catch (error) {}
+      } catch (error) {
+        twitchLog("warn", "twitch:streamStart getGameById failed", {
+          gameId: stream.gameId,
+          err: error.message,
+        });
+      }
     }
 
     const twitchUrl =
@@ -55,11 +92,18 @@ async function streamStart(event, clientManager) {
           : stream.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`,
       };
 
+      twitchLog("debug", "twitch:streamStart generating banner", {
+        category: bannerData.category,
+      });
       const bannerBuffer = await generateStreamBanner(bannerData);
       attachment = new AttachmentBuilder(bannerBuffer, {
         name: "stream-banner.png",
       });
     } catch (error) {
+      twitchLog("error", "twitch:streamStart banner-generation failed", {
+        err: error.message,
+        stack: error.stack,
+      });
       attachment = null;
     }
 
@@ -106,6 +150,7 @@ async function streamStart(event, clientManager) {
 
     const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
     if (!channelId) {
+      twitchLog("warn", "twitch:streamStart no-notification-channel");
       return;
     }
 
@@ -121,6 +166,11 @@ async function streamStart(event, clientManager) {
 
       const sentMessage = await channel.send(messageOptions);
       const discMsgId = sentMessage.id;
+      twitchLog("info", "twitch:streamStart announcement posted", {
+        streamId: event.id,
+        channelId,
+        discMsgId,
+      });
 
       if (!(await streamExists(event.id))) {
         const streamData = {
@@ -134,8 +184,14 @@ async function streamStart(event, clientManager) {
           discMsgId,
         };
         await insertStream(streamData);
+        twitchLog("info", "twitch:streamStart row inserted", {
+          streamId: event.id,
+        });
       } else {
         await updateStreamDiscordMessage(event.id, discMsgId);
+        twitchLog("info", "twitch:streamStart row updated (re-fire)", {
+          streamId: event.id,
+        });
       }
 
       if (twitchApiClient && process.env.TWITCH_CHANNEL) {
@@ -145,9 +201,14 @@ async function streamStart(event, clientManager) {
           process.env.TWITCH_CHANNEL,
         );
       }
+    } else {
+      twitchLog("warn", "twitch:streamStart channel-not-text", { channelId });
     }
   } catch (error) {
-    twitchLog("error", `Error handling stream start: ${error.stack}`);
+    twitchLog("error", "twitch:streamStart failed", {
+      err: error.message,
+      stack: error.stack,
+    });
   }
 }
 module.exports = streamStart;

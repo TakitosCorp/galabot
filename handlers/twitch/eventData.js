@@ -1,3 +1,25 @@
+/**
+ * @module handlers/twitch/eventData
+ * @description
+ * Adapter that turns Twurple's raw `onMessage` arguments into a stable
+ * {@link TwitchEventData} object so per-platform handlers don't depend on the
+ * exact Twurple shape. Adds a `self` flag that is true when the message comes
+ * from the bot account itself.
+ *
+ * @typedef {import('../../utils/types').TwitchEventData} TwitchEventData
+ */
+
+"use strict";
+
+/**
+ * Build a normalised event payload from Twurple's `onMessage` arguments.
+ *
+ * @param {string} channel - Twitch channel name the message arrived on.
+ * @param {string} user - Lower-case username of the sender.
+ * @param {string} message - Raw chat text.
+ * @param {import('@twurple/chat').ChatMessage} msg - Underlying Twurple message object.
+ * @returns {TwitchEventData}
+ */
 function createEventData(channel, user, message, msg) {
   return {
     channel: channel,

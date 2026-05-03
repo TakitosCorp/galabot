@@ -100,7 +100,7 @@ async function streamEnd(event, clientManager) {
               })
               .addFields(
                 {
-                  name: "📝 Title",
+                  name: "📌 Title",
                   value: finalStream.title || "No title",
                   inline: false,
                 },
@@ -127,7 +127,7 @@ async function streamEnd(event, clientManager) {
             await message.edit({
               embeds: [embed],
               components: [],
-              ...(attachment ? { files: [attachment] } : {}),
+              files: attachment ? [attachment] : [],
             });
             twitchLog("info", "Discord message updated for stream end.");
           }

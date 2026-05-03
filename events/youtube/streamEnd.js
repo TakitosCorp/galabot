@@ -51,7 +51,7 @@ async function streamEnd(clientManager, endTime) {
               .setAuthor({ name: "Stream ended! Thanks for watching 💜" })
               .addFields(
                 {
-                  name: "📝 Title",
+                  name: "📌 Title",
                   value: streamData.title || "No title",
                   inline: false,
                 },
@@ -69,7 +69,11 @@ async function streamEnd(clientManager, endTime) {
               .setFooter({ text: "Thanks for stopping by the stream 💜" })
               .setTimestamp(new Date(resolvedEndTime));
 
-            await message.edit({ embeds: [embed], components: [] });
+            await message.edit({
+              embeds: [embed],
+              components: [],
+              files: [],
+            });
             youtubeLog(
               "info",
               "Discord message edited to reflect YouTube stream end.",

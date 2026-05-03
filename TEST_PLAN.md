@@ -7,6 +7,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## Test Environment Setup
 
 ### Prerequisites
+
 - Node.js 22+ installed locally
 - Discord bot with intents: `Guilds`, `Guild Messages`, `Message Content`
 - Twitch bot account with OAuth token (chat:read, chat:edit scopes)
@@ -17,6 +18,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - Test YouTube channel with ability to stream
 
 ### Configuration
+
 - Copy `.env.example` to `.env.test` with test credentials
 - Create separate test database: `data/galabot-test.sqlite`
 - Use test Discord server ID, channel IDs, and role IDs
@@ -28,6 +30,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 1. Discord Integration Tests
 
 ### 1.1 Bot Startup & Connection
+
 - [ ] Bot connects successfully with valid `DISCORD_TOKEN`
 - [ ] Bot reports ready status: `Discord client connected as <bot-tag>` in logs
 - [ ] Bot appears online in Discord server
@@ -38,6 +41,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 1.2 Slash Commands
 
 #### `/rules` Command
+
 - [ ] Command appears in Discord slash menu
 - [ ] `/rules` without user parameter posts full rules embed in channel
 - [ ] Embed includes rule fields with proper formatting
@@ -47,6 +51,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Command fails gracefully if notification channel is invalid
 
 #### `/warn` Command
+
 - [ ] Command appears in Discord slash menu
 - [ ] `/warn @user <reason>` applies warning and 10-min timeout
 - [ ] Warning is stored in database with user ID, timestamp, and reason
@@ -62,6 +67,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 1.3 Message Events
 
 #### Greetings
+
 - [ ] Bot responds to greeting keywords: "hi", "hello", "hey", "heya", "hola", "ola" (case-insensitive)
 - [ ] Greeting response is a random entry from `data/resources.json` greeting pool
 - [ ] Greeting cooldown is 4 hours per user (configurable in `utils/constants.js`)
@@ -72,6 +78,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Database logs greeting with user ID and timestamp
 
 #### Bot Ping Auto-Warn
+
 - [ ] Pinging the bot (`@GalaBot`) triggers automatic warning
 - [ ] Warning is logged to database
 - [ ] User receives DM or channel notification
@@ -82,6 +89,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 1.4 Stream Notifications (Discord)
 
 #### Twitch Stream Start
+
 - [ ] When Twitch stream goes live, Discord embed is posted to `DISCORD_NOTIFICATION_CHANNEL`
 - [ ] Embed includes: title, category, tags, custom banner image
 - [ ] Embed color is purple (0x800080)
@@ -92,6 +100,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] `provider` field is set to `'twitch'`
 
 #### Twitch Stream End
+
 - [ ] When Twitch stream goes offline, Discord embed is updated (not replaced)
 - [ ] Updated embed shows: title, category, status ("stream has ended")
 - [ ] "Watch stream" button is removed
@@ -102,6 +111,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Webhook payload includes: id, provider, timestamp, title, viewers, category, tags, end
 
 #### YouTube Stream Start
+
 - [ ] When YouTube stream goes live, Discord embed is posted to `DISCORD_NOTIFICATION_CHANNEL`
 - [ ] Embed includes: title, stream link, custom banner image
 - [ ] Embed color is red (0xff0000)
@@ -113,12 +123,14 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] `category` and `tags` fields are NULL
 
 #### YouTube Stream End
+
 - [ ] When YouTube stream ends, Discord embed is updated
 - [ ] Updated embed shows: title, status, average viewers
 - [ ] Webhook POST sent with final stream data
 - [ ] Webhook payload includes: id, provider, timestamp, title, viewers, thumbnail, end
 
 ### 1.5 Permission & Safety Tests
+
 - [ ] Bot cannot warn users with higher roles than itself
 - [ ] Bot cannot ban/timeout users without proper permissions
 - [ ] Commands fail gracefully with permission error messages
@@ -129,6 +141,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 2. Twitch Integration Tests
 
 ### 2.1 Bot Startup & Connection
+
 - [ ] Bot connects to Twitch chat as `TWITCH_USERNAME`
 - [ ] Connection log: `Twitch chat client connected as <username>`
 - [ ] Bot joins `TWITCH_CHANNEL` successfully
@@ -138,6 +151,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Bot can be toggled off via `ENABLE_TWITCH=false`
 
 ### 2.2 Token Management
+
 - [ ] On first run, bot reads token from `data/twitch.json`
 - [ ] If token is expired, bot refreshes via twitchtokengenerator.com
 - [ ] Refreshed token is written back to `data/twitch.json`
@@ -148,12 +162,14 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 2.3 Chat Messages
 
 #### Greetings
+
 - [ ] Bot responds to greeting keywords in chat
 - [ ] Response is a random greeting from `data/resources.json`
 - [ ] Greeting cooldown is 4 hours per user (shared with Discord)
 - [ ] User cannot spam greetings within cooldown
 
 #### Chat Commands
+
 - [ ] `!ping` command triggers response: "Pong!"
 - [ ] `g!ping` command (alternate prefix) also triggers response
 - [ ] Commands are case-insensitive
@@ -162,6 +178,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 2.4 Stream Events
 
 #### Stream Start (EventSub)
+
 - [ ] When stream goes online, `streamStart` handler fires immediately
 - [ ] Stream metadata is fetched: title, category, game info
 - [ ] Game box art is fetched from Twitch API
@@ -172,6 +189,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] EventSub log: `EventSub subscribed to events for <channel>`
 
 #### Viewer Polling
+
 - [ ] Viewer count is sampled every 60 seconds during stream (configurable)
 - [ ] Running average is calculated: `new_avg = (old_avg * samples + current) / (samples + 1)`
 - [ ] Average is rounded to nearest integer
@@ -179,6 +197,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Polling stops when stream ends
 
 #### Stream End (EventSub)
+
 - [ ] When stream goes offline, `streamEnd` handler fires
 - [ ] Viewer polling loop stops
 - [ ] Next scheduled streams image is generated (if schedule exists)
@@ -188,6 +207,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] EventSub log: `EventSub stream offline detected`
 
 ### 2.5 Schedule Fetching
+
 - [ ] On stream end, bot fetches Twitch schedule via Helix API
 - [ ] If schedule exists, next streams image is generated and attached to Discord embed
 - [ ] If no schedule exists (404), graceful fallback with empty schedule
@@ -199,6 +219,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 3. YouTube Integration Tests
 
 ### 3.1 Bot Startup & Connection
+
 - [ ] Bot initializes YouTube poller on startup
 - [ ] Slow poll runs first (updateWorkflow)
 - [ ] Fast poll runs immediately after slow poll (checkWorkflow)
@@ -211,6 +232,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 3.2 Polling System
 
 #### Slow Poll (Search)
+
 - [ ] Runs every 3 hours (configurable `YOUTUBE_SLOW_POLL_MS`)
 - [ ] Uses `search.list` (100 quota units per call)
 - [ ] Searches for videos in `YOUTUBE_CHANNEL_ID` with status: upcoming or live
@@ -220,6 +242,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Falls back to `YOUTUBE_API_KEY_2` if primary key is exhausted
 
 #### Fast Poll (Videos)
+
 - [ ] Runs every 1 minute (configurable `YOUTUBE_FAST_POLL_MS`)
 - [ ] Uses `videos.list` (1 quota unit per call)
 - [ ] Detects state transitions: upcoming → starting → live → ended
@@ -230,6 +253,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Updates viewer count if available during live stream
 
 #### State Machine
+
 - [ ] Video discovered in slow poll: status = "unknown"
 - [ ] Fast poll detects `isLive=true`: status = "starting" (grace period)
 - [ ] Fast poll confirms again: status = "live" (fires streamStart)
@@ -237,6 +261,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] On bot restart: resumes tracking if stream is live (`end IS NULL`)
 
 ### 3.3 Quota Management
+
 - [ ] Default quota: 10,000 units/day
 - [ ] Slow poll: ~800 units/day (8 calls × 100 units)
 - [ ] Fast poll: ~1,440 units/day (1,440 calls × 1 unit)
@@ -248,6 +273,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ### 3.4 Stream Events
 
 #### Stream Start
+
 - [ ] Polling detects live status and fires handler
 - [ ] Stream metadata is fetched
 - [ ] Custom YouTube banner image is generated
@@ -257,6 +283,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Fast poll continues to sample viewer count
 
 #### Stream End
+
 - [ ] Polling detects `endTime` and fires handler
 - [ ] Discord notification is updated with end status
 - [ ] Average viewer count is displayed
@@ -269,6 +296,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 4. Database Tests
 
 ### 4.1 Schema Creation
+
 - [ ] On first boot, all tables are created if not exist:
   - [ ] `greetings`
   - [ ] `warns`
@@ -276,6 +304,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] No errors on subsequent boots (idempotent schema)
 
 ### 4.2 Streams Table
+
 - [ ] Insert Twitch stream: `provider='twitch'`, category/tags populated, thumbnail=NULL
 - [ ] Insert YouTube stream: `provider='youtube'`, category/tags=NULL, thumbnail populated
 - [ ] Query by provider filters correctly: `getActiveStream('twitch')` vs `getActiveStream('youtube')`
@@ -288,12 +317,14 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Discord message ID is stored and retrievable
 
 ### 4.3 Greetings Table
+
 - [ ] Greeting is logged with user ID and timestamp
 - [ ] Cooldown check queries by user ID
 - [ ] Same user ID cannot greet again within cooldown window
 - [ ] Different users can greet independently
 
 ### 4.4 Warns Table
+
 - [ ] Warn is logged with user ID, timestamp, and reason
 - [ ] Warning count is calculated correctly
 - [ ] Third warn triggers ban logic
@@ -304,6 +335,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 5. Image Generation Tests
 
 ### 5.1 Puppeteer Setup
+
 - [ ] Chromium/Chrome is found at `PUPPETEER_EXECUTABLE_PATH`
 - [ ] Browser is launched on first use
 - [ ] Browser is reused across multiple renders
@@ -311,6 +343,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Browser is properly closed on shutdown
 
 ### 5.2 Stream Banner (Twitch)
+
 - [ ] Banner template (`templates/streamBanner.html`) is rendered
 - [ ] Placeholders are replaced: `{{STREAM_TITLE}}`, `{{STREAM_CATEGORY}}`, `{{GAME_BOX_ART_URL}}`
 - [ ] Game box art is fetched and rendered (if available)
@@ -319,6 +352,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Image is attached to Discord embed with name "stream-banner.png"
 
 ### 5.3 Stream Banner (YouTube)
+
 - [ ] Banner template (`templates/youtubeStreamBanner.html`) is rendered
 - [ ] Placeholders are replaced: `{{STREAM_TITLE}}`, `{{THUMBNAIL_URL}}`
 - [ ] YouTube thumbnail is used as fallback if banner fails
@@ -326,6 +360,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Image is attached to Discord embed with name "stream-banner.png"
 
 ### 5.4 Next Streams Image (Twitch)
+
 - [ ] Template (`templates/nextStreams.html`) is rendered with schedule data
 - [ ] Upcoming streams are displayed (next 7 days)
 - [ ] Image shows stream titles, times, and categories
@@ -334,6 +369,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Gracefully handles empty schedule (no crashes)
 
 ### 5.5 Error Handling
+
 - [ ] If Puppeteer fails, fallback to standard Discord thumbnails
 - [ ] Error is logged but does not crash the bot
 - [ ] Discord notification is still posted even if banner generation fails
@@ -343,17 +379,20 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 6. Localization Tests
 
 ### 6.1 Language Detection
+
 - [ ] Channel ID matches `SPANISH_CHANNEL_ID`: Spanish responses used
 - [ ] Channel ID does not match: English responses used
 - [ ] Language resolution works for all features: greetings, commands, messages
 
 ### 6.2 Spanish Language
+
 - [ ] Greeting responses include Spanish variants (from `lang/` files)
 - [ ] Command help text is available in Spanish
 - [ ] Stream notifications use correct language
 - [ ] Error messages are localized
 
 ### 6.3 English Language
+
 - [ ] All responses default to English if language is not Spanish
 - [ ] All features have English variants
 
@@ -362,6 +401,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 7. Webhook Tests
 
 ### 7.1 POST_DATA_WEBHOOK
+
 - [ ] Webhook URL is configured in `.env`
 - [ ] POST request is sent when Twitch stream ends
 - [ ] POST request is sent when YouTube stream ends
@@ -384,6 +424,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 8. Logging Tests
 
 ### 8.1 Log Files
+
 - [ ] All logs are written to `logs/` directory
 - [ ] Log files exist for each platform:
   - [ ] `logs/discord.log`
@@ -396,11 +437,13 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Format: `[ISO-8601-timestamp] [Platform] level: message`
 
 ### 8.2 Log Levels
+
 - [ ] `info` level: normal operations (stream start, reconnect, etc.)
 - [ ] `warn` level: recoverable issues (missing schedule, DM fallback, etc.)
 - [ ] `error` level: failures (API errors, missing permissions, etc.)
 
 ### 8.3 Console Output
+
 - [ ] Logs also appear on stdout in real-time
 - [ ] No sensitive information (tokens, IDs) in logs
 
@@ -409,6 +452,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 9. Configuration Tests
 
 ### 9.1 Environment Variables
+
 - [ ] Bot exits with FATAL if required vars are missing:
   - [ ] `DISCORD_TOKEN`
   - [ ] `DISCORD_ID`
@@ -424,6 +468,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Platform can be disabled via env var without crashing
 
 ### 9.2 Constants
+
 - [ ] Greeting cooldown: 4 hours (tunable in `utils/constants.js`)
 - [ ] Warn timeout base: 10 minutes (tunable)
 - [ ] Ban threshold: 3 warns (tunable)
@@ -437,11 +482,13 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 10. Graceful Shutdown Tests
 
 ### 10.1 Signal Handling
+
 - [ ] Bot receives `SIGTERM` signal and initiates shutdown
 - [ ] Bot receives `SIGINT` (Ctrl-C) signal and initiates shutdown
 - [ ] Log: `Received SIGTERM. Shutting down gracefully…`
 
 ### 10.2 Cleanup Sequence
+
 - [ ] Viewer polling intervals are stopped
 - [ ] Puppeteer browser is closed
 - [ ] YouTube polling intervals are cleared
@@ -452,6 +499,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] Process exits with code 0
 
 ### 10.3 In-Progress Operations
+
 - [ ] If stream is ending during shutdown, webhook is still sent (if possible)
 - [ ] No data loss or corruption on shutdown
 
@@ -460,17 +508,20 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 11. Error Recovery Tests
 
 ### 11.1 Network Failures
+
 - [ ] Discord reconnects on connection loss
 - [ ] Twitch chat auto-reconnects on disconnect
 - [ ] YouTube polling continues through transient API errors
 - [ ] API errors are logged but do not crash bot
 
 ### 11.2 Missing Permissions
+
 - [ ] Bot logs error if it cannot edit Discord message (missing permissions)
 - [ ] Bot logs error if it cannot apply timeout (missing permissions)
 - [ ] Operations continue gracefully without permissions
 
 ### 11.3 Invalid Configuration
+
 - [ ] Invalid Discord channel ID is caught and logged
 - [ ] Invalid Twitch channel name is caught and logged
 - [ ] Invalid YouTube channel ID is caught and logged
@@ -481,11 +532,13 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## 12. Integration Tests (Cross-Platform)
 
 ### 12.1 Simultaneous Events
+
 - [ ] Twitch stream end and Discord command execute simultaneously: both succeed
 - [ ] YouTube poll fires while Twitch message handler is active: no race conditions
 - [ ] Greeting cooldown is respected across Discord and Twitch simultaneously
 
 ### 12.2 State Consistency
+
 - [ ] Database reflects correct state after multi-platform events
 - [ ] Viewer averages are correct if events overlap
 
@@ -494,6 +547,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## Manual Testing Checklist
 
 ### Pre-Test
+
 - [ ] Database is clean: `data/galabot-test.sqlite` is fresh
 - [ ] All credentials are valid and have required permissions
 - [ ] Discord server is set up with test channel and roles
@@ -501,12 +555,14 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 - [ ] YouTube channel has no active streams
 
 ### Execution
+
 - [ ] Run bot in test environment: `npm start` with `.env.test`
 - [ ] Monitor logs in real-time: `tail -f logs/combined.log`
 - [ ] Execute each test case manually
 - [ ] Record results (pass/fail) for each test
 
 ### Post-Test
+
 - [ ] Review all log files for errors
 - [ ] Verify database state with SQLite viewer
 - [ ] Clean up test data (warns, greetings, streams)
@@ -517,6 +573,7 @@ This document outlines a comprehensive testing strategy for GalaBot across all p
 ## Automated Testing (Future)
 
 When automated tests are added, they should cover:
+
 - [ ] All database CRUD operations
 - [ ] All Discord commands (mocked)
 - [ ] All Twitch chat handlers (mocked)

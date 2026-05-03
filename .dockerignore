@@ -1,0 +1,59 @@
+# -----------------------------------------------------------------------------
+# 1. Version Control
+# (Prevents your entire commit history from inflating the image size)
+# -----------------------------------------------------------------------------
+.git
+.gitignore
+.gitattributes
+
+# -----------------------------------------------------------------------------
+# 2. Docker Files
+# (No need to copy Docker configuration into the image itself)
+# -----------------------------------------------------------------------------
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# -----------------------------------------------------------------------------
+# 3. Environment Variables & Secrets
+# (CRITICAL: Prevents hardcoding local secrets and passwords into the image)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+*.cert
+secrets/
+
+# -----------------------------------------------------------------------------
+# 4. OS & IDE Generated Files
+# (Prevents host-specific junk files from busting the Docker cache)
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------------------------------------------------------------
+# 5. Logs & Temporary Files
+# -----------------------------------------------------------------------------
+logs/
+*.log
+tmp/
+temp/
+coverage/
+.nyc_output/
+
+# -----------------------------------------------------------------------------
+# 6. LANGUAGE SPECIFIC: Node.js / JavaScript
+# (Prevents overwriting Linux binaries with host OS binaries, e.g., ELF header errors)
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/

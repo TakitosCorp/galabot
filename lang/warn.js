@@ -1,5 +1,7 @@
 module.exports = {
   en: {
+    reasonField: "Reason:",
+    actionField: "Actions taken:",
     banTitle: (username) => `Ban issued for ${username}`,
     banReason: "Accumulated 3 or more warnings.",
     banAction: "Permanent server ban.",
@@ -17,9 +19,10 @@ module.exports = {
     errBanFailed: (username) => `❌ Banning ${username} failed.`,
     errTimeoutFailed: (username) => `❌ Timeout for ${username} failed.`,
     dmFailBan: (username) => `Could not send ban DM to ${username}.`,
-    dmFailWarn: (username) => `Could not send warn/timeout DM to ${username}.`,
+    dmFailWarn: (username) =>
+      `Could not send warning/timeout DM to ${username}.`,
     logBanned: (username, by) =>
-      `User ${username} banned for accumulated warns by ${by}.`,
+      `User ${username} banned for accumulated warnings by ${by}.`,
     logTimeout: (username, mins, by) =>
       `Timeout of ${mins}m applied to ${username} by ${by}.`,
     logBanFailed: (username, msg) => `Failed to ban ${username}: ${msg}`,
@@ -27,12 +30,14 @@ module.exports = {
       `Failed to apply timeout to ${username}: ${msg}`,
   },
   es: {
-    banTitle: (username) => `Ban emitido para ${username}`,
+    reasonField: "Razón:",
+    actionField: "Acciones tomadas:",
+    banTitle: (username) => `Baneo emitido para ${username}`,
     banReason: "Acumulación de 3 o más advertencias.",
     banAction: "Baneo permanente del servidor.",
-    warnTitle: (username) => `Advertencia y Timeout para ${username}`,
+    warnTitle: (username) => `Advertencia y aislamiento para ${username}`,
     warnCount: "Total de advertencias:",
-    timeoutDuration: "Duración del timeout:",
+    timeoutDuration: "Duración del aislamiento:",
     timeoutMinutes: (mins) => `${mins} minutos`,
     errNotInServer: "El usuario no se encuentra en este servidor.",
     errBot: "No puedes advertir a un bot.",
@@ -40,19 +45,20 @@ module.exports = {
     errSelf: "No te puedes advertir a ti mismo.",
     errNoBanPerms: "No tengo permisos para banear miembros.",
     errNoTimeoutPerms:
-      "No tengo permisos para aplicar timeouts (moderar miembros).",
+      "No tengo permisos para aplicar aislamientos (moderar miembros).",
     errBanFailed: (username) => `❌ El baneo de ${username} ha fallado.`,
     errTimeoutFailed: (username) =>
-      `❌ El timeout para ${username} ha fallado.`,
-    dmFailBan: (username) => `No se pudo enviar el DM de baneo a ${username}.`,
+      `❌ El aislamiento para ${username} ha fallado.`,
+    dmFailBan: (username) =>
+      `No se pudo enviar el mensaje directo de baneo a ${username}.`,
     dmFailWarn: (username) =>
-      `No se pudo enviar el DM de advertencia a ${username}.`,
+      `No se pudo enviar el mensaje directo de advertencia a ${username}.`,
     logBanned: (username, by) =>
-      `Usuario ${username} baneado por acumulación de warns por ${by}.`,
+      `Usuario ${username} baneado por acumulación de advertencias por ${by}.`,
     logTimeout: (username, mins, by) =>
-      `Timeout de ${mins}m aplicado a ${username} por ${by}.`,
-    logBanFailed: (username, msg) => `Fallo al banear a ${username}: ${msg}`,
+      `Aislamiento de ${mins}m aplicado a ${username} por ${by}.`,
+    logBanFailed: (username, msg) => `Error al banear a ${username}: ${msg}`,
     logTimeoutFailed: (username, msg) =>
-      `Fallo al aplicar timeout a ${username}: ${msg}`,
+      `Error al aplicar aislamiento a ${username}: ${msg}`,
   },
 };

@@ -26,10 +26,10 @@ module.exports = {
       {
         name: "★ No personal or chat spam",
         value:
-          "⋆ DO NOT advertise your social media or someone else's, if you want to do so, ask an admin or moderator first!",
+          "⋆ DO NOT advertise your social media or someone else's. If you want to do so, ask an admin or moderator first!",
       },
       {
-        name: "★ DO NOT MAKE ANNOYING NOISES OR SIMILAR THINGS IN VOICE CHANNELS",
+        name: "★ DO NOT MAKE ANNOYING NOISES IN VOICE CHANNELS",
         value: "⋆ Keep voice channels respectful and clear.",
       },
       {
@@ -42,12 +42,12 @@ module.exports = {
         value: "⋆ **IMMEDIATE BAN**",
       },
       {
-        name: "★ Offensive usernames and/or profile pictures are prohibited",
+        name: "★ Offensive usernames or profile pictures are prohibited",
         value:
           "⋆ ˚｡⋆୨୧˚ Keep your usernames and profile pictures appropriate. ˚୨୧⋆｡˚ ⋆",
       },
       {
-        name: "★ DO NOT share your or others personal information",
+        name: "★ DO NOT share personal information",
         value: "⋆ Keep everyone's privacy protected.",
       },
       { name: "​", value: "​" },
@@ -65,58 +65,58 @@ module.exports = {
   },
   es: {
     reminderTitle: (username) => `Recordatorio para ${username}`,
-    reminderDesc: `Me han pedido que te recuerde que leas la normativa, ve a <#1080660073858220147> a leerla.`,
-    dmSuccess: (tag) => `✅ Recordatorio enviado a ${tag} por DM.`,
+    reminderDesc: `Se me ha solicitado recordarte que leas las normas. Por favor, revísalas en <#1080660073858220147>.`,
+    dmSuccess: (tag) => `✅ Recordatorio enviado a ${tag} por mensaje directo.`,
     dmFallback: (id) =>
-      `¡Hola <@${id}>! No he podido enviarte un DM, pero me han pedido que te recuerde leer las normas en <#1080660073858220147>.`,
+      `¡Hola <@${id}>! No he podido enviarte un mensaje directo, pero se me ha pedido que te recuerde leer las normas en <#1080660073858220147>.`,
     dmFallbackReply: (tag) =>
-      `⚠️ No se pudo enviar DM a ${tag}, se le notificó aquí.`,
+      `⚠️ No se pudo enviar el mensaje directo a ${tag}; se le notificó por este medio.`,
     rulesTitle: "¡REGLAS!",
     rulesFields: [
       {
-        name: "★ Los DMs de Gala están CERRADOS",
+        name: "★ Los mensajes directos de Gala están CERRADOS",
         value:
-          "⋆ ˚｡⋆୨୧ ¡Si quieres decirle algo a Gala, puedes escribirle en el servidor! No la etiqu etes, sé paciente, ¡lo verá eventualmente! Si necesitas algo urgente, contacta a un mod.",
+          "⋆ ˚｡⋆୨୧ ¡Si quieres decirle algo a Gala, puedes escribirle en el servidor! No la etiquetes y sé paciente; lo verá eventualmente. Si necesitas algo urgente, contacta a un moderador.",
       },
       {
         name: "★ RESPETO",
         value:
-          "⋆ Respeta los límites y el espacio personal de la creadora. Recuerda que Gala es una creadora de contenido y nosotros somos sus seguidores. ¡No cruces las líneas!",
+          "⋆ Respeta los límites y el espacio personal de la creadora. Recuerda que Gala es una creadora de contenido y nosotros somos sus seguidores. ¡No cruces la línea!",
       },
       {
         name: "★ Sé respetuoso/a",
-        value: "⋆ ¡SIN comentarios ofensivos hacia otros!",
+        value: "⋆ ¡Sin comentarios ofensivos hacia los demás!",
       },
       {
         name: "★ Sin spam personal o de chat",
         value:
-          "⋆ NO hagas publicidad de tu red social o la de otros, ¡si quieres hacerlo, pídele permiso a un admin o moderador primero!",
+          "⋆ No hagas publicidad de tus redes sociales o las de otros. Si deseas hacerlo, pide permiso a un administrador o moderador primero.",
       },
       {
-        name: "★ NO HAGAS RUIDOS MOLESTOS O SIMILARES EN CANALES DE VOZ",
+        name: "★ NO HAGAS RUIDOS MOLESTOS EN CANALES DE VOZ",
         value: "⋆ Mantén los canales de voz respetuosos y claros.",
       },
       {
-        name: "★ Está prohibido material pornográfico o NSFW",
+        name: "★ Prohibido el material pornográfico o NSFW",
         value:
-          '⋆ Debes marcar este contenido como "spoiler". Compartir este tipo de contenido resultará en **BAN INMEDIATO**.',
+          '⋆ Debes marcar este contenido como "spoiler". Compartir este tipo de contenido resultará en un **BANEO INMEDIATO**.',
       },
       {
-        name: "★ GORE/CP está prohibido",
-        value: "⋆ **BAN INMEDIATO**",
+        name: "★ El contenido GORE/CP está prohibido",
+        value: "⋆ **BANEO INMEDIATO**",
       },
       {
-        name: "★ Están prohibidos los nombres de usuario y/o fotos de perfil ofensivos",
+        name: "★ Nombres de usuario o fotos de perfil ofensivos prohibidos",
         value:
-          "⋆ ˚｡⋆୨୧˚ Mantén tu nombre de usuario y foto de perfil apropiados. ˚୨୧⋆｡˚ ⋆",
+          "⋆ ˚｡⋆୨୧˚ Mantén tu nombre de usuario y foto de perfil de forma apropiada. ˚୨୧⋆｡˚ ⋆",
       },
       {
-        name: "★ NO compartas tu información personal ni la de otros",
+        name: "★ NO compartas información personal",
         value: "⋆ Protege la privacidad de todos.",
       },
       { name: "​", value: "​" },
       {
-        name: "≡;- ꒰ ° 3 ADVERTENCIAS = BAN ° ꒱",
+        name: "≡;- ꒰ ° 3 ADVERTENCIAS = BANEO ° ꒱",
         value: "¡Esto no es negociable!",
       },
     ],
@@ -125,8 +125,8 @@ module.exports = {
       `Normas del servidor enviadas en el canal por petición de ${username}`,
     logDmSent: (tag, by) => `Recordatorio de normas enviado a ${tag} por ${by}`,
     logDmFail: (tag) =>
-      `No se pudo enviar DM a ${tag}, notificando en el canal.`,
+      `No se pudo enviar el mensaje directo a ${tag}; notificando en el canal.`,
     logChannelFail: (msg) =>
-      `Fallo al intentar notificar en el canal alternativo: ${msg}`,
+      `Error al intentar notificar en el canal alternativo: ${msg}`,
   },
 };

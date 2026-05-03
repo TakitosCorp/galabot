@@ -26,6 +26,7 @@ module.exports = {
     const lang = getLanguage(interaction.channelId);
     const t = strings[lang];
     const tEn = strings.en;
+    const tEs = strings.es;
     const user = interaction.options.getUser("user");
 
     if (user) {
@@ -57,18 +58,22 @@ module.exports = {
         }
       }
     } else {
-      const rulesEmbed = new EmbedBuilder()
+      const rulesEmbedEs = new EmbedBuilder()
         .setColor(0x800080)
-        .setTitle(t.rulesTitle)
-        .addFields(...t.rulesFields)
+        .setTitle(tEs.rulesTitle)
+        .addFields(...tEs.rulesFields)
         .setImage("https://i.ibb.co/wh3TkmHN/imagen-2026-05-01-164811177.png")
-        .setThumbnail(
-          "https://github.com/AlexDeveloperUwU/alexdev-files/blob/main/images/gala_knife.png?raw=true",
-        )
-        .setFooter({ text: t.rulesFooter });
+        .setFooter({ text: tEs.rulesFooter });
+
+      const rulesEmbedEn = new EmbedBuilder()
+        .setColor(0x800080)
+        .setTitle(tEn.rulesTitle)
+        .addFields(...tEn.rulesFields)
+        .setImage("https://i.ibb.co/wh3TkmHN/imagen-2026-05-01-164811177.png")
+        .setFooter({ text: tEn.rulesFooter });
 
       discordLog("info", tEn.logSent(interaction.user.username));
-      await interaction.reply({ embeds: [rulesEmbed] });
+      await interaction.reply({ embeds: [rulesEmbedEs, rulesEmbedEn] });
     }
   },
 };

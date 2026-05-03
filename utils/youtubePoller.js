@@ -41,6 +41,7 @@ const state = {
   thumbnail: null,
   scheduledStart: null,
   streamUrl: null,
+  category: null,
   status: "unknown",
   embedSent: false,
   isPolling: false,
@@ -425,6 +426,7 @@ async function updateWorkflow() {
         thumbnail: next.thumbnail,
         scheduledStart: next.scheduledStart,
         streamUrl: next.streamUrl,
+        category: next.category,
         status: ongoingStream ? "live" : "upcoming",
         embedSent: isNewStream ? false : state.embedSent,
       });
@@ -432,6 +434,7 @@ async function updateWorkflow() {
         videoId: next.videoId,
         status: ongoingStream ? "live" : "upcoming",
         isNewStream,
+        scheduledStart: next.scheduledStart,
       });
     } else {
       if (!state.status || state.status === "upcoming") {

@@ -130,6 +130,11 @@ async function streamStart(event, clientManager) {
               : "None",
           inline: false,
         },
+        {
+          name: "Start time",
+          value: `<t:${Math.floor(event.startDate.getTime() / 1000)}:f>`,
+          inline: false,
+        },
       )
       .setImage(
         attachment

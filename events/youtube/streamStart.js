@@ -37,7 +37,7 @@ async function streamStart(clientManager, streamState) {
   });
   try {
     const { discordClient } = clientManager;
-    const { videoId, title, thumbnail, scheduledStart, streamUrl } =
+    const { videoId, title, thumbnail, scheduledStart, streamUrl, category } =
       streamState;
 
     if (!discordClient || !discordClient.isReady()) {
@@ -61,7 +61,7 @@ async function streamStart(clientManager, streamState) {
       const bannerData = {
         provider: "youtube",
         title: title || "No title",
-        category: "YouTube Live",
+        category: category || "YouTube Live",
         image: thumbnail || "",
       };
 
@@ -85,6 +85,11 @@ async function streamStart(clientManager, streamState) {
       .addFields(
         { name: "Title", value: title || "No title", inline: false },
         { name: "Link", value: streamUrl, inline: false },
+        {
+          name: "Start time",
+          value: `<t:${Math.floor(new Date(scheduledStart || Date.now()).getTime() / 1000)}:f>`,
+          inline: false,
+        },
       )
       .setImage(attachment ? "attachment://stream-banner.png" : thumbnail)
       .setTimestamp(scheduledStart ? new Date(scheduledStart) : new Date())

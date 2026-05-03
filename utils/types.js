@@ -136,6 +136,7 @@
  * @property {string|null} thumbnail - Tracked stream thumbnail URL.
  * @property {string|null} scheduledStart - ISO-8601 scheduled or actual start time.
  * @property {string|null} streamUrl - Public watch URL.
+ * @property {string|null} category - Resolved category name, or null when not yet known.
  * @property {("unknown"|"upcoming"|"starting"|"live"|"ended")} status - State-machine label.
  * @property {boolean} embedSent - True after a Discord announcement embed has been posted for the current video.
  * @property {boolean} isPolling - Re-entrancy lock for `updateWorkflow`.

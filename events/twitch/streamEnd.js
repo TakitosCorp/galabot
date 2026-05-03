@@ -72,11 +72,11 @@ async function streamEnd(event, clientManager) {
 
     let imageBuffer = null;
     let isFollowup = false;
+    let scheduleThisWeek = [];
 
     try {
       const twitchUsername = process.env.TWITCH_CHANNEL;
       if (twitchUsername) {
-        let scheduleThisWeek;
         try {
           scheduleThisWeek = await getStreamerScheduleThisWeek(
             twitchUsername,
@@ -151,18 +151,38 @@ async function streamEnd(event, clientManager) {
                   value: finalStream.title || "No title",
                   inline: false,
                 },
-                {
-                  name: "Category",
-                  value: `*${finalStream.category || "No category"}*`,
-                  inline: false,
-                },
-                {
-                  name: "Status",
-                  value: "The stream has ended",
-                  inline: false,
-                },
+                ...(scheduleThisWeek.length === 0
+                  ? [
+                      {
+                        name: "Status",
+                        value: "The stream has ended",
+                        inline: false,
+                      },
+                    ]
+                  : []),
+                ...(scheduleThisWeek.length > 0
+                  ? [
+                      {
+                        name: "Next streams",
+                        value: scheduleThisWeek
+                          .map((s) => {
+                            const epoch = Math.floor(
+                              new Date(s.start).getTime() / 1000,
+                            );
+                            return `• ${s.title} – <t:${epoch}:F>`;
+                          })
+                          .join("\n"),
+                        inline: false,
+                      },
+                    ]
+                  : []),
               )
-              .setFooter({ text: "Thanks for stopping by" })
+              .setFooter({
+                text:
+                  scheduleThisWeek.length > 0
+                    ? "Thanks for stopping by • Image times are in UTC"
+                    : "Thanks for stopping by",
+              })
               .setTimestamp(new Date(endTime));
 
             const attachmentName = isFollowup

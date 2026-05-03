@@ -19,6 +19,7 @@ const {
   checkWorkflow,
   getState,
   setState,
+  fetchAndCacheCategories,
 } = require("../../utils/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
@@ -27,6 +28,7 @@ const { youtubeLog } = require("../../utils/loggers");
 const {
   YOUTUBE_FAST_POLL_MS,
   YOUTUBE_SLOW_POLL_MS,
+  YOUTUBE_CATEGORY_POLL_MS,
 } = require("../../utils/constants");
 
 /**
@@ -47,6 +49,7 @@ async function runSlowPoll(clientManager) {
         videoId: state.videoId,
         title: state.title,
         status: state.status,
+        scheduledStart: state.scheduledStart,
       });
     } else {
       youtubeLog("info", "youtube:slowPoll no-streams");
@@ -110,7 +113,9 @@ async function runFastPoll(clientManager) {
       }
 
       if (
-        (state.status === "starting" || state.status === "upcoming") &&
+        (state.status === "starting" ||
+          state.status === "upcoming" ||
+          state.status === "live") &&
         !state.embedSent
       ) {
         youtubeLog("info", "youtube:fastPoll confirming live", {
@@ -154,6 +159,7 @@ async function bootstrap(clientManager) {
     });
   }
 
+  await fetchAndCacheCategories();
   await runSlowPoll(clientManager);
   await runFastPoll(clientManager);
 
@@ -165,8 +171,12 @@ async function bootstrap(clientManager) {
     () => runFastPoll(clientManager),
     YOUTUBE_FAST_POLL_MS,
   );
+  const categoryInterval = setInterval(
+    fetchAndCacheCategories,
+    YOUTUBE_CATEGORY_POLL_MS,
+  );
 
-  clientManager.youtubeIntervals.push(slowInterval, fastInterval);
+  clientManager.youtubeIntervals.push(slowInterval, fastInterval, categoryInterval);
   youtubeLog("info", "youtube:bootstrap complete", {
     slowPollMs: YOUTUBE_SLOW_POLL_MS,
     fastPollMs: YOUTUBE_FAST_POLL_MS,

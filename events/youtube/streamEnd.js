@@ -64,10 +64,10 @@ async function streamEnd(clientManager, endTime) {
 
     let imageBuffer = null;
     let isFollowup = false;
+    let streams = [];
 
     try {
       const upcomingData = await getUpcomingStreams();
-      const streams = [];
 
       if (upcomingData?.items?.length) {
         for (const item of upcomingData.items) {
@@ -127,18 +127,38 @@ async function streamEnd(clientManager, endTime) {
                   value: streamData.title || "No title",
                   inline: false,
                 },
-                {
-                  name: "Status",
-                  value: "The stream has ended",
-                  inline: false,
-                },
-                {
-                  name: "Average viewers",
-                  value: String(Math.round(streamData.viewers || 0)),
-                  inline: false,
-                },
+                ...(streams.length === 0
+                  ? [
+                      {
+                        name: "Status",
+                        value: "The stream has ended",
+                        inline: false,
+                      },
+                    ]
+                  : []),
+                ...(streams.length > 0
+                  ? [
+                      {
+                        name: "Next streams",
+                        value: streams
+                          .map((s) => {
+                            const epoch = Math.floor(
+                              new Date(s.start).getTime() / 1000,
+                            );
+                            return `• ${s.title} – <t:${epoch}:F>`;
+                          })
+                          .join("\n"),
+                        inline: false,
+                      },
+                    ]
+                  : []),
               )
-              .setFooter({ text: "Thanks for stopping by" })
+              .setFooter({
+                text:
+                  streams.length > 0
+                    ? "Thanks for stopping by • Image times are in UTC"
+                    : "Thanks for stopping by",
+              })
               .setTimestamp(new Date(resolvedEndTime));
 
             const attachmentName = isFollowup

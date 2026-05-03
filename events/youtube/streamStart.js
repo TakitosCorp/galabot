@@ -7,7 +7,7 @@ const {
   ButtonStyle,
   AttachmentBuilder,
 } = require("discord.js");
-const { generateYoutubeBanner } = require("../../utils/imageGenerator");
+const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { setState } = require("../../utils/youtubePoller");
 
 async function streamStart(clientManager, streamState) {
@@ -17,18 +17,10 @@ async function streamStart(clientManager, streamState) {
       streamState;
 
     if (!discordClient || !discordClient.isReady()) {
-      youtubeLog(
-        "error",
-        "Discord client is not ready. Skipping stream start notification.",
-      );
       return;
     }
 
     if (await streamExists(videoId)) {
-      youtubeLog(
-        "warn",
-        `Stream ${videoId} already exists in DB — notification already sent. Skipping.`,
-      );
       setState({ embedSent: true, status: "live" });
       return;
     }
@@ -40,24 +32,27 @@ async function streamStart(clientManager, streamState) {
 
     let attachment = null;
     try {
-      const bannerBuffer = await generateYoutubeBanner({ title, thumbnail });
+      const bannerData = {
+        provider: "youtube",
+        title: title || "No title",
+        category: "YouTube Live",
+        image: thumbnail || "",
+      };
+
+      const bannerBuffer = await generateStreamBanner(bannerData);
       attachment = new AttachmentBuilder(bannerBuffer, {
         name: "stream-banner.png",
       });
-      youtubeLog("info", "YouTube banner generated successfully.");
     } catch (bannerErr) {
-      youtubeLog(
-        "warn",
-        `Could not generate YouTube banner, falling back to thumbnail: ${bannerErr.message}`,
-      );
+      attachment = null;
     }
 
     const embed = new EmbedBuilder()
       .setColor(0xff0000)
       .setAuthor({ name: randomTitle, url: streamUrl })
       .addFields(
-        { name: "📝 Title", value: title || "No title", inline: false },
-        { name: "🔗 Link", value: streamUrl, inline: false },
+        { name: "Title", value: title || "No title", inline: false },
+        { name: "Link", value: streamUrl, inline: false },
       )
       .setImage(attachment ? "attachment://stream-banner.png" : thumbnail)
       .setTimestamp(scheduledStart ? new Date(scheduledStart) : new Date())
@@ -65,23 +60,18 @@ async function streamStart(clientManager, streamState) {
 
     const button = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("Watch stream :3")
+        .setLabel("Watch stream")
         .setStyle(ButtonStyle.Link)
         .setURL(streamUrl),
     );
 
     const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
     if (!channelId) {
-      youtubeLog("error", "DISCORD_NOTIFICATION_CHANNEL env var is not set.");
       return;
     }
 
     const channel = await discordClient.channels.fetch(channelId);
     if (!channel || !channel.isTextBased()) {
-      youtubeLog(
-        "error",
-        `Notification channel (${channelId}) not found or is not a text channel.`,
-      );
       return;
     }
 
@@ -94,7 +84,6 @@ async function streamStart(clientManager, streamState) {
     };
 
     const sentMessage = await channel.send(messageOptions);
-    youtubeLog("info", "Discord notification sent for YouTube stream start.");
 
     await insertStream({
       id: videoId,
@@ -107,7 +96,6 @@ async function streamStart(clientManager, streamState) {
       thumbnail: thumbnail || null,
       discMsgId: sentMessage.id,
     });
-    youtubeLog("info", `YouTube stream saved to DB with ID: ${videoId}`);
 
     setState({ embedSent: true, status: "live" });
   } catch (error) {

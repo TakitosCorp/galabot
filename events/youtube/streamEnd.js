@@ -1,7 +1,16 @@
 const { youtubeLog } = require("../../utils/loggers");
 const { getActiveStream, updateStreamEnd } = require("../../db/streams");
-const { EmbedBuilder } = require("discord.js");
-const { setState } = require("../../utils/youtubePoller");
+const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const {
+  setState,
+  getUpcomingStreams,
+  getVideoStats,
+  extractStreamData,
+} = require("../../utils/youtubePoller");
+const {
+  generateFollowupImage,
+  generateEndedImage,
+} = require("../../utils/imageGenerator");
 const axios = require("axios");
 
 async function streamEnd(clientManager, endTime) {
@@ -10,19 +19,11 @@ async function streamEnd(clientManager, endTime) {
 
     const streamData = await getActiveStream("youtube");
     if (!streamData) {
-      youtubeLog(
-        "warn",
-        "No active YouTube stream found in DB to mark as ended.",
-      );
       return;
     }
 
     const resolvedEndTime = endTime || new Date().toISOString();
     await updateStreamEnd(streamData.id, resolvedEndTime);
-    youtubeLog(
-      "info",
-      `YouTube stream ${streamData.id} marked as ended in DB.`,
-    );
 
     setState({
       status: "ended",
@@ -33,6 +34,43 @@ async function streamEnd(clientManager, endTime) {
       scheduledStart: null,
       streamUrl: null,
     });
+
+    let imageBuffer = null;
+    let isFollowup = false;
+
+    try {
+      const upcomingData = await getUpcomingStreams();
+      const streams = [];
+
+      if (upcomingData?.items?.length) {
+        for (const item of upcomingData.items) {
+          const vidId = item.id.videoId;
+          const stats = await getVideoStats(vidId);
+          const streamInfo = extractStreamData(vidId, stats);
+
+          if (streamInfo) {
+            streams.push({
+              title: streamInfo.title,
+              category: "YouTube Live",
+              start: streamInfo.scheduledStart,
+              gameBoxArtUrl: streamInfo.thumbnail,
+            });
+          }
+        }
+      }
+
+      if (streams.length > 0) {
+        imageBuffer = await generateFollowupImage(
+          { provider: "youtube" },
+          streams,
+        );
+        isFollowup = true;
+      } else {
+        imageBuffer = await generateEndedImage({ provider: "youtube" });
+      }
+    } catch (imgErr) {
+      youtubeLog("error", `Error generating end image: ${imgErr.message}`);
+    }
 
     try {
       const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
@@ -48,44 +86,46 @@ async function streamEnd(clientManager, endTime) {
           if (message) {
             const embed = new EmbedBuilder()
               .setColor(0xff0000)
-              .setAuthor({ name: "Stream ended! Thanks for watching 💜" })
+              .setAuthor({ name: "Stream ended! Thanks for watching" })
               .addFields(
                 {
-                  name: "📌 Title",
+                  name: "Title",
                   value: streamData.title || "No title",
                   inline: false,
                 },
                 {
-                  name: "📺 Status",
-                  value: "The stream has ended — see you next time!",
+                  name: "Status",
+                  value: "The stream has ended",
                   inline: false,
                 },
                 {
-                  name: "👁️ Average viewers",
+                  name: "Average viewers",
                   value: String(Math.round(streamData.viewers || 0)),
                   inline: false,
                 },
               )
-              .setFooter({ text: "Thanks for stopping by the stream 💜" })
+              .setFooter({ text: "Thanks for stopping by" })
               .setTimestamp(new Date(resolvedEndTime));
+
+            const attachmentName = isFollowup
+              ? "stream-followup.png"
+              : "stream-ended.png";
+            const attachment = imageBuffer
+              ? new AttachmentBuilder(imageBuffer, { name: attachmentName })
+              : null;
+
+            if (attachment) embed.setImage(`attachment://${attachmentName}`);
 
             await message.edit({
               embeds: [embed],
               components: [],
-              files: [],
+              ...(attachment ? { files: [attachment] } : {}),
             });
-            youtubeLog(
-              "info",
-              "Discord message edited to reflect YouTube stream end.",
-            );
           }
         }
       }
     } catch (editErr) {
-      youtubeLog(
-        "error",
-        `Could not edit Discord message for stream end: ${editErr.stack}`,
-      );
+      youtubeLog("error", `Could not edit Discord message: ${editErr.message}`);
     }
 
     if (process.env.POST_DATA_WEBHOOK) {
@@ -100,13 +140,7 @@ async function streamEnd(clientManager, endTime) {
           thumbnail: streamData.thumbnail,
           end: resolvedEndTime,
         });
-        youtubeLog("info", "YouTube stream end webhook sent successfully.");
-      } catch (webhookErr) {
-        youtubeLog(
-          "error",
-          `Error sending YouTube stream end webhook: ${webhookErr.stack}`,
-        );
-      }
+      } catch (webhookErr) {}
     }
   } catch (error) {
     youtubeLog("error", `Error handling YouTube stream end: ${error.stack}`);

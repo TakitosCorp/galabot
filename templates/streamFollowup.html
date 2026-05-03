@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stream Followup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="w-full h-screen {{BG_CLASS}} relative overflow-hidden">
+    <div
+      class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 flex items-center shadow-lg"
+    >
+      <span class="text-gray-900 font-semibold text-sm">UPCOMING STREAMS</span>
+    </div>
+
+    <div class="flex items-center justify-center h-full px-8">
+      <div
+        class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-2xl p-3 max-w-3xl w-full border border-white/60"
+      >
+        <div id="streamsContainer" class="space-y-1.5"></div>
+      </div>
+    </div>
+
+    <div class="absolute bottom-4 right-4">
+      <div class="flex items-center text-white text-base">
+        <span class="font-mono">{{LINK_TEXT}}</span>
+      </div>
+    </div>
+
+    <script>
+      const streams = {{STREAMS_JSON}};
+
+      function formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function renderStreams() {
+        const container = document.getElementById("streamsContainer");
+
+        if (!streams || streams.length === 0) {
+          container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-8 text-center">
+              <div class="text-4xl mb-3">(o_o)</div>
+              <h2 class="text-lg font-bold text-gray-900 mb-1">No upcoming streams found</h2>
+              <p class="text-sm text-gray-700">Check back later</p>
+            </div>`;
+          return;
+        }
+
+        streams.forEach((stream, index) => {
+          const el = document.createElement("div");
+          el.className = "grid grid-cols-6 gap-2 items-center py-1.5";
+          if (index < streams.length - 1) el.className += " border-b border-white/30";
+
+          el.innerHTML = `
+            <div class="col-span-1 flex justify-center">
+              <img src="${stream.gameBoxArtUrl || ''}" class="rounded-md shadow-md w-12 h-16 object-cover">
+            </div>
+            <div class="col-span-5 space-y-0.5">
+              <h2 class="text-base font-bold text-gray-900 truncate">${stream.title}</h2>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-900 text-xs truncate">${stream.category}</span>
+                <span class="text-gray-700 text-xs font-medium ml-2">${formatDateTime(stream.start)}</span>
+              </div>
+            </div>`;
+          container.appendChild(el);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", renderStreams);
+    </script>
+  </body>
+</html>

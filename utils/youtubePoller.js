@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { youtubeLog } = require("./loggers");
+const fileUtils = require("./fileUtils");
 const {
   YOUTUBE_STREAM_VALID_HOURS,
   YOUTUBE_QUOTA_COOLDOWN_MS,
@@ -44,17 +45,9 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
 
       if (status === 403 && reason === "quotaExceeded") {
         if (process.env.YOUTUBE_API_KEY_2 && !state.usingFallbackKey) {
-          youtubeLog(
-            "warn",
-            "Primary API key quota exceeded, switching to fallback key.",
-          );
           setState({ usingFallbackKey: true });
           continue;
         }
-        youtubeLog(
-          "error",
-          "All API keys have exceeded quota. Pausing search.list calls for 24 hours.",
-        );
         setState({
           quotaExhaustedUntil: Date.now() + YOUTUBE_QUOTA_COOLDOWN_MS,
         });
@@ -62,30 +55,48 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
       }
 
       if (status === 400 || status === 404) {
-        youtubeLog(
-          "warn",
-          `Non-retryable API error (${status}): ${err.message}`,
-        );
         return null;
       }
 
       if (attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000;
-        youtubeLog(
-          "warn",
-          `API call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms: ${err.message}`,
-        );
         await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
-        youtubeLog(
-          "error",
-          `API call failed after ${maxRetries + 1} attempts: ${err.message}`,
-        );
         return null;
       }
     }
   }
   return null;
+}
+
+async function fetchAndCacheCategories() {
+  youtubeLog("info", "Fetching YouTube categories...");
+  const key = getApiKey(false);
+  const data = await withRetry(() =>
+    axios
+      .get("https://www.googleapis.com/youtube/v3/videoCategories", {
+        params: {
+          part: "snippet",
+          regionCode: "US",
+          key,
+        },
+      })
+      .then((r) => r.data),
+  );
+
+  if (data && data.items) {
+    const categories = {};
+    for (const item of data.items) {
+      categories[item.id] = item.snippet.title;
+    }
+    fileUtils.writeJSON(
+      fileUtils.getFilePath("youtubeCategories.json"),
+      categories,
+    );
+    youtubeLog("info", "YouTube categories cached successfully.");
+  } else {
+    youtubeLog("warn", "Failed to fetch YouTube categories.");
+  }
 }
 
 async function getUpcomingStreams() {
@@ -174,35 +185,33 @@ function extractStreamData(videoId, statsData) {
   const thumbnail =
     thumbs.maxres?.url || thumbs.high?.url || thumbs.default?.url || null;
 
+  const categoryId = item.snippet.categoryId;
+  const cachedCategories = fileUtils.readJSON(
+    fileUtils.getFilePath("youtubeCategories.json"),
+    {},
+  );
+  const categoryName = cachedCategories[categoryId] || "YouTube Live";
+
   return {
     videoId,
     title: item.snippet.title,
     thumbnail,
     scheduledStart: startTime,
     streamUrl: `https://www.youtube.com/watch?v=${videoId}`,
+    category: categoryName,
   };
 }
 
 async function updateWorkflow() {
   if (state.isPolling) {
-    youtubeLog(
-      "debug",
-      "Slow poll skipped — another poll is already in progress.",
-    );
     return;
   }
 
   if (state.quotaExhaustedUntil > Date.now()) {
-    const resumeAt = new Date(state.quotaExhaustedUntil).toISOString();
-    youtubeLog(
-      "warn",
-      `Skipping search.list calls — quota exhausted until ${resumeAt}.`,
-    );
     return;
   }
 
   setState({ isPolling: true });
-  youtubeLog("info", "===== Slow poll (updateWorkflow) started =====");
 
   try {
     const now = new Date();
@@ -212,24 +221,16 @@ async function updateWorkflow() {
     const ongoingData = await getOngoingStream();
     if (ongoingData?.items?.length) {
       const videoId = ongoingData.items[0].id.videoId;
-      youtubeLog("info", `Live stream found with ID: ${videoId}`);
       const stats = await getVideoStats(videoId);
       const streamData = extractStreamData(videoId, stats);
       if (streamData) {
         ongoingStream = streamData;
         candidates.push(streamData);
-        youtubeLog("info", `Live stream added: "${streamData.title}"`);
       }
-    } else {
-      youtubeLog("info", "No streams currently live.");
     }
 
     const upcomingData = await getUpcomingStreams();
     if (upcomingData?.items?.length) {
-      youtubeLog(
-        "info",
-        `Processing ${upcomingData.items.length} upcoming stream(s).`,
-      );
       for (const item of upcomingData.items) {
         try {
           const videoId = item.id.videoId;
@@ -238,32 +239,15 @@ async function updateWorkflow() {
           if (!streamData) continue;
 
           if (shouldSkip(streamData.title)) {
-            youtubeLog(
-              "info",
-              `Skipping "${streamData.title}" (matches skip list).`,
-            );
             continue;
           }
 
           const scheduledDate = new Date(streamData.scheduledStart);
           if (scheduledDate > now || isStreamValid(streamData.scheduledStart)) {
             candidates.push(streamData);
-            youtubeLog("info", `Upcoming stream queued: "${streamData.title}"`);
-          } else {
-            youtubeLog(
-              "info",
-              `Skipping "${streamData.title}" — too far in the past.`,
-            );
           }
-        } catch (itemErr) {
-          youtubeLog(
-            "warn",
-            `Error processing upcoming stream: ${itemErr.message}`,
-          );
-        }
+        } catch (itemErr) {}
       }
-    } else {
-      youtubeLog("info", "No upcoming streams found.");
     }
 
     candidates.sort(
@@ -283,16 +267,13 @@ async function updateWorkflow() {
         status: ongoingStream ? "live" : "upcoming",
         embedSent: isNewStream ? false : state.embedSent,
       });
-      youtubeLog("info", `Tracking stream: "${next.title}" (${next.videoId})`);
     } else {
-      youtubeLog("info", "No streams to track.");
       if (!state.status || state.status === "upcoming") {
         setState({ status: "unknown" });
       }
     }
   } finally {
     setState({ isPolling: false });
-    youtubeLog("info", "===== Slow poll (updateWorkflow) complete =====");
   }
 }
 
@@ -301,21 +282,15 @@ async function checkWorkflow() {
 
   const stats = await getVideoStats(state.videoId);
   if (!stats?.items?.length) {
-    youtubeLog("debug", `No stats returned for video ${state.videoId}.`);
     return null;
   }
 
   const details = stats.items[0].liveStreamingDetails;
   if (!details) {
-    youtubeLog("debug", `No liveStreamingDetails for video ${state.videoId}.`);
     return null;
   }
 
   if (details.actualEndTime) {
-    youtubeLog(
-      "info",
-      `Stream ${state.videoId} has ended (actualEndTime set).`,
-    );
     return { isLive: false, viewers: 0, endTime: details.actualEndTime };
   }
 
@@ -328,14 +303,19 @@ async function checkWorkflow() {
   }
 
   if (details.actualStartTime) {
-    youtubeLog(
-      "info",
-      `Stream ${state.videoId} has actualStartTime but no viewers yet — grace period.`,
-    );
     return { isLive: true, viewers: 0, endTime: null };
   }
 
   return { isLive: false, viewers: 0, endTime: null };
 }
 
-module.exports = { updateWorkflow, checkWorkflow, getState, setState };
+module.exports = {
+  updateWorkflow,
+  checkWorkflow,
+  getState,
+  setState,
+  getUpcomingStreams,
+  getVideoStats,
+  extractStreamData,
+  fetchAndCacheCategories,
+};

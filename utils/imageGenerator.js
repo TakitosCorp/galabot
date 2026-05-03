@@ -1,7 +1,6 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
-const { twitchLog, youtubeLog } = require("./loggers");
 const {
   PUPPETEER_PAGE_TIMEOUT_MS,
   PUPPETEER_GOTO_TIMEOUT_MS,
@@ -26,14 +25,12 @@ async function getBrowser() {
     try {
       await browser.version();
     } catch {
-      twitchLog("warn", "Puppeteer browser became unavailable; relaunching.");
       browser = null;
     }
   }
   if (!browser) {
     const executablePath =
       process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
-
     browser = await puppeteer.launch({
       headless: "new",
       executablePath,
@@ -49,187 +46,113 @@ async function getBrowser() {
         "--disable-web-security",
         "--disable-features=VizDisplayCompositor",
         "--max-old-space-size=4096",
-        "--enable-logging",
-        "--v=1",
       ],
     });
   }
   return browser;
 }
 
-async function generateStreamBanner(streamData, options = {}) {
+function getCommonTemplateVars(provider) {
+  const isYt = provider === "youtube";
+  return {
+    "{{BG_CLASS}}": isYt
+      ? "bg-gradient-to-br from-red-600 to-pink-500"
+      : "bg-gradient-to-br from-purple-600 to-pink-500",
+    "{{LINK_TEXT}}": isYt ? process.env.YOUTUBE_URL : process.env.TWITCH_URL,
+  };
+}
+
+async function generateImageFromTemplate(
+  templateName,
+  replacements,
+  waitSelector,
+  settleMs,
+) {
   let page;
   try {
-    twitchLog("info", "Generating banner...");
-
-    const templateName = options.templateName || "streamBanner.html";
     const templatePath = path.join(__dirname, "..", "templates", templateName);
-
-    try {
-      await fs.access(templatePath);
-    } catch (error) {
-      twitchLog("error", `HTML file not found: ${templatePath}`);
-      throw new Error(`HTML template not found at: ${templatePath}`);
-    }
-
     let htmlContent = await fs.readFile(templatePath, "utf8");
-    if (!htmlContent || htmlContent.trim().length === 0) {
-      twitchLog("error", "HTML file is empty");
-      throw new Error("HTML file is empty");
-    }
 
-    if (templateName === "streamBanner.html") {
-      const gameImageUrl =
-        streamData.gameBoxArtUrl ||
-        (streamData.gameId
-          ? `https://static-cdn.jtvnw.net/ttv-boxart/${streamData.gameId}-432x576.jpg`
-          : "https://static-cdn.jtvnw.net/ttv-static/404_boxart-432x576.jpg");
-
-      let filteredTitle = (streamData.title || "No title")
-        .replace(/!\w+\b/g, "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-
-      htmlContent = htmlContent
-        .replace("{{STREAM_TITLE}}", escapeHtml(filteredTitle))
-        .replace(
-          "{{STREAM_CATEGORY}}",
-          escapeHtml(streamData.category || "No category"),
-        )
-        .replace("{{GAME_IMAGE_URL}}", escapeHtml(gameImageUrl));
-    }
-
-    if (templateName === "youtubeStreamBanner.html") {
-      htmlContent = htmlContent
-        .replace("{{STREAM_TITLE}}", escapeHtml(streamData.title || "No title"))
-        .replace("{{THUMBNAIL_URL}}", escapeHtml(streamData.thumbnail || ""));
-    }
-
-    if (templateName === "nextStreams.html" && options.streamsJson) {
-      htmlContent = htmlContent.replace(
-        /const streams = \[[\s\S]*?\];/,
-        `const streams = ${JSON.stringify(options.streamsJson, null, 2)};`,
-      );
+    for (const [key, value] of Object.entries(replacements)) {
+      htmlContent = htmlContent.replace(new RegExp(key, "g"), value);
     }
 
     const browserInstance = await getBrowser();
     page = await browserInstance.newPage();
 
-    page.on("pageerror", (error) => {
-      twitchLog("error", `[Browser Error] ${error.message}`);
-    });
-    page.on("requestfailed", (request) => {
-      twitchLog(
-        "warn",
-        `[Request Failed] ${request.url()} - ${request.failure().errorText}`,
-      );
-    });
-    page.on("response", (response) => {
-      if (response.status() >= 400) {
-        twitchLog(
-          "warn",
-          `[HTTP Error] ${response.url()} - ${response.status()}`,
-        );
-      }
-    });
-
     await page.setDefaultNavigationTimeout(PUPPETEER_PAGE_TIMEOUT_MS);
     await page.setDefaultTimeout(PUPPETEER_PAGE_TIMEOUT_MS);
-
     await page.setViewport({ width: 1280, height: 720 });
 
     const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    twitchLog("debug", "Navigating to data URI to render banner...");
     await page.goto(dataUri, {
       waitUntil: "networkidle0",
       timeout: PUPPETEER_GOTO_TIMEOUT_MS,
     });
 
-    const bodyContent = await page.evaluate(() => document.body.innerHTML);
-    if (!bodyContent || bodyContent.trim().length === 0) {
-      twitchLog(
-        "warn",
-        "Body content is empty after first attempt, retrying with setContent...",
-      );
-      await page.setContent(htmlContent, {
-        waitUntil: ["load", "domcontentloaded"],
-        timeout: PUPPETEER_GOTO_TIMEOUT_MS,
-      });
-      const bodyContentRetry = await page.evaluate(
-        () => document.body.innerHTML,
-      );
-      if (!bodyContentRetry || bodyContentRetry.trim().length === 0) {
-        throw new Error("HTML content did not load correctly in the page");
-      }
-    }
-
-    if (templateName === "nextStreams.html") {
+    if (waitSelector) {
       await page
-        .waitForSelector("#streamsContainer", {
+        .waitForSelector(waitSelector, {
           timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
         })
         .catch(() => {});
-      await new Promise((resolve) =>
-        setTimeout(resolve, NEXT_STREAMS_SETTLE_MS),
-      );
-    } else if (templateName === "youtubeStreamBanner.html") {
-      try {
-        await page.waitForSelector("#thumbnailImage", {
-          timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
-        });
-      } catch (error) {
-        youtubeLog(
-          "warn",
-          `Thumbnail not loaded in expected time, continuing: ${error.message}`,
-        );
-      }
-      await new Promise((resolve) => setTimeout(resolve, BANNER_SETTLE_MS));
-    } else {
-      try {
-        await page.waitForSelector("#gameImage", {
-          timeout: PUPPETEER_SELECTOR_TIMEOUT_MS,
-        });
-      } catch (error) {
-        twitchLog(
-          "warn",
-          `Image not loaded in expected time, continuing: ${error.message}`,
-        );
-      }
-      await new Promise((resolve) => setTimeout(resolve, BANNER_SETTLE_MS));
     }
+    await new Promise((r) => setTimeout(r, settleMs));
 
-    twitchLog("debug", "Taking banner screenshot...");
     const screenshot = await page.screenshot({
       type: "png",
       fullPage: false,
       timeout: PUPPETEER_SCREENSHOT_TIMEOUT_MS,
     });
-
     await page.close();
-
-    twitchLog("info", "Banner generated successfully.");
     return screenshot;
   } catch (error) {
-    if (page) {
-      await page.close().catch(() => {});
-    }
-    twitchLog("error", `Error generating banner image: ${error.message}`);
-    twitchLog("error", `Stack trace: ${error.stack}`);
+    if (page) await page.close().catch(() => {});
     throw error;
   }
 }
 
-async function generateNextStreamsImage(streamsJson) {
-  return generateStreamBanner(
-    {},
-    { templateName: "nextStreams.html", streamsJson },
+async function generateStreamBanner(streamData) {
+  const vars = getCommonTemplateVars(streamData.provider);
+  let filteredTitle = (streamData.title || "No title")
+    .replace(/!\w+\b/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  vars["{{STREAM_TITLE}}"] = escapeHtml(filteredTitle);
+  vars["{{STREAM_CATEGORY}}"] = escapeHtml(
+    streamData.category || "No category",
+  );
+  vars["{{GAME_IMAGE_URL}}"] = escapeHtml(streamData.image || "");
+
+  return generateImageFromTemplate(
+    "streamBanner.html",
+    vars,
+    "#gameImage",
+    BANNER_SETTLE_MS,
   );
 }
 
-async function generateYoutubeBanner(streamData) {
-  return generateStreamBanner(streamData, {
-    templateName: "youtubeStreamBanner.html",
-  });
+async function generateFollowupImage(streamData, streamsJson) {
+  const vars = getCommonTemplateVars(streamData.provider);
+  vars["{{STREAMS_JSON}}"] = JSON.stringify(streamsJson || []);
+
+  return generateImageFromTemplate(
+    "streamFollowup.html",
+    vars,
+    "#streamsContainer",
+    NEXT_STREAMS_SETTLE_MS,
+  );
+}
+
+async function generateEndedImage(streamData) {
+  const vars = getCommonTemplateVars(streamData.provider);
+  return generateImageFromTemplate(
+    "streamEnded.html",
+    vars,
+    null,
+    BANNER_SETTLE_MS,
+  );
 }
 
 async function closeBrowser() {
@@ -241,7 +164,7 @@ async function closeBrowser() {
 
 module.exports = {
   generateStreamBanner,
-  generateNextStreamsImage,
-  generateYoutubeBanner,
+  generateFollowupImage,
+  generateEndedImage,
   closeBrowser,
 };

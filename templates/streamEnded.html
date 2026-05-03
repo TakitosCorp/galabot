@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stream Ended</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="w-full h-screen {{BG_CLASS}} relative overflow-hidden">
+    <div class="flex items-center justify-center h-full px-8">
+      <div
+        class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-2xl p-8 max-w-3xl w-full border border-white/60 text-center"
+      >
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Stream Ended</h1>
+        <p class="text-xl text-gray-800">
+          Thanks for watching! See you next time.
+        </p>
+      </div>
+    </div>
+    <div class="absolute bottom-4 right-4">
+      <div class="flex items-center text-white text-base">
+        <span class="font-mono">{{LINK_TEXT}}</span>
+      </div>
+    </div>
+  </body>
+</html>

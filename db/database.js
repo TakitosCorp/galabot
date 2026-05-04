@@ -1,65 +1,10 @@
 /**
- * @module db/database
- * @description
- * SQLite + Kysely connection bootstrap. Owns the singleton `db` instance every
- * other module under `db/` imports, and exposes an `initialize()` that ensures
- * all tables exist on startup. The database file lives at `<projectRoot>/data/galabot.sqlite`.
- *
- * Tables managed here:
- *  - `greetings` — last greeting timestamp per user (cooldown tracking).
- *  - `warns` — moderation warnings.
- *  - `streams` — unified stream history across Twitch + YouTube.
- *  - `discord_scheduled_events` — dedup guard for Discord Guild Scheduled Events.
- */
-
-"use strict";
-
-const { Kysely, SqliteDialect } = require("kysely");
-const path = require("path");
-const fs = require("fs");
-const Database = require("better-sqlite3");
-const { dbLog } = require("../utils/loggers");
-
-/**
- * Absolute path to the project's `data/` directory. Created on first load.
- * @type {string}
- * @constant
- */
-const dataDir = path.resolve(__dirname, "../data");
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  dbLog("info", "db:dataDir created", { dataDir });
-}
-
-/**
- * Absolute path to the SQLite database file.
- * @type {string}
- * @constant
- */
-const dbFile = path.join(dataDir, "galabot.sqlite");
-
-/**
- * Singleton Kysely instance backed by `better-sqlite3`. Imported by every
- * query helper under `db/`.
- * @type {import('kysely').Kysely<any>}
- */
-const db = new Kysely({
-  dialect: new SqliteDialect({
-    database: new Database(dbFile),
-  }),
-});
-
-dbLog("debug", "db:connection ready", { dbFile });
-
-/**
- * Create every table the bot relies on if it does not already exist.
- * Safe to call repeatedly on an existing database.
- *
- * Table creation uses `.ifNotExists()` inside a transaction for atomicity.
+ * Create every table the bot relies on if it does not already exist,
+ * and handle automatic migrations for older schemas missing new columns.
  *
  * @async
  * @returns {Promise<void>}
- * @throws {Error} When the underlying SQLite engine rejects (e.g. permission denied).
+ * @throws {Error} When the underlying SQLite engine rejects.
  */
 async function initialize() {
   dbLog("info", "db:initialize start");
@@ -82,15 +27,13 @@ async function initialize() {
         .addColumn("reason", "text", (col) => col.notNull())
         .execute();
 
-      // Unified stream table across all providers.
-      // provider: 'twitch' | 'youtube'
-      // category, tags  — Twitch only; NULL for other providers.
-      // thumbnail       — YouTube only; NULL for other providers.
       await trx.schema
         .createTable("streams")
         .ifNotExists()
         .addColumn("id", "text", (col) => col.primaryKey())
-        .addColumn("provider", "text", (col) => col.notNull())
+        .addColumn("provider", "text", (col) =>
+          col.notNull().defaultTo("twitch"),
+        )
         .addColumn("timestamp", "datetime", (col) => col.notNull())
         .addColumn("title", "text", (col) => col.notNull())
         .addColumn("viewers", "real", (col) => col.notNull().defaultTo(0))
@@ -104,13 +47,13 @@ async function initialize() {
         .addColumn("end", "datetime")
         .execute();
 
-      // Dedup guard for Discord Guild Scheduled Events.
-      // source_id is the provider-native id: Twitch segment UUID or YouTube videoId.
       await trx.schema
         .createTable("discord_scheduled_events")
         .ifNotExists()
         .addColumn("source_id", "text", (col) => col.primaryKey())
-        .addColumn("provider", "text", (col) => col.notNull())
+        .addColumn("provider", "text", (col) =>
+          col.notNull().defaultTo("twitch"),
+        )
         .addColumn("discord_event_id", "text", (col) => col.notNull())
         .addColumn("created_at", "datetime", (col) => col.notNull())
         .addColumn("scheduled_start", "text")
@@ -118,6 +61,67 @@ async function initialize() {
         .addColumn("title", "text")
         .execute();
     });
+
+    const streamsInfo = sqliteDb.pragma("table_info(streams)");
+    if (streamsInfo.length > 0) {
+      const cols = streamsInfo.map((c) => c.name);
+      if (!cols.includes("provider")) {
+        sqliteDb.exec(
+          "ALTER TABLE streams ADD COLUMN provider text NOT NULL DEFAULT 'twitch'",
+        );
+        dbLog("info", "db:migration added provider to streams");
+      }
+      if (!cols.includes("category")) {
+        sqliteDb.exec("ALTER TABLE streams ADD COLUMN category text");
+        dbLog("info", "db:migration added category to streams");
+      }
+      if (!cols.includes("tags")) {
+        sqliteDb.exec("ALTER TABLE streams ADD COLUMN tags text");
+        dbLog("info", "db:migration added tags to streams");
+      }
+      if (!cols.includes("thumbnail")) {
+        sqliteDb.exec("ALTER TABLE streams ADD COLUMN thumbnail text");
+        dbLog("info", "db:migration added thumbnail to streams");
+      }
+    }
+
+    const eventsInfo = sqliteDb.pragma("table_info(discord_scheduled_events)");
+    if (eventsInfo.length > 0) {
+      const cols = eventsInfo.map((c) => c.name);
+      if (!cols.includes("provider")) {
+        sqliteDb.exec(
+          "ALTER TABLE discord_scheduled_events ADD COLUMN provider text NOT NULL DEFAULT 'twitch'",
+        );
+        dbLog(
+          "info",
+          "db:migration added provider to discord_scheduled_events",
+        );
+      }
+      if (!cols.includes("scheduled_start")) {
+        sqliteDb.exec(
+          "ALTER TABLE discord_scheduled_events ADD COLUMN scheduled_start text",
+        );
+        dbLog(
+          "info",
+          "db:migration added scheduled_start to discord_scheduled_events",
+        );
+      }
+      if (!cols.includes("scheduled_end")) {
+        sqliteDb.exec(
+          "ALTER TABLE discord_scheduled_events ADD COLUMN scheduled_end text",
+        );
+        dbLog(
+          "info",
+          "db:migration added scheduled_end to discord_scheduled_events",
+        );
+      }
+      if (!cols.includes("title")) {
+        sqliteDb.exec(
+          "ALTER TABLE discord_scheduled_events ADD COLUMN title text",
+        );
+        dbLog("info", "db:migration added title to discord_scheduled_events");
+      }
+    }
 
     dbLog("info", "db:initialize complete");
   } catch (err) {
@@ -128,5 +132,3 @@ async function initialize() {
     throw err;
   }
 }
-
-module.exports = { db, initialize };

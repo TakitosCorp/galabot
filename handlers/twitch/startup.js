@@ -17,6 +17,12 @@ const streamEndHandler = require("../../events/twitch/streamEnd");
 const messageHandler = require("../../events/twitch/messageCreate");
 const interactionHandler = require("../../events/twitch/interactionCreate");
 const { createEventData } = require("./eventData");
+const {
+  syncTwitchScheduleEvents,
+} = require("../../utils/discordGuildEvents");
+
+/** Interval reference for the hourly Twitch schedule → Discord events sync. */
+const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;
 
 /**
  * Attach all chat + EventSub callbacks to the clients owned by `clientManager`.
@@ -98,6 +104,22 @@ async function bootstrap(clientManager) {
       stack: error.stack,
     });
   }
+
+  // Initial Discord event sync + hourly refresh for upcoming Twitch schedule.
+  syncTwitchScheduleEvents(clientManager).catch((err) => {
+    twitchLog("error", "twitch:bootstrap scheduleSync failed", {
+      err: err.message,
+      stack: err.stack,
+    });
+  });
+  setInterval(() => {
+    syncTwitchScheduleEvents(clientManager).catch((err) => {
+      twitchLog("error", "twitch:scheduleSync interval failed", {
+        err: err.message,
+        stack: err.stack,
+      });
+    });
+  }, TWITCH_SCHEDULE_SYNC_MS);
 
   twitchLog("info", "twitch:bootstrap complete");
 }

@@ -3,7 +3,8 @@
  * @description
  * Helix wrappers focused on the streamer's published schedule. Used by the
  * stream-end pipeline to decide whether to render a "next streams" follow-up
- * image or a generic "stream ended" image.
+ * image or a generic "stream ended" image, and by the Discord event sync to
+ * create Guild Scheduled Events for all upcoming segments.
  *
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
  */
@@ -85,9 +86,9 @@ async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
 }
 
 /**
- * Fetch the streamer's Helix schedule and filter it down to segments that fall
- * inside the current week (now → next Sunday 23:59:59 UTC). Each segment is
- * decorated with a pre-resolved box-art URL when available.
+ * Fetch all future scheduled segments for the streamer, starting from now.
+ * Each segment is decorated with a pre-resolved box-art URL when available.
+ * Used by the stream-end followup image pipeline and by the Discord event sync.
  *
  * @async
  * @param {string} username - Twitch login (no leading `#`).
@@ -107,14 +108,7 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   const accessToken = twitchConfig.ACCESS_TOKEN;
 
   const broadcasterId = await getBroadcasterId(username, clientId, accessToken);
-
   const now = new Date();
-  const endOfWeek = new Date(now);
-  const dayOfWeek = now.getUTCDay();
-  const daysUntilSunday = (7 - dayOfWeek) % 7;
-  endOfWeek.setUTCDate(now.getUTCDate() + daysUntilSunday);
-  endOfWeek.setUTCHours(23, 59, 59, 999);
-
   const startTimeForAPI = now.toISOString();
   const url = `https://api.twitch.tv/helix/schedule?broadcaster_id=${broadcasterId}&start_time=${startTimeForAPI}`;
   const res = await axios.get(url, {
@@ -122,15 +116,14 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   });
 
   const data = res.data;
-  const segments = (data?.data?.segments || []).filter((seg) => {
-    const start = new Date(seg.start_time);
-    return start >= now && start <= endOfWeek;
-  });
+  const segments = (data?.data?.segments || []).filter(
+    (seg) => new Date(seg.start_time) >= now,
+  );
 
   twitchLog("info", "twitchSchedule:segments fetched", {
     broadcasterId,
     total: data?.data?.segments?.length || 0,
-    thisWeek: segments.length,
+    upcoming: segments.length,
   });
 
   const result = [];
@@ -144,6 +137,7 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
       );
     }
     result.push({
+      id: seg.id,
       title: seg.title,
       category,
       start: new Date(seg.start_time).toISOString(),

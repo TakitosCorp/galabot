@@ -25,6 +25,7 @@ const {
   generateEndedImage,
 } = require("../../utils/imageGenerator");
 const { stopViewersAverage } = require("../../utils/twitchViews");
+const { setIdleStatus } = require("../../utils/discordPresence");
 
 /**
  * Process a `streamOffline` EventSub event. Errors are logged at every step but
@@ -213,6 +214,8 @@ async function streamEnd(event, clientManager) {
         stack: editErr.stack,
       });
     }
+
+    setIdleStatus(discordClient);
 
     if (updated) {
       try {

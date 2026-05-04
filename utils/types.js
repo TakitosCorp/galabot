@@ -119,11 +119,25 @@
 /**
  * Streamer schedule entry returned by {@link module:utils/twitchSchedule.getStreamerScheduleThisWeek}.
  * @typedef {Object} ScheduleSegment
+ * @property {string} id - Twitch segment UUID.
  * @property {string} title - Segment title.
  * @property {string} category - Game/category name; "Sin categoría" when unset.
  * @property {string} start - ISO-8601 segment start.
  * @property {string} end - ISO-8601 segment end.
  * @property {string|null} gameBoxArtUrl - Pre-resolved box-art URL or null when unavailable.
+ */
+
+/**
+ * Row shape for the `discord_scheduled_events` SQLite table — prevents duplicate
+ * Discord Guild Scheduled Events and carries enough metadata to detect reschedules.
+ * @typedef {Object} DiscordScheduledEventRow
+ * @property {string} sourceId - Provider-native identifier: Twitch segment UUID or YouTube videoId.
+ * @property {("twitch"|"youtube")} provider - Originating platform.
+ * @property {string} discordEventId - Discord Guild Scheduled Event snowflake id.
+ * @property {string} createdAt - ISO-8601 timestamp when the row was inserted.
+ * @property {string|null} scheduledStart - ISO-8601 start time stored at creation; compared on each sync to detect reschedules.
+ * @property {string|null} scheduledEnd - ISO-8601 end time stored at creation.
+ * @property {string|null} title - Stream title stored at creation; compared to detect renames.
  */
 
 /* ──────────────────────────── YouTube types ──────────────────────────── */

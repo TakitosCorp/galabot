@@ -27,6 +27,7 @@ const {
 } = require("discord.js");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { startViewersAverage } = require("../../utils/twitchViews");
+const { setStreamingStatus } = require("../../utils/discordPresence");
 
 /**
  * Process a `streamOnline` EventSub event. Failures at any step are logged but
@@ -206,6 +207,8 @@ async function streamStart(event, clientManager) {
           process.env.TWITCH_CHANNEL,
         );
       }
+
+      setStreamingStatus(discordClient, stream.title || "No title", twitchUrl);
     } else {
       twitchLog("warn", "twitch:streamStart channel-not-text", { channelId });
     }

@@ -9,6 +9,7 @@
  *  - `greetings` — last greeting timestamp per user (cooldown tracking).
  *  - `warns` — moderation warnings.
  *  - `streams` — unified stream history across Twitch + YouTube.
+ *  - `discord_scheduled_events` — dedup guard for Discord Guild Scheduled Events.
  */
 
 "use strict";
@@ -51,9 +52,10 @@ const db = new Kysely({
 dbLog("debug", "db:connection ready", { dbFile });
 
 /**
- * Create every table the bot relies on if it does not already exist. Safe to call
- * repeatedly — every `createTable` is wrapped with `.ifNotExists()`. All schema
- * changes happen in a single transaction so partial migrations cannot leak.
+ * Create every table the bot relies on if it does not already exist.
+ * Safe to call repeatedly on an existing database.
+ *
+ * Table creation uses `.ifNotExists()` inside a transaction for atomicity.
  *
  * @async
  * @returns {Promise<void>}
@@ -101,7 +103,22 @@ async function initialize() {
         .addColumn("discMsgId", "text", (col) => col.notNull().defaultTo(""))
         .addColumn("end", "datetime")
         .execute();
+
+      // Dedup guard for Discord Guild Scheduled Events.
+      // source_id is the provider-native id: Twitch segment UUID or YouTube videoId.
+      await trx.schema
+        .createTable("discord_scheduled_events")
+        .ifNotExists()
+        .addColumn("source_id", "text", (col) => col.primaryKey())
+        .addColumn("provider", "text", (col) => col.notNull())
+        .addColumn("discord_event_id", "text", (col) => col.notNull())
+        .addColumn("created_at", "datetime", (col) => col.notNull())
+        .addColumn("scheduled_start", "text")
+        .addColumn("scheduled_end", "text")
+        .addColumn("title", "text")
+        .execute();
     });
+
     dbLog("info", "db:initialize complete");
   } catch (err) {
     dbLog("error", "db:initialize failed", {

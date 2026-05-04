@@ -20,6 +20,9 @@ const {
   getState,
   setState,
   fetchAndCacheCategories,
+  getUpcomingStreams,
+  getVideoStats,
+  extractStreamData,
 } = require("../../utils/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
@@ -30,6 +33,59 @@ const {
   YOUTUBE_SLOW_POLL_MS,
   YOUTUBE_CATEGORY_POLL_MS,
 } = require("../../utils/constants");
+const {
+  createGuildStreamEvent,
+  cleanupRemovedEvents,
+} = require("../../utils/discordGuildEvents");
+
+/**
+ * Fetch all upcoming YouTube streams, create Discord Guild Scheduled Events for
+ * any not yet tracked, and clean up events whose streams were removed. Mirrors
+ * the Twitch schedule sync but uses the YouTube search API results.
+ *
+ * Separated from `runSlowPoll` so it can be cleanly gated by
+ * `DISCORD_EVENTS_ENABLED` without complicating the polling state machine.
+ *
+ * @async
+ * @param {import('discord.js').Client|null} discordClient
+ * @returns {Promise<void>}
+ */
+async function syncYouTubeDiscordEvents(discordClient) {
+  try {
+    const upcomingData = await getUpcomingStreams();
+    const currentSourceIds = [];
+
+    if (upcomingData?.items?.length) {
+      for (const item of upcomingData.items) {
+        const vidId = item.id?.videoId;
+        if (!vidId) continue;
+
+        const stats = await getVideoStats(vidId);
+        const streamInfo = extractStreamData(vidId, stats);
+        if (!streamInfo) continue;
+
+        currentSourceIds.push(vidId);
+        await createGuildStreamEvent(discordClient, {
+          provider: "youtube",
+          sourceId: vidId,
+          title: streamInfo.title,
+          streamUrl: streamInfo.streamUrl,
+          scheduledStart: streamInfo.scheduledStart,
+        });
+      }
+    }
+
+    await cleanupRemovedEvents(discordClient, "youtube", currentSourceIds);
+    youtubeLog("info", "youtube:slowPoll discordEventSync complete", {
+      upcoming: currentSourceIds.length,
+    });
+  } catch (err) {
+    youtubeLog("error", "youtube:slowPoll discordEventSync failed", {
+      err: err.message,
+      stack: err.stack,
+    });
+  }
+}
 
 /**
  * One pass of the slow poll: refresh the tracked stream candidate by searching
@@ -53,6 +109,10 @@ async function runSlowPoll(clientManager) {
       });
     } else {
       youtubeLog("info", "youtube:slowPoll no-streams");
+    }
+
+    if (process.env.DISCORD_EVENTS_ENABLED === "true") {
+      await syncYouTubeDiscordEvents(clientManager.discordClient);
     }
   } catch (err) {
     youtubeLog("error", "youtube:slowPoll failed", {

@@ -20,6 +20,7 @@ const {
 } = require("discord.js");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { setState } = require("../../utils/youtubePoller");
+const { setStreamingStatus } = require("../../utils/discordPresence");
 
 /**
  * Announce a YouTube live stream on Discord. Errors are logged but never thrown
@@ -141,6 +142,7 @@ async function streamStart(clientManager, streamState) {
       discMsgId: sentMessage.id,
     });
 
+    setStreamingStatus(discordClient, title || "No title", streamUrl);
     setState({ embedSent: true, status: "live" });
     youtubeLog("info", "youtube:streamStart state -> live", { videoId });
   } catch (error) {

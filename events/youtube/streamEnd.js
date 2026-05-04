@@ -13,6 +13,7 @@
 const { youtubeLog } = require("../../utils/loggers");
 const { getActiveStream, updateStreamEnd } = require("../../db/streams");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { setIdleStatus } = require("../../utils/discordPresence");
 const {
   setState,
   getUpcomingStreams,
@@ -189,6 +190,8 @@ async function streamEnd(clientManager, endTime) {
         stack: editErr.stack,
       });
     }
+
+    setIdleStatus(discordClient);
 
     if (process.env.POST_DATA_WEBHOOK) {
       try {

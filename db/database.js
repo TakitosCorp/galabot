@@ -1,4 +1,32 @@
 /**
+ * @module db/database
+ * @description
+ * Database connection and initialization. Sets up the better-sqlite3 connection,
+ * configures Kysely, and handles schema creation and migrations.
+ */
+
+"use strict";
+
+const Database = require("better-sqlite3");
+const { Kysely, SqliteDialect } = require("kysely");
+const { dbLog } = require("../utils/loggers");
+const path = require("path");
+const fs = require("fs");
+
+const dataDir = path.join(__dirname, "..", "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const sqliteDb = new Database(path.join(dataDir, "galabot.sqlite"));
+
+const db = new Kysely({
+  dialect: new SqliteDialect({
+    database: sqliteDb,
+  }),
+});
+
+/**
  * Create every table the bot relies on if it does not already exist,
  * and handle automatic migrations for older schemas missing new columns.
  *
@@ -132,3 +160,9 @@ async function initialize() {
     throw err;
   }
 }
+
+module.exports = {
+  db,
+  sqliteDb,
+  initialize,
+};

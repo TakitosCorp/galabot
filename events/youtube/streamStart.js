@@ -19,6 +19,7 @@ const {
   AttachmentBuilder,
 } = require("discord.js");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { setState } = require("../../utils/youtubePoller");
 const { setStreamingStatus } = require("../../utils/discordPresence");
 
@@ -84,7 +85,7 @@ async function streamStart(clientManager, streamState) {
       .setColor(0xff0000)
       .setAuthor({ name: randomTitle, url: streamUrl })
       .addFields(
-        { name: "Title", value: title || "No title", inline: false },
+        { name: "Title", value: cleanStreamTitle(title), inline: false },
         { name: "Link", value: streamUrl, inline: false },
         {
           name: "Start time",
@@ -136,13 +137,13 @@ async function streamStart(clientManager, streamState) {
       timestamp: scheduledStart
         ? new Date(scheduledStart).toISOString()
         : new Date().toISOString(),
-      title: title || "No title",
+      title: cleanStreamTitle(title),
       viewers: 0,
       thumbnail: thumbnail || null,
       discMsgId: sentMessage.id,
     });
 
-    setStreamingStatus(discordClient, title || "No title", streamUrl);
+    setStreamingStatus(discordClient, cleanStreamTitle(title), streamUrl);
     setState({ embedSent: true, status: "live" });
     youtubeLog("info", "youtube:streamStart state -> live", { videoId });
   } catch (error) {

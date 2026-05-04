@@ -1,4 +1,3 @@
-
 # GalaBot
 
 GalaBot is a multi-platform streaming companion bot for a single content creator's community. It bridges **Discord**, **Twitch**, and **YouTube** in one Node.js process: announcing streams as they go live, generating custom banner images, moderating Discord chat, greeting users, and persisting per-stream stats to a local SQLite database. It is built around the streamer "Gala" (a dinosaur mascot), but the codebase is generic enough to be reused — every channel ID, role, and credential is loaded from environment variables.
@@ -210,20 +209,20 @@ Notes:
 
 If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils/constants.js`:
 
-| Constant                     | Default | Meaning                                                                                      |
-| ---------------------------- | ------- | -------------------------------------------------------------------------------------------- |
-| `GREETING_COOLDOWN_MS`       | 4 h     | Time before a user can trigger a greeting response again. Shared between Discord and Twitch. |
-| `WARN_TIMEOUT_BASE_MS`       | 10 min  | Per-warn timeout. A user with N warns gets a `N * 10 min` timeout.                           |
-| `MAX_WARN_BEFORE_BAN`        | 3       | Number of warns at which the user is permanently banned.                                     |
-| `MAX_WARN_REASON_LENGTH`     | 512     | Max characters allowed in a `/warn` reason.                                                  |
-| `TOKEN_VALIDITY_MS`          | 59 days | How long a refreshed Twitch token is considered valid before re-refreshing.                  |
-| `VIEWER_POLL_INTERVAL_MS`    | 60 s    | Twitch viewer-count sampling interval during a live stream.                                  |
-| `YOUTUBE_FAST_POLL_MS`       | 60 s    | Cadence of the lightweight `videos.list` poll (1 quota unit per call).                       |
-| `YOUTUBE_SLOW_POLL_MS`       | 3 h     | Cadence of the heavier `search.list` poll (100 quota units per call).                        |
-| `YOUTUBE_CATEGORY_POLL_MS`   | 48 h    | Cadence for fetching and caching YouTube category mappings via the `videoCategories` endpoint.|
-| `YOUTUBE_STREAM_VALID_HOURS` | 12      | How long after publish a discovered video is still tracked.                                  |
-| `YOUTUBE_QUOTA_COOLDOWN_MS`  | 24 h    | Pause on `search.list` calls after a quota error.                                            |
-| `PUPPETEER_*_TIMEOUT_MS`     | various | Puppeteer page/goto/screenshot/selector timeouts. Bump these on slow hardware.               |
+| Constant                     | Default | Meaning                                                                                        |
+| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `GREETING_COOLDOWN_MS`       | 4 h     | Time before a user can trigger a greeting response again. Shared between Discord and Twitch.   |
+| `WARN_TIMEOUT_BASE_MS`       | 10 min  | Per-warn timeout. A user with N warns gets a `N * 10 min` timeout.                             |
+| `MAX_WARN_BEFORE_BAN`        | 3       | Number of warns at which the user is permanently banned.                                       |
+| `MAX_WARN_REASON_LENGTH`     | 512     | Max characters allowed in a `/warn` reason.                                                    |
+| `TOKEN_VALIDITY_MS`          | 59 days | How long a refreshed Twitch token is considered valid before re-refreshing.                    |
+| `VIEWER_POLL_INTERVAL_MS`    | 60 s    | Twitch viewer-count sampling interval during a live stream.                                    |
+| `YOUTUBE_FAST_POLL_MS`       | 60 s    | Cadence of the lightweight `videos.list` poll (1 quota unit per call).                         |
+| `YOUTUBE_SLOW_POLL_MS`       | 3 h     | Cadence of the heavier `search.list` poll (100 quota units per call).                          |
+| `YOUTUBE_CATEGORY_POLL_MS`   | 48 h    | Cadence for fetching and caching YouTube category mappings via the `videoCategories` endpoint. |
+| `YOUTUBE_STREAM_VALID_HOURS` | 12      | How long after publish a discovered video is still tracked.                                    |
+| `YOUTUBE_QUOTA_COOLDOWN_MS`  | 24 h    | Pause on `search.list` calls after a quota error.                                              |
+| `PUPPETEER_*_TIMEOUT_MS`     | various | Puppeteer page/goto/screenshot/selector timeouts. Bump these on slow hardware.                 |
 
 ---
 
@@ -436,7 +435,7 @@ There are no migrations — `ifNotExists()` means new tables are added on next b
 
 ### YouTube polling state machine
 
-State lives in `utils/youtubePoller.js` (`getState()` / `setState()`). The workflow queries `fetchAndCacheCategories()` to resolve category IDs to strings via `data/youtubeCategories.json`. 
+State lives in `utils/youtubePoller.js` (`getState()` / `setState()`). The workflow queries `fetchAndCacheCategories()` to resolve category IDs to strings via `data/youtubeCategories.json`.
 
 The flow:
 
@@ -589,4 +588,7 @@ The bot ignores its own user ID via `GALA_DISCORD_ID`. Make sure that var is the
 No `LICENSE` file is currently present in the repository. Treat the source as "all rights reserved" until one is added.
 
 Built around the streamer **Gala** and her dinosaur mascot. Powered by [discord.js](https://discord.js.org/), [Twurple](https://twurple.js.org/), [Kysely](https://kysely.dev/), [better-sqlite3](https://github.com/WiseLibs/better-sqlite3), [Puppeteer](https://pptr.dev/), and [Winston](https://github.com/winstonjs/winston).
+
+```
+
 ```

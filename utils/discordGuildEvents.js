@@ -22,6 +22,7 @@ const {
   GuildScheduledEventPrivacyLevel,
 } = require("discord.js");
 const { discordLog } = require("./loggers");
+const { cleanStreamTitle } = require("./streamTitleCleaner");
 const {
   insertDiscordEvent,
   getDiscordEventBySourceId,
@@ -71,29 +72,41 @@ async function createGuildStreamEvent(discordClient, opts) {
   });
 
   if (!scheduledStart) {
-    discordLog("warn", "discordGuildEvents:createGuildStreamEvent no-start-time", {
-      sourceId,
-    });
+    discordLog(
+      "warn",
+      "discordGuildEvents:createGuildStreamEvent no-start-time",
+      {
+        sourceId,
+      },
+    );
     return;
   }
 
   const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
   if (!channelId) {
-    discordLog("warn", "discordGuildEvents:createGuildStreamEvent no-channel-id");
+    discordLog(
+      "warn",
+      "discordGuildEvents:createGuildStreamEvent no-channel-id",
+    );
     return;
   }
 
   try {
     const channel = await discordClient.channels.fetch(channelId);
     if (!channel || !channel.guild) {
-      discordLog("warn", "discordGuildEvents:createGuildStreamEvent guild-not-found", {
-        channelId,
-      });
+      discordLog(
+        "warn",
+        "discordGuildEvents:createGuildStreamEvent guild-not-found",
+        {
+          channelId,
+        },
+      );
       return;
     }
 
     const prefix = provider === "twitch" ? "[TWITCH]" : "[YT]";
-    const eventName = `${prefix} ${title}`;
+    const cleanedTitle = cleanStreamTitle(title);
+    const eventName = `${prefix} ${cleanedTitle}`;
     const startDate = new Date(scheduledStart);
     const resolvedEnd = scheduledEnd
       ? scheduledEnd
@@ -110,7 +123,7 @@ async function createGuildStreamEvent(discordClient, opts) {
         entityType: GuildScheduledEventEntityType.External,
         privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
         entityMetadata: { location: streamUrl },
-        description: title,
+        description: cleanedTitle,
       });
 
       await insertDiscordEvent({
@@ -120,7 +133,7 @@ async function createGuildStreamEvent(discordClient, opts) {
         createdAt: new Date().toISOString(),
         scheduledStart,
         scheduledEnd: resolvedEnd,
-        title,
+        title: cleanedTitle,
       });
 
       discordLog("info", "discordGuildEvents:createGuildStreamEvent created", {
@@ -139,12 +152,16 @@ async function createGuildStreamEvent(discordClient, opts) {
     const endChanged =
       !existing.scheduledEnd ||
       new Date(existing.scheduledEnd).getTime() !== endDate.getTime();
-    const titleChanged = existing.title !== title;
+    const titleChanged = existing.title !== cleanedTitle;
 
     if (!startChanged && !endChanged && !titleChanged) {
-      discordLog("debug", "discordGuildEvents:createGuildStreamEvent skip (unchanged)", {
-        sourceId,
-      });
+      discordLog(
+        "debug",
+        "discordGuildEvents:createGuildStreamEvent skip (unchanged)",
+        {
+          sourceId,
+        },
+      );
       return;
     }
 
@@ -153,13 +170,13 @@ async function createGuildStreamEvent(discordClient, opts) {
       scheduledStartTime: startDate,
       scheduledEndTime: endDate,
       entityMetadata: { location: streamUrl },
-      description: title,
+      description: cleanedTitle,
     });
 
     await updateDiscordEvent(sourceId, {
       scheduledStart,
       scheduledEnd: resolvedEnd,
-      title,
+      title: cleanedTitle,
     });
 
     discordLog("info", "discordGuildEvents:createGuildStreamEvent updated", {
@@ -227,12 +244,16 @@ async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
           discordEventId: row.discordEventId,
         });
       } catch (deleteErr) {
-        discordLog("warn", "discordGuildEvents:cleanupRemovedEvents discord-delete failed", {
-          provider,
-          sourceId: row.sourceId,
-          discordEventId: row.discordEventId,
-          err: deleteErr.message,
-        });
+        discordLog(
+          "warn",
+          "discordGuildEvents:cleanupRemovedEvents discord-delete failed",
+          {
+            provider,
+            sourceId: row.sourceId,
+            discordEventId: row.discordEventId,
+            err: deleteErr.message,
+          },
+        );
       }
 
       await deleteDiscordEvent(row.sourceId);
@@ -268,7 +289,10 @@ async function syncTwitchScheduleEvents(clientManager) {
     process.env.TWITCH_URL || `https://www.twitch.tv/${username}`;
 
   if (!username) {
-    discordLog("warn", "discordGuildEvents:syncTwitchScheduleEvents no-username");
+    discordLog(
+      "warn",
+      "discordGuildEvents:syncTwitchScheduleEvents no-username",
+    );
     return;
   }
 
@@ -277,7 +301,10 @@ async function syncTwitchScheduleEvents(clientManager) {
   });
 
   try {
-    const segments = await getStreamerScheduleThisWeek(username, twitchApiClient);
+    const segments = await getStreamerScheduleThisWeek(
+      username,
+      twitchApiClient,
+    );
     discordLog("info", "discordGuildEvents:syncTwitchScheduleEvents fetched", {
       count: segments.length,
     });

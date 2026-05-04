@@ -67,7 +67,7 @@ module.exports = {
         value: "This is not negotiable!",
       },
     ],
-    rulesFooter: "Thank you for reading the rules, takito 💜",
+    rulesFooter: "Thank you for reading the rules, fossil 💜",
     logSent: (username) =>
       `Server rules sent in channel by request of ${username}`,
     logDmSent: (tag, by) => `Rules reminder sent to ${tag} by ${by}`,
@@ -131,7 +131,7 @@ module.exports = {
         value: "¡Esto no es negociable!",
       },
     ],
-    rulesFooter: "Muchas gracias por leer las reglas, takito 💜",
+    rulesFooter: "Muchas gracias por leer las reglas, fossil 💜",
     logSent: (username) =>
       `Normas del servidor enviadas en el canal por petición de ${username}`,
     logDmSent: (tag, by) => `Recordatorio de normas enviado a ${tag} por ${by}`,

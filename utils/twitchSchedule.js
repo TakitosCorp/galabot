@@ -102,7 +102,9 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
       `El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`,
     );
   }
-  twitchLog("debug", "twitchSchedule:getStreamerScheduleThisWeek", { username });
+  twitchLog("debug", "twitchSchedule:getStreamerScheduleThisWeek", {
+    username,
+  });
   const twitchConfig = await getValidTwitchConfig();
   const clientId = twitchConfig.CLIENT_ID;
   const accessToken = twitchConfig.ACCESS_TOKEN;

@@ -20,6 +20,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
 const { sysLog } = require("./loggers");
+const { cleanStreamTitle } = require("./streamTitleCleaner");
 const {
   PUPPETEER_PAGE_TIMEOUT_MS,
   PUPPETEER_GOTO_TIMEOUT_MS,
@@ -201,10 +202,7 @@ async function generateImageFromTemplate(
  */
 async function generateStreamBanner(streamData) {
   const vars = getCommonTemplateVars(streamData.provider);
-  let filteredTitle = (streamData.title || "No title")
-    .replace(/!\w+\b/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  let filteredTitle = cleanStreamTitle(streamData.title).replace(/!\w+\b/g, "");
 
   vars["{{STREAM_TITLE}}"] = escapeHtml(filteredTitle);
   vars["{{STREAM_CATEGORY}}"] = escapeHtml(

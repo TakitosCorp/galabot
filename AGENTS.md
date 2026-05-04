@@ -145,7 +145,7 @@ module.exports = { name, once, async execute(...) {} };
 module.exports = { data: new SlashCommandBuilder()…, async execute(...) {} };
 ```
 
-### 2.7 Comments — when *not* to write them
+### 2.7 Comments — when _not_ to write them
 
 - Don't restate what well-named code already says.
 - Don't reference the current task or PR ("added for X flow").
@@ -160,15 +160,15 @@ module.exports = { data: new SlashCommandBuilder()…, async execute(...) {} };
 
 Five Winston channels live in [utils/loggers.js](utils/loggers.js):
 
-| Channel | When to use it |
-| --- | --- |
-| `discordLog` | Anything inside Discord events, commands, message handlers. |
-| `twitchLog` | Twitch chat, EventSub, token, viewer-poll, schedule helpers. |
-| `youtubeLog` | YouTube poller, fast/slow polls, stream start/end events. |
-| `dbLog` | Every `db/*.js` query helper. |
-| `sysLog` | Lifecycle, env validation, file utils, image generator, anything cross-cutting. |
+| Channel      | When to use it                                                                  |
+| ------------ | ------------------------------------------------------------------------------- |
+| `discordLog` | Anything inside Discord events, commands, message handlers.                     |
+| `twitchLog`  | Twitch chat, EventSub, token, viewer-poll, schedule helpers.                    |
+| `youtubeLog` | YouTube poller, fast/slow polls, stream start/end events.                       |
+| `dbLog`      | Every `db/*.js` query helper.                                                   |
+| `sysLog`     | Lifecycle, env validation, file utils, image generator, anything cross-cutting. |
 
-Each channel writes to `logs/<channel>.log` *and* `logs/combined.log` *and* the
+Each channel writes to `logs/<channel>.log` _and_ `logs/combined.log` _and_ the
 console — pick by **domain**, not by destination.
 
 ### 3.2 Call signature
@@ -187,8 +187,8 @@ logger(level, 'module:action short message', { contextKey: value, ... });
 Good:
 
 ```js
-dbLog('debug', 'streams:getStreamById', { streamId });
-discordLog('info', 'warn:timeout-applied', {
+dbLog("debug", "streams:getStreamById", { streamId });
+discordLog("info", "warn:timeout-applied", {
   target: user.username,
   targetId: user.id,
   minutes: timeoutDuration / 60000,
@@ -200,8 +200,8 @@ discordLog('info', 'warn:timeout-applied', {
 Bad:
 
 ```js
-dbLog('debug', `getStreamById(${streamId})`);            // variable in message
-discordLog('info', 'Did a thing for ' + user.username);  // no module: prefix
+dbLog("debug", `getStreamById(${streamId})`); // variable in message
+discordLog("info", "Did a thing for " + user.username); // no module: prefix
 ```
 
 ### 3.3 Level guidance
@@ -228,7 +228,7 @@ the error to propagate, log it:
 try {
   await doStuff();
 } catch (err) {
-  twitchLog('error', 'twitchViews:tick failed', {
+  twitchLog("error", "twitchViews:tick failed", {
     streamId,
     err: err.message,
     stack: err.stack,
@@ -236,7 +236,7 @@ try {
 }
 ```
 
-If you *do* want it to propagate, log first then rethrow:
+If you _do_ want it to propagate, log first then rethrow:
 
 ```js
 } catch (err) {
@@ -276,12 +276,12 @@ correct there.
 
 ## 4. Error-handling patterns by layer
 
-| Layer | Pattern |
-| --- | --- |
-| **Database (`db/*.js`)** | `dbLog('debug', …)` on entry. Wrap the query in `try/catch`; on error `dbLog('error', …, { err, stack })` then **rethrow**. Caller decides on fallback. |
-| **Event handlers (`events/**`)** | Wrap the **whole** `execute` body in `try/catch`. On error log with full context but **swallow** — the EventSub / discord.js listener must stay registered. |
-| **Slash commands (`commands/discord/*`)** | Don't wrap; the dispatcher in `events/discord/interactionCreate.js` already catches, logs and replies ephemerally. |
-| **Utilities (`utils/*`)** | Match the contract: token/poller/schedule helpers can throw and let the caller decide; long-running pollers (`twitchViews`, `youtubePoller`) catch internally and keep ticking. |
+| Layer                                     | Pattern                                                                                                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Database (`db/*.js`)**                  | `dbLog('debug', …)` on entry. Wrap the query in `try/catch`; on error `dbLog('error', …, { err, stack })` then **rethrow**. Caller decides on fallback.                         |
+| **Event handlers (`events/**`)\*\*        | Wrap the **whole** `execute` body in `try/catch`. On error log with full context but **swallow** — the EventSub / discord.js listener must stay registered.                     |
+| **Slash commands (`commands/discord/*`)** | Don't wrap; the dispatcher in `events/discord/interactionCreate.js` already catches, logs and replies ephemerally.                                                              |
+| **Utilities (`utils/*`)**                 | Match the contract: token/poller/schedule helpers can throw and let the caller decide; long-running pollers (`twitchViews`, `youtubePoller`) catch internally and keep ticking. |
 
 ---
 
@@ -289,6 +289,7 @@ correct there.
 
 1. Pick the right directory (events vs handlers vs messages vs utils).
 2. Start the file with the standard header:
+
    ```js
    /**
     * @module …
@@ -297,6 +298,7 @@ correct there.
 
    "use strict";
    ```
+
 3. If you're introducing a shape used in another file, add a `@typedef` to
    `utils/types.js` rather than redeclaring it locally.
 4. Pick the right logger and add `debug` entry logs to every meaningful
@@ -332,7 +334,7 @@ credentials, so it's only practical in production. For local changes:
 
 ---
 
-## 8. What *not* to add
+## 8. What _not_ to add
 
 - No ESLint/Prettier config — keep diffs focused on behaviour.
 - No TypeScript migration without a separate, scoped task.

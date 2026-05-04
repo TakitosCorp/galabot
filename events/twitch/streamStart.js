@@ -26,6 +26,7 @@ const {
   AttachmentBuilder,
 } = require("discord.js");
 const { generateStreamBanner } = require("../../utils/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { startViewersAverage } = require("../../utils/twitchViews");
 const { setStreamingStatus } = require("../../utils/discordPresence");
 
@@ -117,7 +118,7 @@ async function streamStart(event, clientManager) {
       })
       .setURL(twitchUrl)
       .addFields(
-        { name: "Title", value: stream.title || "No title", inline: false },
+        { name: "Title", value: cleanStreamTitle(stream.title), inline: false },
         {
           name: "Category",
           value: `*${stream.gameName || "No category"}*`,
@@ -183,7 +184,7 @@ async function streamStart(event, clientManager) {
           id: event.id,
           provider: "twitch",
           timestamp: event.startDate.toISOString(),
-          title: stream.title || "No title",
+          title: cleanStreamTitle(stream.title),
           viewers: 0,
           category: stream.gameName || "No category",
           tags: JSON.stringify(stream.tags || []),
@@ -208,7 +209,11 @@ async function streamStart(event, clientManager) {
         );
       }
 
-      setStreamingStatus(discordClient, stream.title || "No title", twitchUrl);
+      setStreamingStatus(
+        discordClient,
+        cleanStreamTitle(stream.title),
+        twitchUrl,
+      );
     } else {
       twitchLog("warn", "twitch:streamStart channel-not-text", { channelId });
     }

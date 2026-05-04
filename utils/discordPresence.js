@@ -31,7 +31,10 @@ function setStreamingStatus(discordClient, streamTitle, streamUrl) {
       ],
       status: "online",
     });
-    discordLog("info", "discord:presence streaming", { streamTitle, streamUrl });
+    discordLog("info", "discord:presence streaming", {
+      streamTitle,
+      streamUrl,
+    });
   } catch (err) {
     discordLog("error", "discord:presence setStreaming failed", {
       err: err.message,

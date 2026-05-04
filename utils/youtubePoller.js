@@ -104,7 +104,10 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
 
       if (status === 403 && reason === "quotaExceeded") {
         if (process.env.YOUTUBE_API_KEY_2 && !state.usingFallbackKey) {
-          youtubeLog("warn", "youtubePoller:quota primary-exhausted, switching to fallback key");
+          youtubeLog(
+            "warn",
+            "youtubePoller:quota primary-exhausted, switching to fallback key",
+          );
           setState({ usingFallbackKey: true });
           continue;
         }

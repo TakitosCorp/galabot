@@ -14,6 +14,7 @@ const { youtubeLog } = require("../../utils/loggers");
 const { getActiveStream, updateStreamEnd } = require("../../db/streams");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { setIdleStatus } = require("../../utils/discordPresence");
+const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const {
   setState,
   getUpcomingStreams,
@@ -125,7 +126,7 @@ async function streamEnd(clientManager, endTime) {
               .addFields(
                 {
                   name: "Title",
-                  value: streamData.title || "No title",
+                  value: cleanStreamTitle(streamData.title),
                   inline: false,
                 },
                 ...(streams.length === 0
@@ -200,7 +201,7 @@ async function streamEnd(clientManager, endTime) {
           timestamp: streamData.timestamp
             ? new Date(streamData.timestamp).toISOString()
             : null,
-          title: streamData.title,
+          title: cleanStreamTitle(streamData.title),
           viewers: streamData.viewers || 0,
           thumbnail: streamData.thumbnail,
           end: resolvedEndTime,

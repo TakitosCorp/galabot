@@ -24,6 +24,7 @@ const {
   generateFollowupImage,
   generateEndedImage,
 } = require("../../utils/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { stopViewersAverage } = require("../../utils/twitchViews");
 const { setIdleStatus } = require("../../utils/discordPresence");
 
@@ -149,7 +150,7 @@ async function streamEnd(event, clientManager) {
               .addFields(
                 {
                   name: "Title",
-                  value: finalStream.title || "No title",
+                  value: cleanStreamTitle(finalStream.title),
                   inline: false,
                 },
                 ...(scheduleThisWeek.length === 0
@@ -225,7 +226,7 @@ async function streamEnd(event, clientManager) {
           timestamp: finalStream.timestamp
             ? new Date(finalStream.timestamp).toISOString()
             : null,
-          title: finalStream.title,
+          title: cleanStreamTitle(finalStream.title),
           viewers: finalStream.viewers || 0,
           category: finalStream.category,
           tags: finalStream.tags ? JSON.parse(finalStream.tags) : null,

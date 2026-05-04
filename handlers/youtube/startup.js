@@ -236,7 +236,11 @@ async function bootstrap(clientManager) {
     YOUTUBE_CATEGORY_POLL_MS,
   );
 
-  clientManager.youtubeIntervals.push(slowInterval, fastInterval, categoryInterval);
+  clientManager.youtubeIntervals.push(
+    slowInterval,
+    fastInterval,
+    categoryInterval,
+  );
   youtubeLog("info", "youtube:bootstrap complete", {
     slowPollMs: YOUTUBE_SLOW_POLL_MS,
     fastPollMs: YOUTUBE_FAST_POLL_MS,

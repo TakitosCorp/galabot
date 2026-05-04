@@ -1,4 +1,4 @@
-```md
+
 # GalaBot
 
 GalaBot is a multi-platform streaming companion bot for a single content creator's community. It bridges **Discord**, **Twitch**, and **YouTube** in one Node.js process: announcing streams as they go live, generating custom banner images, moderating Discord chat, greeting users, and persisting per-stream stats to a local SQLite database. It is built around the streamer "Gala" (a dinosaur mascot), but the codebase is generic enough to be reused — every channel ID, role, and credential is loaded from environment variables.

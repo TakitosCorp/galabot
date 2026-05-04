@@ -198,11 +198,13 @@ async function streamEnd(clientManager, endTime) {
       try {
         await axios.post(process.env.POST_DATA_WEBHOOK, {
           id: streamData.id,
+          provider: "youtube",
           timestamp: streamData.timestamp
             ? new Date(streamData.timestamp).toISOString()
             : null,
           title: cleanStreamTitle(streamData.title),
           viewers: streamData.viewers || 0,
+          category: streamData.category || null,
           thumbnail: streamData.thumbnail,
           end: resolvedEndTime,
         });

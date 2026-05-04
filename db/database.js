@@ -88,6 +88,17 @@ async function initialize() {
         .addColumn("scheduled_end", "text")
         .addColumn("title", "text")
         .execute();
+
+      await trx.schema
+        .createTable("reaction_role_messages")
+        .ifNotExists()
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("message_id", "text", (col) => col.notNull().unique())
+        .addColumn("channel_id", "text", (col) => col.notNull())
+        .addColumn("guild_id", "text", (col) => col.notNull())
+        .addColumn("group_name", "text", (col) => col.notNull().defaultTo("RULES"))
+        .addColumn("created_at", "datetime", (col) => col.notNull())
+        .execute();
     });
 
     const streamsInfo = sqliteDb.pragma("table_info(streams)");
@@ -148,6 +159,17 @@ async function initialize() {
           "ALTER TABLE discord_scheduled_events ADD COLUMN title text",
         );
         dbLog("info", "db:migration added title to discord_scheduled_events");
+      }
+    }
+
+    const rrInfo = sqliteDb.pragma("table_info(reaction_role_messages)");
+    if (rrInfo.length > 0) {
+      const cols = rrInfo.map((c) => c.name);
+      if (!cols.includes("group_name")) {
+        sqliteDb.exec(
+          "ALTER TABLE reaction_role_messages ADD COLUMN group_name text NOT NULL DEFAULT 'RULES'",
+        );
+        dbLog("info", "db:migration added group_name to reaction_role_messages");
       }
     }
 

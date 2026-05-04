@@ -16,10 +16,11 @@
 const {
   Client: DiscordClient,
   GatewayIntentBits,
+  Partials,
   Events,
 } = require("discord.js");
 
-const { initialize: dbInitialize } = require("./db/database");
+const { initialize: dbInitialize, db } = require("./db/database");
 const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
 const { discordLog, twitchLog, sysLog } = require("./utils/loggers");
 
@@ -47,6 +48,8 @@ class clientManager {
      * @type {NodeJS.Timeout[]}
      */
     this.youtubeIntervals = [];
+    /** @type {import('kysely').Kysely} */
+    this.db = db;
   }
 
   /**
@@ -114,7 +117,9 @@ class clientManager {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
       ],
+      partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     });
 
     await bootstrapDiscord(this.discordClient, this);

@@ -22,6 +22,11 @@ const {
 const { discordLog } = require("../../utils/loggers");
 const { getLanguage } = require("../../utils/language");
 const strings = require("../../lang/rules");
+const {
+  parseReactionRoleEnv,
+  addReactionsToMessage,
+  trackMessage,
+} = require("../../utils/reactionRoleManager");
 
 /** @type {DiscordSlashCommand} */
 module.exports = {
@@ -41,9 +46,10 @@ module.exports = {
    * @async
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    * @param {import('discord.js').Client} client
+   * @param {import('../../clientManager')} clientManager
    * @returns {Promise<void>}
    */
-  async execute(interaction, client) {
+  async execute(interaction, client, clientManager) {
     const lang = getLanguage(interaction.channelId);
     const t = strings[lang];
     const tEn = strings.en;
@@ -116,7 +122,25 @@ module.exports = {
         issuer: interaction.user.username,
         channelId: interaction.channelId,
       });
-      await interaction.reply({ embeds: [rulesEmbedEs, rulesEmbedEn] });
+      const { resource: { message: sentMessage } } = await interaction.reply({
+        embeds: [rulesEmbedEs, rulesEmbedEn],
+        withResponse: true,
+      });
+
+      const emojiRoleMap = parseReactionRoleEnv("RULES");
+      if (emojiRoleMap.size > 0) {
+        await addReactionsToMessage(sentMessage, emojiRoleMap);
+        await trackMessage(
+          sentMessage.id,
+          sentMessage.channelId,
+          interaction.guildId,
+          "RULES",
+        );
+        discordLog("info", "rules:reaction-roles added", {
+          messageId: sentMessage.id,
+          count: emojiRoleMap.size,
+        });
+      }
     }
   },
 };

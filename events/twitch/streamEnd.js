@@ -230,6 +230,7 @@ async function streamEnd(event, clientManager) {
           viewers: finalStream.viewers || 0,
           category: finalStream.category,
           tags: finalStream.tags ? JSON.parse(finalStream.tags) : null,
+          thumbnail: finalStream.thumbnail || null,
           end: endTime,
         });
         twitchLog("info", "twitch:streamEnd webhook posted", {

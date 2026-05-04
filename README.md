@@ -34,6 +34,7 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
 **Discord**
 
 - Slash commands: `/rules` (post or DM the server rules) and `/warn` (warn → timeout → ban escalation).
+- Reaction roles: When `/rules` is posted, configured emoji reactions grant roles automatically. Reactions persist across bot restarts.
 - Greeting responses with a per-user cooldown (greetings on Discord and Twitch share the same cooldown).
 - Auto-moderation: pinging the bot directly issues a warning automatically.
 - Stream announcements posted as rich embeds with a custom-rendered banner attachment and an optional role mention; the same message is updated when the stream ends with the final stats.
@@ -177,6 +178,7 @@ Notes:
 | `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                      |
 | `DISCORD_NOTIFICATION_ROLE_ID` | no       | Role ID mentioned in Twitch and YouTube stream notifications. Leave blank for no mention. |
 | `SPANISH_CHANNEL_ID`           | no       | Channel ID treated as Spanish-locale. Any other channel falls back to English.            |
+| `REACTION_ROLE_{GROUP}_EMOJI*` | no       | Reaction role mappings, namespaced by group. Format: `REACTION_ROLE_RULES_EMOJI1=🦖:roleId`. Supports Unicode and custom Discord emojis (`<:name:id>`). Each command uses its own group (e.g. `RULES`). |
 
 ### Twitch
 
@@ -473,6 +475,7 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 | Add a Discord slash command                               | Add a new file under `commands/discord/` exporting `{ data, execute }`, then run `npm run generate-cmds`. |
 | Add a Discord chat behavior                               | Edit `events/discord/messageCreate.js` (or add a new handler — Discord auto-loads new files).             |
 | Add a Twitch chat command                                 | Add a branch to `events/twitch/interactionCreate.js`.                                                     |
+| Configure reaction roles on `/rules`                      | Add `REACTION_ROLE_RULES_EMOJI1=emoji:roleId` to `.env`. Use `REACTION_ROLE_{GROUP}_EMOJI*` for other embeds. |
 | Tune greeting cooldown / ban threshold / timeout duration | Edit constants in `utils/constants.js`.                                                                   |
 | Tune Twitch viewer poll cadence                           | `VIEWER_POLL_INTERVAL_MS` in `utils/constants.js`.                                                        |
 | Tune YouTube polling cadence                              | `YOUTUBE_FAST_POLL_MS` and `YOUTUBE_SLOW_POLL_MS` in `utils/constants.js` (mind the quota).               |
@@ -534,6 +537,19 @@ One row per warning issued, used for the `/warn` escalation logic.
 | `thumbnail`     | text (nullable)           | Thumbnail URL. YouTube only; `NULL` for other providers.                  |
 | `discMsgId`     | text (default `""`)       | Discord notification message ID — used to update the embed on stream end. |
 | `end`           | datetime (nullable)       | Stream end time; `NULL` while the stream is live.                         |
+
+### `reaction_role_messages`
+
+Tracks messages with reaction roles enabled (for persistent role assignment across restarts).
+
+| Column      | Type               | Purpose                                           |
+| ----------- | ------------------ | ------------------------------------------------- |
+| `id`        | integer (PK, auto) | Row ID.                                           |
+| `message_id`| text (unique)      | Discord message ID of the message with reactions.|
+| `channel_id`| text               | Discord channel ID where the message was posted. |
+| `guild_id`  | text               | Discord guild (server) ID.                        |
+| `group_name`| text (default `RULES`) | Env var group name — drives which `REACTION_ROLE_{GROUP}_EMOJI*` vars are used. |
+| `created_at`| datetime           | When the message was tracked.                     |
 
 ---
 

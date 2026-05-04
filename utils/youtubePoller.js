@@ -24,11 +24,8 @@
 const axios = require("axios");
 const { youtubeLog } = require("./loggers");
 const fileUtils = require("./fileUtils");
-const {
-  YOUTUBE_STREAM_VALID_HOURS,
-  YOUTUBE_QUOTA_COOLDOWN_MS,
-  YOUTUBE_RETRY_MAX,
-} = require("./constants");
+const { updateStreamViewers } = require("../db/streams");
+const { YOUTUBE_QUOTA_COOLDOWN_MS, YOUTUBE_RETRY_MAX } = require("./constants");
 
 /**
  * Mutable singleton state for the poller. Treat as private to this module —
@@ -263,20 +260,6 @@ async function getVideoStats(videoId) {
 }
 
 /**
- * Decide whether a scheduled-start time is recent enough to keep tracking.
- *
- * @param {string} scheduledStart - ISO-8601 timestamp.
- * @returns {boolean} `true` when the scheduled start is within
- *   {@link YOUTUBE_STREAM_VALID_HOURS} hours of now.
- */
-function isStreamValid(scheduledStart) {
-  const streamDate = new Date(scheduledStart);
-  const now = new Date();
-  const diffHours = (now - streamDate) / (1000 * 60 * 60);
-  return diffHours <= YOUTUBE_STREAM_VALID_HOURS;
-}
-
-/**
  * Build the list of title patterns that should be skipped when picking a
  * candidate stream. Combines a built-in list ("【HORARIO SEMANAL】") with the
  * comma-separated `YOUTUBE_SKIP_TITLES` env var.
@@ -395,6 +378,15 @@ async function updateWorkflow() {
           const streamData = extractStreamData(videoId, stats);
           if (!streamData) continue;
 
+          const liveBroadcastContent = stats?.items?.[0]?.snippet?.liveBroadcastContent;
+          if (liveBroadcastContent !== "upcoming" && liveBroadcastContent !== "live") {
+            youtubeLog("debug", "youtubePoller:skip non-upcoming", {
+              videoId,
+              liveBroadcastContent,
+            });
+            continue;
+          }
+
           if (shouldSkip(streamData.title)) {
             youtubeLog("debug", "youtubePoller:skip title-pattern", {
               videoId,
@@ -404,7 +396,7 @@ async function updateWorkflow() {
           }
 
           const scheduledDate = new Date(streamData.scheduledStart);
-          if (scheduledDate > now || isStreamValid(streamData.scheduledStart)) {
+          if (scheduledDate > now) {
             candidates.push(streamData);
           }
         } catch (itemErr) {
@@ -482,9 +474,22 @@ async function checkWorkflow() {
   }
 
   if (details.concurrentViewers) {
+    const viewerCount = Number(details.concurrentViewers);
+    try {
+      await updateStreamViewers(state.videoId, viewerCount);
+    } catch (err) {
+      youtubeLog(
+        "warn",
+        "youtubePoller:checkWorkflow updateStreamViewers failed",
+        {
+          err: err.message,
+          videoId: state.videoId,
+        },
+      );
+    }
     return {
       isLive: true,
-      viewers: Number(details.concurrentViewers),
+      viewers: viewerCount,
       endTime: null,
     };
   }

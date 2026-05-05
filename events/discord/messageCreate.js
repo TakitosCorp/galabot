@@ -2,9 +2,11 @@
  * @module events/discord/messageCreate
  * @description
  * Listens for messages in any guild text channel and routes them to:
- *  - the ping handler when the bot's owner (`GALA_DISCORD_ID`) is mentioned, or
- *  - the greeting handler when the message matches a known greeting in the
- *    user's resolved language.
+ *  - the ping handler when Gala's personal account (`GALA_USER_ID`) is mentioned,
+ *  - the greeting handler when the bot itself is mentioned and the message matches
+ *    a known greeting in the user's resolved language,
+ *  - the AI handler when the bot itself is mentioned with a non-greeting message, or
+ *  - the greeting handler when no mention is present but the message is a greeting.
  *
  * Bot-authored messages and DMs are ignored.
  *
@@ -16,6 +18,7 @@
 const resources = require("../../data/resources.json");
 const { handleHello } = require("../../messages/discord/msgHello");
 const { handlePing } = require("../../messages/discord/msgPing");
+const { handleAI } = require("../../messages/discord/msgAI");
 const { getLanguage } = require("../../utils/core/language");
 const { discordLog } = require("../../utils/core/loggers");
 
@@ -25,7 +28,7 @@ module.exports = {
   /**
    * @async
    * @param {import('discord.js').Message} message - Incoming Discord message.
-   * @param {import('discord.js').Client} client - Gateway client (unused, kept for handler signature).
+   * @param {import('discord.js').Client} client - Gateway client (used to resolve the bot's own user id).
    * @param {import('../../clientManager')} clientManager - Lifecycle owner (unused here).
    * @returns {Promise<void>}
    */
@@ -34,8 +37,19 @@ module.exports = {
 
     const lang = getLanguage(message.channelId);
 
-    if (message.content.includes(`<@${process.env.GALA_DISCORD_ID}>`)) {
-      discordLog("debug", "messageCreate:ping detected", {
+    const content = message.content.toLowerCase().trim();
+    const isGreeting = resources[lang].greetings.some(
+      (greet) =>
+        new RegExp(`^${greet}$`, "i").test(content) ||
+        new RegExp(`\\b${greet}\\b`, "i").test(content),
+    );
+
+    // Warn/ban when Gala's personal Discord account is @-mentioned.
+    if (
+      process.env.GALA_USER_ID &&
+      message.content.includes(`<@${process.env.GALA_USER_ID}>`)
+    ) {
+      discordLog("debug", "messageCreate:gala-user-ping", {
         userId: message.author.id,
         channelId: message.channelId,
         guildId: message.guildId,
@@ -44,13 +58,26 @@ module.exports = {
       return;
     }
 
-    const content = message.content.toLowerCase().trim();
-    const isGreeting = resources[lang].greetings.some(
-      (greet) =>
-        new RegExp(`^${greet}$`, "i").test(content) ||
-        new RegExp(`\\b${greet}\\b`, "i").test(content),
-    );
+    // Bot @mention → greeting or AI reply.
+    if (message.content.includes(`<@${client.user.id}>`)) {
+      if (isGreeting) {
+        discordLog("debug", "messageCreate:bot-mention+greeting", {
+          userId: message.author.id,
+          channelId: message.channelId,
+          lang,
+        });
+        await handleHello(message, lang);
+      } else {
+        discordLog("debug", "messageCreate:bot-mention+ai", {
+          userId: message.author.id,
+          channelId: message.channelId,
+        });
+        await handleAI(message);
+      }
+      return;
+    }
 
+    // No mention — standalone greeting.
     if (isGreeting) {
       discordLog("debug", "messageCreate:greeting matched", {
         userId: message.author.id,

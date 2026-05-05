@@ -181,6 +181,14 @@
 /* ──────────────────────────── Discord handler types ──────────────────────────── */
 
 /**
+ * Entry in the AI rate-limiter's in-memory map. Stored in `messages/discord/msgAI`
+ * and never persisted — the window resets on bot restart.
+ * @typedef {Object} AiRateLimitEntry
+ * @property {string} userId - Discord user id.
+ * @property {number[]} timestamps - Epoch-ms timestamps of recent AI requests within the current window.
+ */
+
+/**
  * Standard discord.js event handler module shape used by the auto-loader in
  * {@link module:handlers/discord/startup}.
  * @typedef {Object} DiscordEventHandler

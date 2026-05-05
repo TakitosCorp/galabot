@@ -20,6 +20,7 @@
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "kysely": "^0.28.4",
+    "ollama": "^0.6.3",
     "puppeteer": "^24.16.1",
     "winston": "^3.17.0"
   }

@@ -145,4 +145,19 @@ module.exports = {
    * @constant
    */
   YOUTUBE_RETRY_MAX: 3,
+
+  /**
+   * Maximum number of AI requests a single user may make within
+   * `AI_RATE_LIMIT_WINDOW_MS` before receiving a cooldown reply.
+   * @type {number}
+   * @constant
+   */
+  AI_RATE_LIMIT_MAX: 10,
+
+  /**
+   * Sliding-window duration for the per-user AI rate limiter.
+   * @type {number}
+   * @constant
+   */
+  AI_RATE_LIMIT_WINDOW_MS: 60 * 1000, // 1 minute
 };

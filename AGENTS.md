@@ -334,6 +334,28 @@ credentials, so it's only practical in production. For local changes:
 
 ---
 
+## 9. Optional features and env vars
+
+Some features are guarded by optional environment variables. The bot starts and
+runs without them — the feature is simply skipped or degraded gracefully.
+
+| Variable               | Purpose                                                                                                                                                                                            | Required?    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `GALA_USER_ID`         | Personal Discord user id of the streamer. Bot @-mentions of this account trigger the warn/ban escalation in `messages/discord/msgPing.js`.                                                         | **Required** |
+| `GALA_DISCORD_ID`      | Discord guild/server id. Used only by the `npm run sync-emojis` CLI script (`utils/helpers/botEmojis.js`) to fetch guild emojis. **Not** a user id.                                                | Required     |
+| `OLLAMA_URL`           | Base URL of the local Ollama server (e.g. `http://localhost:11434`). When absent, bot @-mentions that are not greetings receive a short "can't reply right now" message instead of an AI response. | Optional     |
+| `OLLAMA_MODEL`         | Ollama model name to use for AI replies. Defaults to `gemma3:1b` when unset.                                                                                                                       | Optional     |
+| `OLLAMA_NO_LIMITS_IDS` | Comma-separated Discord user ids exempt from the AI rate limit. Parsed once at startup into a `Set` in `messages/discord/msgAI.js`.                                                                | Optional     |
+
+The AI reply path lives in:
+
+- `utils/discord/ollamaClient.js` — Ollama client wrapper (reads `data/AIPrompt.md` at startup).
+- `messages/discord/msgAI.js` — rate limiter + reply handler (10 requests / 60 s per user, in-process only).
+
+The system prompt for the AI is `data/AIPrompt.md`. Edit it to change the bot's personality without touching code.
+
+---
+
 ## 8. What _not_ to add
 
 - No ESLint/Prettier config — keep diffs focused on behaviour.

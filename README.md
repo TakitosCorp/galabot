@@ -36,7 +36,8 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
 - Slash commands: `/rules` (post or DM the server rules) and `/warn` (warn → timeout → ban escalation).
 - Reaction roles: When `/rules` is posted, configured emoji reactions grant roles automatically. Reactions persist across bot restarts.
 - Greeting responses with a per-user cooldown (greetings on Discord and Twitch share the same cooldown).
-- Auto-moderation: pinging the bot directly issues a warning automatically.
+- Auto-moderation: pinging the streamer's personal account (`GALA_USER_ID`) issues a warning automatically (warn → timeout → ban escalation).
+- AI replies: pinging the bot (`@GalaBot`) with a non-greeting message forwards the text to a local Ollama model and replies with the result. Rate-limited to 10 requests per minute per user (configurable exemptions via `OLLAMA_NO_LIMITS_IDS`). Requires `OLLAMA_URL` to be set.
 - Stream announcements posted as rich embeds with a custom-rendered banner attachment and an optional role mention; the same message is updated when the stream ends with the final stats.
 
 **Twitch**
@@ -174,7 +175,8 @@ Notes:
 | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DISCORD_TOKEN`                | yes      | Bot token from the Discord Developer Portal.                                                                                                                                                            |
 | `DISCORD_ID`                   | yes      | Application (client) ID — used by `generate-cmds` to register slash commands.                                                                                                                           |
-| `GALA_DISCORD_ID`              | yes      | The bot account's user ID. Used to detect when a user pings the bot in chat.                                                                                                                            |
+| `GALA_DISCORD_ID`              | yes      | Discord guild/server ID. Used by the emoji-sync script (`npm run sync-emojis`) to fetch guild emojis. **Not** a user ID.                                                                               |
+| `GALA_USER_ID`                 | yes      | Gala's personal Discord user ID. Bot @-mentions of this account trigger the warn/ban escalation instead of an AI reply.                                                                                 |
 | `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                                                                                                                                    |
 | `DISCORD_NOTIFICATION_ROLE_ID` | no       | Role ID mentioned in Twitch and YouTube stream notifications. Leave blank for no mention.                                                                                                               |
 | `SPANISH_CHANNEL_ID`           | no       | Channel ID treated as Spanish-locale. Any other channel falls back to English.                                                                                                                          |
@@ -208,6 +210,16 @@ Notes:
 | `ENABLE_YOUTUBE`            | no       | Set to `false` to skip YouTube initialization entirely.                                                                                                                          |
 | `PUPPETEER_EXECUTABLE_PATH` | no       | Path to the Chromium/Chrome binary used by Puppeteer. Defaults to `/usr/bin/chromium` in Docker.                                                                                 |
 
+### Ollama AI replies (optional)
+
+When `OLLAMA_URL` is set, bot @-mentions that are not greetings are forwarded to a local Ollama model and replied to with the AI response. The system prompt is `data/AIPrompt.md` — edit it to change personality without touching code.
+
+| Variable                | Required | Description                                                                                                       |
+| ----------------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `OLLAMA_URL`            | no       | Base URL of the Ollama server (e.g. `http://localhost:11434`). Feature is disabled when absent.                   |
+| `OLLAMA_MODEL`          | no       | Model name to use. Defaults to `gemma3:1b` when unset.                                                            |
+| `OLLAMA_NO_LIMITS_IDS`  | no       | Comma-separated Discord user IDs that bypass the AI rate limit entirely (useful for the bot owner / trusted users). |
+
 ### Tunable constants (not env vars)
 
 If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils/constants.js`:
@@ -226,6 +238,8 @@ If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils
 | `YOUTUBE_STREAM_VALID_HOURS` | 12      | How long after publish a discovered video is still tracked.                                    |
 | `YOUTUBE_QUOTA_COOLDOWN_MS`  | 24 h    | Pause on `search.list` calls after a quota error.                                              |
 | `PUPPETEER_*_TIMEOUT_MS`     | various | Puppeteer page/goto/screenshot/selector timeouts. Bump these on slow hardware.                 |
+| `AI_RATE_LIMIT_MAX`          | 10      | Maximum AI requests per user within the rate-limit window before a cooldown reply is sent.     |
+| `AI_RATE_LIMIT_WINDOW_MS`    | 60 s    | Sliding-window duration for the per-user AI rate limiter.                                      |
 
 ---
 
@@ -237,8 +251,9 @@ If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils
 4. **Invite the bot** to your server using the OAuth2 URL Generator with scopes `bot` and `applications.commands`, and these bot permissions:
    - View Channels, Send Messages, Embed Links, Attach Files, Use External Emojis (for greetings/notifications)
    - Manage Messages, Moderate Members, Ban Members (for `/warn` and auto-moderation)
-5. **Find IDs** by enabling Developer Mode in Discord (Settings → Advanced), then right-clicking the channel/role/user → Copy ID. You'll need:
-   - The bot's user ID → `GALA_DISCORD_ID`
+5. **Find IDs** by enabling Developer Mode in Discord (Settings → Advanced), then right-clicking the channel/role/user/server → Copy ID. You'll need:
+   - The guild/server ID → `GALA_DISCORD_ID` (right-click the server icon)
+   - Gala's personal Discord user ID → `GALA_USER_ID` (right-click her user)
    - The notification channel ID → `DISCORD_NOTIFICATION_CHANNEL` (used for both Twitch and YouTube announcements)
    - The role to ping for live streams → `DISCORD_NOTIFICATION_ROLE_ID` (optional, used for both Twitch and YouTube)
    - The Spanish channel ID, if you have one → `SPANISH_CHANNEL_ID`
@@ -360,6 +375,7 @@ GalaBot/
 │   ├── twitch.json            Cached Twitch tokens.
 │   ├── resources.json         Greeting/response pool used at runtime.
 │   ├── emojis.json            Custom emoji mapping.
+│   ├── AIPrompt.md            System prompt for Ollama AI replies (edit to change bot personality).
 │   └── youtubeCategories.json Cached YouTube category mappings.
 │
 └── logs/                      Winston log output (created on first boot).
@@ -574,7 +590,7 @@ Tracks messages with reaction roles enabled (for persistent role assignment acro
 ### Common failures
 
 **`FATAL: Missing required environment variables: …`**
-The required-vars list is `DISCORD_TOKEN`, `DISCORD_ID`, `GALA_DISCORD_ID`, `TWITCH_CHANNEL`, `TWITCH_USERNAME`, `DISCORD_NOTIFICATION_CHANNEL`, `POST_DATA_WEBHOOK`. Set the missing one in `.env` (or set the relevant `ENABLE_*=false` if you don't need that platform — but note that **Twitch vars are required even if Twitch is disabled** because they're in the unconditional REQUIRED_ENV list in `main.js`).
+The required-vars list is `DISCORD_TOKEN`, `DISCORD_ID`, `GALA_DISCORD_ID`, `GALA_USER_ID`, `TWITCH_CHANNEL`, `TWITCH_USERNAME`, `DISCORD_NOTIFICATION_CHANNEL`, `POST_DATA_WEBHOOK`. Set the missing one in `.env` (or set the relevant `ENABLE_*=false` if you don't need that platform — but note that **Twitch vars are required even if Twitch is disabled** because they're in the unconditional REQUIRED_ENV list in `main.js`).
 
 **Puppeteer can't find Chromium**
 You'll see an error like `Failed to launch the browser process`. Set `PUPPETEER_EXECUTABLE_PATH` to your Chrome/Chromium binary, or use the Docker setup (which has it pre-installed).
@@ -588,8 +604,11 @@ You'll see 403s in `logs/youtube.log`. The bot pauses `search.list` for 24 h aut
 **Slash commands aren't appearing in Discord**
 Run `npm run generate-cmds`. Global slash commands can take a few minutes to propagate. Confirm the bot was invited with the `applications.commands` scope.
 
-**The bot pings itself / loops on greetings**
-The bot ignores its own user ID via `GALA_DISCORD_ID`. Make sure that var is the bot's user ID, not your user ID.
+**The bot isn't replying to @mentions with AI / is warning people instead**
+`GALA_USER_ID` must be set to Gala's *personal* Discord user ID (not the bot's). The bot detects its own @mention via `client.user.id` at runtime — no env var needed for that. `GALA_DISCORD_ID` is the guild/server ID and is unrelated to mention detection.
+
+**AI replies return "I can't reply right now"**
+`OLLAMA_URL` is either unset or the Ollama server is unreachable. Check that Ollama is running (`ollama serve`) and that `OLLAMA_URL` in `.env` points to it (e.g. `http://localhost:11434`). Confirm the model is pulled: `ollama pull gemma3:1b`.
 
 ---
 

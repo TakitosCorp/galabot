@@ -17,7 +17,13 @@ const { sysLog } = require("./utils/core/loggers");
  * Environment variables that must be set for the bot to start. Optional settings
  * (`ENABLE_DISCORD`, `ENABLE_TWITCH`, `ENABLE_YOUTUBE`, `SPANISH_CHANNEL_ID`,
  * `YOUTUBE_API_KEY*`, `YOUTUBE_CHANNEL_ID`, `DISCORD_NOTIFICATION_ROLE_ID`,
- * `PUPPETEER_EXECUTABLE_PATH`, `YOUTUBE_SKIP_TITLES`) are intentionally absent.
+ * `PUPPETEER_EXECUTABLE_PATH`, `YOUTUBE_SKIP_TITLES`,
+ * `OLLAMA_URL`, `OLLAMA_MODEL`) are intentionally absent — the features they
+ * control degrade gracefully when the variables are missing.
+ *
+ * `GALA_USER_ID` is the personal Discord user id of the streamer whose
+ * @-mentions trigger the warn/ban escalation. `GALA_DISCORD_ID` is the
+ * guild/server id (used by the emoji-sync script).
  *
  * @type {readonly string[]}
  * @constant
@@ -26,6 +32,7 @@ const REQUIRED_ENV = [
   "DISCORD_TOKEN",
   "DISCORD_ID",
   "GALA_DISCORD_ID",
+  "GALA_USER_ID",
   "TWITCH_CHANNEL",
   "TWITCH_USERNAME",
   "TWITCH_URL",

@@ -190,12 +190,13 @@ Notes:
 
 ### YouTube
 
-| Variable             | Required    | Description                                                                                |
-| -------------------- | ----------- | ------------------------------------------------------------------------------------------ |
-| `YOUTUBE_CHANNEL_ID` | conditional | The YouTube channel ID to monitor (starts with `UC...`). Required when YouTube is enabled. |
-| `YOUTUBE_API_KEY`    | conditional | YouTube Data API v3 key. Required when YouTube is enabled.                                 |
-| `YOUTUBE_API_KEY_2`  | no          | Optional fallback key. Used when the primary key hits its 10 000 unit/day quota.           |
-| `YOUTUBE_URL`        | yes         | The streamer's YouTube URL to include in embeds.                                           |
+| Variable                | Required    | Description                                                                                 |
+| ----------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| `YOUTUBE_CHANNEL_ID`    | conditional | The YouTube channel ID to monitor (starts with `UC...`). Required when YouTube is enabled.  |
+| `YOUTUBE_API_KEY`       | conditional | YouTube Data API v3 key. Required when YouTube is enabled.                                  |
+| `YOUTUBE_API_KEY_2`     | no          | Optional fallback key. Used when the primary key hits its 10 000 unit/day quota.            |
+| `YOUTUBE_URL`           | yes         | The streamer's YouTube URL to include in embeds.                                            |
+| `YOUTUBE_BLACKLIST_IDS` | no          | Comma-separated list of video IDs to ignore. These streams are skipped on all API requests. |
 
 ### Webhooks & toggles
 
@@ -290,6 +291,7 @@ If chat connects but EventSub fails, your token is missing a scope — regenerat
 2. **(Strongly recommended) Create a second key on a different project** for `YOUTUBE_API_KEY_2`. Each project gets its own 10 000 unit/day quota; the bot transparently falls back to the second key if the first is exhausted.
 3. **Find the channel ID** of the streamer's YouTube channel — the 24-character ID starting with `UC`. Paste into `YOUTUBE_CHANNEL_ID`.
 4. **Notifications** are posted to the same `DISCORD_NOTIFICATION_CHANNEL` (and pinged with the same `DISCORD_NOTIFICATION_ROLE_ID`) as Twitch announcements — no extra config needed.
+5. **(Optional) Blacklist videos** by adding their IDs to `YOUTUBE_BLACKLIST_IDS` (comma-separated). Blacklisted streams are completely ignored by the polling system and never announced. Use this for regularly-scheduled or recurring streams that should not trigger announcements.
 
 ### Quota math
 
@@ -476,6 +478,7 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 | Add a Discord chat behavior                               | Edit `events/discord/messageCreate.js` (or add a new handler — Discord auto-loads new files).                 |
 | Add a Twitch chat command                                 | Add a branch to `events/twitch/interactionCreate.js`.                                                         |
 | Configure reaction roles on `/rules`                      | Add `REACTION_ROLE_RULES_EMOJI1=emoji:roleId` to `.env`. Use `REACTION_ROLE_{GROUP}_EMOJI*` for other embeds. |
+| Blacklist a YouTube stream                                | Add the video ID to `YOUTUBE_BLACKLIST_IDS` in `.env` (comma-separated for multiple). No restart needed.      |
 | Tune greeting cooldown / ban threshold / timeout duration | Edit constants in `utils/constants.js`.                                                                       |
 | Tune Twitch viewer poll cadence                           | `VIEWER_POLL_INTERVAL_MS` in `utils/constants.js`.                                                            |
 | Tune YouTube polling cadence                              | `YOUTUBE_FAST_POLL_MS` and `YOUTUBE_SLOW_POLL_MS` in `utils/constants.js` (mind the quota).                   |

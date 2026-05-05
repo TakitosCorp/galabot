@@ -41,8 +41,7 @@ async function getBroadcasterId(username, clientId, accessToken) {
       },
     });
     const data = res.data;
-    if (!data.data.length)
-      throw new Error(`User not found: ${username}`);
+    if (!data.data.length) throw new Error(`User not found: ${username}`);
     return data.data[0].id;
   } catch (err) {
     if (err.response) {

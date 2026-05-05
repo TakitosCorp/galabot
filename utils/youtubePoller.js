@@ -6,6 +6,10 @@
  * quota cooldown, and upcoming streams cache) plus the API helpers used by
  * the slow/fast polls in `handlers/youtube/startup`.
  *
+ * Streams can be blacklisted via the `YOUTUBE_BLACKLIST_IDS` environment
+ * variable (comma-separated list of video IDs). Blacklisted videos are
+ * filtered out during polling and never announced.
+ *
  * @typedef {import('./types').YouTubeState} YouTubeState
  * @typedef {import('./types').YouTubeStreamData} YouTubeStreamData
  * @typedef {import('./types').YouTubeCheckResult} YouTubeCheckResult
@@ -251,6 +255,30 @@ function getSkipTitles() {
 }
 
 /**
+ * Build the list of video IDs that should be blacklisted and ignored completely.
+ *
+ * @returns {string[]}
+ */
+function getBlacklistedVideoIds() {
+  const fromEnv = process.env.YOUTUBE_BLACKLIST_IDS
+    ? process.env.YOUTUBE_BLACKLIST_IDS.split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    : [];
+  return fromEnv;
+}
+
+/**
+ * Checks if the video ID is blacklisted.
+ *
+ * @param {string} videoId - The video ID.
+ * @returns {boolean} True if the video should be ignored.
+ */
+function isBlacklisted(videoId) {
+  return getBlacklistedVideoIds().includes(videoId);
+}
+
+/**
  * Checks if the title matches any pattern to skip.
  *
  * @param {string} title - The stream title.
@@ -329,14 +357,24 @@ async function updateWorkflow() {
     const ongoingData = await getOngoingStream();
     if (ongoingData?.items?.length) {
       const videoId = ongoingData.items[0].id.videoId;
-      const stats = await getVideoStats(videoId);
-      const streamData = extractStreamData(videoId, stats);
-      if (streamData) {
-        ongoingStream = streamData;
-        candidates.push(streamData);
-        youtubeLog("debug", "youtubePoller:updateWorkflow ongoing-found", {
-          videoId,
-        });
+      if (isBlacklisted(videoId)) {
+        youtubeLog(
+          "debug",
+          "youtubePoller:updateWorkflow ongoing-blacklisted",
+          {
+            videoId,
+          },
+        );
+      } else {
+        const stats = await getVideoStats(videoId);
+        const streamData = extractStreamData(videoId, stats);
+        if (streamData) {
+          ongoingStream = streamData;
+          candidates.push(streamData);
+          youtubeLog("debug", "youtubePoller:updateWorkflow ongoing-found", {
+            videoId,
+          });
+        }
       }
     }
 
@@ -348,6 +386,14 @@ async function updateWorkflow() {
       for (const item of upcomingData.items) {
         try {
           const videoId = item.id.videoId;
+
+          if (isBlacklisted(videoId)) {
+            youtubeLog("debug", "youtubePoller:skip blacklisted", {
+              videoId,
+            });
+            continue;
+          }
+
           const stats = await getVideoStats(videoId);
           const streamData = extractStreamData(videoId, stats);
           if (!streamData) continue;
@@ -489,4 +535,6 @@ module.exports = {
   getVideoStats,
   extractStreamData,
   fetchAndCacheCategories,
+  getBlacklistedVideoIds,
+  isBlacklisted,
 };

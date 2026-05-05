@@ -315,8 +315,8 @@ correct there.
   `@type`/`@constant` JSDoc block.
 - New required env var → add it to `REQUIRED_ENV` in [main.js](main.js) so the
   bot fails fast on missing config. Optional env vars are documented in
-  the JSDoc of whichever module reads them (e.g. `YOUTUBE_API_KEY_2` is
-  described in `utils/youtubePoller.js`).
+  the JSDoc of whichever module reads them (e.g. `YOUTUBE_API_KEY_2` and
+  `YOUTUBE_BLACKLIST_IDS` are described in `utils/youtubePoller.js`).
 
 ---
 

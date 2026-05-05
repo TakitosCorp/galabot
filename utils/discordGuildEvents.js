@@ -27,15 +27,19 @@ const {
 const { getStreamerScheduleThisWeek } = require("./twitchSchedule");
 
 /**
+ * Create or update a Discord Guild Scheduled Event for an upcoming stream.
+ * Detects reschedules and renames. Will delete and recreate the event if it
+ * was prematurely marked as Completed or Canceled.
+ *
  * @async
- * @param {import('discord.js').Client|null} discordClient
- * @param {Object} opts
- * @param {("twitch"|"youtube")} opts.provider
- * @param {string} opts.sourceId
- * @param {string} opts.title
- * @param {string} opts.streamUrl
- * @param {string|null} opts.scheduledStart
- * @param {string|null} [opts.scheduledEnd]
+ * @param {import('discord.js').Client|null} discordClient - The Discord client.
+ * @param {Object} opts - Event configuration options.
+ * @param {("twitch"|"youtube")} opts.provider - The platform provider.
+ * @param {string} opts.sourceId - The provider's unique stream or video ID.
+ * @param {string} opts.title - The stream title.
+ * @param {string} opts.streamUrl - The URL to watch the stream.
+ * @param {string|null} opts.scheduledStart - ISO-8601 start time.
+ * @param {string|null} [opts.scheduledEnd] - ISO-8601 end time (defaults to start + 3h).
  * @returns {Promise<void>}
  */
 async function createGuildStreamEvent(discordClient, opts) {
@@ -225,9 +229,12 @@ async function createGuildStreamEvent(discordClient, opts) {
 }
 
 /**
+ * Update a Discord Guild Scheduled Event status to Active.
+ * Called when a stream physically goes live.
+ *
  * @async
- * @param {import('discord.js').Client|null} discordClient
- * @param {string} sourceId
+ * @param {import('discord.js').Client|null} discordClient - The Discord client.
+ * @param {string} sourceId - The provider's unique stream or video ID.
  * @returns {Promise<void>}
  */
 async function activateGuildStreamEvent(discordClient, sourceId) {
@@ -261,9 +268,12 @@ async function activateGuildStreamEvent(discordClient, sourceId) {
 }
 
 /**
+ * Update a Discord Guild Scheduled Event status to Completed.
+ * Called when a stream physically ends.
+ *
  * @async
- * @param {import('discord.js').Client|null} discordClient
- * @param {string} sourceId
+ * @param {import('discord.js').Client|null} discordClient - The Discord client.
+ * @param {string} sourceId - The provider's unique stream or video ID.
  * @returns {Promise<void>}
  */
 async function completeGuildStreamEvent(discordClient, sourceId) {
@@ -297,10 +307,13 @@ async function completeGuildStreamEvent(discordClient, sourceId) {
 }
 
 /**
+ * Delete Discord Guild Scheduled Events whose source streams are no longer in
+ * the current schedule.
+ *
  * @async
- * @param {import('discord.js').Client|null} discordClient
- * @param {("twitch"|"youtube")} provider
- * @param {string[]} currentSourceIds
+ * @param {import('discord.js').Client|null} discordClient - The Discord client.
+ * @param {("twitch"|"youtube")} provider - The platform provider.
+ * @param {string[]} currentSourceIds - Source ids still present in the live schedule.
  * @returns {Promise<void>}
  */
 async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
@@ -357,8 +370,10 @@ async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
 }
 
 /**
+ * Fetch all upcoming Twitch schedule segments and sync them to Discord Guild Scheduled Events.
+ *
  * @async
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function syncTwitchScheduleEvents(clientManager) {

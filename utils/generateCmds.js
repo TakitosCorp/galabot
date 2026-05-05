@@ -42,9 +42,7 @@ async function resetGlobalCommands() {
     );
     const deletePromises = commands.map((command) => {
       const deleteUrl = `${Routes.applicationCommands(process.env.DISCORD_ID)}/${command.id}`;
-      console.log(
-        `[❎] Deleting command: ${command.name} (ID: ${command.id})`,
-      );
+      console.log(`[❎] Deleting command: ${command.name} (ID: ${command.id})`);
       return rest.delete(deleteUrl);
     });
     await Promise.all(deletePromises);

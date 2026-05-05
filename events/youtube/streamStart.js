@@ -24,9 +24,11 @@ const { setStreamingStatus } = require("../../utils/discordPresence");
 const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
+ * Announce a YouTube live stream on Discord and activate the scheduled event.
+ *
  * @async
- * @param {import('../../clientManager')} clientManager
- * @param {import('../../utils/types').YouTubeState} streamState
+ * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../utils/types').YouTubeState} streamState - Snapshot of poller state at live transition.
  * @returns {Promise<void>}
  */
 async function streamStart(clientManager, streamState) {

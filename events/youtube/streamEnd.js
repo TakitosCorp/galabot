@@ -3,7 +3,8 @@
  * @description
  * Records the end time on the row, resets poller state, edits the original
  * announcement embed in place, posts the final stream stats to the configured
- * webhook, and completes the matching Discord scheduled event.
+ * webhook, and completes the matching Discord scheduled event. Uses the
+ * cached upcoming streams to save quota.
  */
 
 "use strict";
@@ -13,12 +14,7 @@ const { getActiveStream, updateStreamEnd } = require("../../db/streams");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { setIdleStatus } = require("../../utils/discordPresence");
 const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
-const {
-  setState,
-  getUpcomingStreams,
-  getVideoStats,
-  extractStreamData,
-} = require("../../utils/youtubePoller");
+const { getState, setState } = require("../../utils/youtubePoller");
 const {
   generateFollowupImage,
   generateEndedImage,
@@ -27,9 +23,11 @@ const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
 const axios = require("axios");
 
 /**
+ * Wrap up the just-ended YouTube stream.
+ *
  * @async
- * @param {import('../../clientManager')} clientManager
- * @param {string|null} endTime
+ * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {string|null} endTime - ISO-8601 actual end time reported by the API.
  * @returns {Promise<void>}
  */
 async function streamEnd(clientManager, endTime) {
@@ -52,6 +50,8 @@ async function streamEnd(clientManager, endTime) {
 
     await completeGuildStreamEvent(discordClient, streamData.id);
 
+    const { upcomingStreams } = getState();
+
     setState({
       status: "ended",
       embedSent: false,
@@ -68,27 +68,26 @@ async function streamEnd(clientManager, endTime) {
     let streams = [];
 
     try {
-      const upcomingData = await getUpcomingStreams();
+      if (upcomingStreams && upcomingStreams.length > 0) {
+        const now = Date.now();
+        for (const streamInfo of upcomingStreams) {
+          if (streamInfo.videoId === streamData.id) continue;
 
-      if (upcomingData?.items?.length) {
-        for (const item of upcomingData.items) {
-          const vidId = item.id.videoId;
-          const stats = await getVideoStats(vidId);
-          const streamInfo = extractStreamData(vidId, stats);
-
-          if (streamInfo) {
+          if (new Date(streamInfo.scheduledStart).getTime() > now) {
             streams.push({
               title: streamInfo.title,
-              category: "YouTube Live",
+              category: streamInfo.category,
               start: streamInfo.scheduledStart,
               gameBoxArtUrl: streamInfo.thumbnail,
             });
           }
         }
-
         streams.sort(
           (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
         );
+        youtubeLog("debug", "youtube:streamEnd using cached upcoming streams", {
+          count: streams.length,
+        });
       }
 
       if (streams.length > 0) {

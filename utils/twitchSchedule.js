@@ -16,12 +16,14 @@ const { getValidTwitchConfig } = require("./twitchToken");
 const { twitchLog } = require("./loggers");
 
 /**
+ * Resolve a Twitch login name to its broadcaster id via Helix `/users`.
+ *
  * @async
- * @param {string} username
- * @param {string} clientId
- * @param {string} accessToken
- * @returns {Promise<string>}
- * @throws {Error}
+ * @param {string} username - Twitch login (no leading `#`).
+ * @param {string} clientId - Twitch app client id from the cached token.
+ * @param {string} accessToken - Twitch user access token.
+ * @returns {Promise<string>} The broadcaster id string.
+ * @throws {Error} When the username is missing/invalid or Helix returns an error.
  */
 async function getBroadcasterId(username, clientId, accessToken) {
   if (typeof username !== "string") {
@@ -58,10 +60,13 @@ async function getBroadcasterId(username, clientId, accessToken) {
 }
 
 /**
+ * Resolve a category name to a high-resolution box-art URL via the Twurple
+ * API client. Returns `null` on lookup failure or missing category.
+ *
  * @async
- * @param {import('@twurple/api').ApiClient|null} twitchApiClient
- * @param {string} categoryName
- * @returns {Promise<string|null>}
+ * @param {import('@twurple/api').ApiClient|null} twitchApiClient - The Twurple API client.
+ * @param {string} categoryName - The category name to look up.
+ * @returns {Promise<string|null>} The box art URL or null.
  */
 async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
   if (!twitchApiClient || !categoryName) return null;
@@ -81,11 +86,13 @@ async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
 }
 
 /**
+ * Fetch all future scheduled segments for the streamer, sorted chronologically.
+ *
  * @async
- * @param {string} username
- * @param {import('@twurple/api').ApiClient} twitchApiClient
- * @returns {Promise<ScheduleSegment[]>}
- * @throws {Error}
+ * @param {string} username - Twitch login (no leading `#`).
+ * @param {import('@twurple/api').ApiClient} twitchApiClient - Used to resolve box art for each segment.
+ * @returns {Promise<ScheduleSegment[]>} Array of scheduled segments.
+ * @throws {Error} On invalid input or non-recoverable Helix errors.
  */
 async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   if (typeof username !== "string") {

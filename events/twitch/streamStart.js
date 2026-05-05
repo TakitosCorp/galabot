@@ -6,7 +6,7 @@
  * 2. Posting an embed announcement.
  * 3. Persisting the stream row.
  * 4. Starting the rolling viewer-average poller.
- * 5. Activating the matching Discord Guild Scheduled Event if any.
+ * 5. Activating the matching Discord Guild Scheduled Event.
  */
 
 "use strict";
@@ -31,9 +31,11 @@ const { setStreamingStatus } = require("../../utils/discordPresence");
 const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
+ * Process a `streamOnline` EventSub event.
+ *
  * @async
- * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event
- * @param {import('../../clientManager')} clientManager
+ * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event - The Twurple stream online event.
+ * @param {import('../../clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamStart(event, clientManager) {

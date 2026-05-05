@@ -3,16 +3,8 @@
  * @description
  * Stateful poller that drives the YouTube live-stream announcement pipeline.
  * Holds in-memory state (the current tracked videoId, status, embed flag,
- * quota cooldown) plus the API helpers used by the slow/fast polls in
- * {@link module:handlers/youtube/startup}.
- *
- * Quota strategy:
- *  - Two API keys are supported. The primary (`YOUTUBE_API_KEY`) is used for
- *    everything except `search.list` calls. When `search.list` returns
- *    `quotaExceeded` we transparently flip to `YOUTUBE_API_KEY_2` for searches
- *    only — `videos.list` keeps using the primary key.
- *  - Once both keys are exhausted we set `quotaExhaustedUntil` to "now + 24 h"
- *    so future calls short-circuit until the daily window resets.
+ * quota cooldown, and upcoming streams cache) plus the API helpers used by
+ * the slow/fast polls in `handlers/youtube/startup`.
  *
  * @typedef {import('./types').YouTubeState} YouTubeState
  * @typedef {import('./types').YouTubeStreamData} YouTubeStreamData
@@ -28,9 +20,8 @@ const { updateStreamViewers } = require("../db/streams");
 const { YOUTUBE_QUOTA_COOLDOWN_MS, YOUTUBE_RETRY_MAX } = require("./constants");
 
 /**
- * Mutable singleton state for the poller. Treat as private to this module —
- * outside callers should go through {@link getState} / {@link setState}.
- * @type {YouTubeState}
+ * Mutable singleton state for the poller.
+ * @type {YouTubeState & { upcomingStreams: YouTubeStreamData[] }}
  */
 const state = {
   videoId: null,
@@ -44,12 +35,13 @@ const state = {
   isPolling: false,
   quotaExhaustedUntil: 0,
   usingFallbackKey: false,
+  upcomingStreams: [],
 };
 
 /**
- * Return a shallow copy of the current state so callers can safely read it
- * without risking accidental mutation.
- * @returns {YouTubeState}
+ * Return a shallow copy of the current state.
+ *
+ * @returns {YouTubeState & { upcomingStreams: YouTubeStreamData[] }}
  */
 function getState() {
   return { ...state };
@@ -57,7 +49,8 @@ function getState() {
 
 /**
  * Merge a partial state update into the singleton state.
- * @param {Partial<YouTubeState>} partial
+ *
+ * @param {Partial<YouTubeState & { upcomingStreams: YouTubeStreamData[] }>} partial
  * @returns {void}
  */
 function setState(partial) {
@@ -65,10 +58,9 @@ function setState(partial) {
 }
 
 /**
- * Pick the right API key for a given call. Search calls flip to the fallback
- * key once the primary has hit its quota; everything else stays on the primary.
+ * Pick the right API key for a given call.
  *
- * @param {boolean} [forSearch=false] - True when picking a key for `search.list`.
+ * @param {boolean} [forSearch=false] - True when picking a key for search.list.
  * @returns {string|undefined} The selected API key.
  */
 function getApiKey(forSearch = false) {
@@ -80,16 +72,12 @@ function getApiKey(forSearch = false) {
 
 /**
  * Wrap an async API call with exponential-backoff retry and quota awareness.
- * Returns `null` (instead of throwing) on:
- *  - 400/404 responses (caller-fixable, no point retrying),
- *  - exhausted retries,
- *  - permanent quota exhaustion (sets `quotaExhaustedUntil`).
  *
  * @template T
  * @async
  * @param {() => Promise<T>} fn - Function to call (must throw on error).
- * @param {number} [maxRetries=YOUTUBE_RETRY_MAX]
- * @returns {Promise<T|null>}
+ * @param {number} [maxRetries=YOUTUBE_RETRY_MAX] - Max retry attempts.
+ * @returns {Promise<T|null>} Null on 400/404 responses or exhausted retries/quota.
  */
 async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -118,10 +106,7 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
       }
 
       if (status === 400 || status === 404) {
-        youtubeLog("warn", "youtubePoller:request gave-up", {
-          status,
-          reason,
-        });
+        youtubeLog("warn", "youtubePoller:request gave-up", { status, reason });
         return null;
       }
 
@@ -148,9 +133,7 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
 }
 
 /**
- * Refresh the cached `id → categoryName` map from `videoCategories.list`. The
- * cache is written to `data/youtubeCategories.json` and read by
- * {@link extractStreamData}.
+ * Refresh the cached `id -> categoryName` map from `videoCategories.list`.
  *
  * @async
  * @returns {Promise<void>}
@@ -161,11 +144,7 @@ async function fetchAndCacheCategories() {
   const data = await withRetry(() =>
     axios
       .get("https://www.googleapis.com/youtube/v3/videoCategories", {
-        params: {
-          part: "snippet",
-          regionCode: "ES",
-          key,
-        },
+        params: { part: "snippet", regionCode: "ES", key },
       })
       .then((r) => r.data),
   );
@@ -189,8 +168,9 @@ async function fetchAndCacheCategories() {
 
 /**
  * `search.list` for `eventType=upcoming` — high-quota call.
+ *
  * @async
- * @returns {Promise<any|null>} Raw API response or `null` on quota/error.
+ * @returns {Promise<any|null>} Raw API response.
  */
 async function getUpcomingStreams() {
   const key = getApiKey(true);
@@ -213,8 +193,9 @@ async function getUpcomingStreams() {
 
 /**
  * `search.list` for `eventType=live` — high-quota call.
+ *
  * @async
- * @returns {Promise<any|null>} Raw API response or `null` on quota/error.
+ * @returns {Promise<any|null>} Raw API response.
  */
 async function getOngoingStream() {
   const key = getApiKey(true);
@@ -236,12 +217,11 @@ async function getOngoingStream() {
 }
 
 /**
- * `videos.list` for a single videoId — low quota cost. Used by the fast poll
- * to track `liveStreamingDetails` once a candidate has been picked.
+ * `videos.list` for a single videoId — low quota cost.
  *
  * @async
- * @param {string} videoId
- * @returns {Promise<any|null>}
+ * @param {string} videoId - The YouTube video ID.
+ * @returns {Promise<any|null>} Raw API response.
  */
 async function getVideoStats(videoId) {
   const key = getApiKey(false);
@@ -249,20 +229,14 @@ async function getVideoStats(videoId) {
   return withRetry(() =>
     axios
       .get("https://www.googleapis.com/youtube/v3/videos", {
-        params: {
-          part: "liveStreamingDetails,snippet",
-          id: videoId,
-          key,
-        },
+        params: { part: "liveStreamingDetails,snippet", id: videoId, key },
       })
       .then((r) => r.data),
   );
 }
 
 /**
- * Build the list of title patterns that should be skipped when picking a
- * candidate stream. Combines a built-in list ("【HORARIO SEMANAL】") with the
- * comma-separated `YOUTUBE_SKIP_TITLES` env var.
+ * Build the list of title patterns that should be skipped.
  *
  * @returns {string[]}
  */
@@ -277,21 +251,21 @@ function getSkipTitles() {
 }
 
 /**
- * @param {string} title
- * @returns {boolean} `true` when `title` matches any pattern from {@link getSkipTitles}.
+ * Checks if the title matches any pattern to skip.
+ *
+ * @param {string} title - The stream title.
+ * @returns {boolean} True if the stream should be skipped.
  */
 function shouldSkip(title) {
   return getSkipTitles().some((pattern) => title.includes(pattern));
 }
 
 /**
- * Reduce a `videos.list` response item to the {@link YouTubeStreamData} shape
- * the rest of the codebase expects. Returns `null` when the response is missing
- * a snippet, `liveStreamingDetails`, or any usable start time.
+ * Reduce a `videos.list` response item to the YouTubeStreamData shape.
  *
- * @param {string} videoId
- * @param {any} statsData - Raw `videos.list` response.
- * @returns {YouTubeStreamData|null}
+ * @param {string} videoId - The video ID.
+ * @param {any} statsData - Raw API response.
+ * @returns {YouTubeStreamData|null} Parsed data or null.
  */
 function extractStreamData(videoId, statsData) {
   if (!statsData?.items?.length) return null;
@@ -326,8 +300,7 @@ function extractStreamData(videoId, statsData) {
 
 /**
  * Slow-poll core: search for live and upcoming streams on the channel, score
- * candidates, and update state with the best one. Re-entrant: the `isPolling`
- * lock prevents two concurrent updates from racing on `setState`.
+ * candidates, and update state with the best one. Also caches upcoming streams.
  *
  * @async
  * @returns {Promise<void>}
@@ -350,6 +323,7 @@ async function updateWorkflow() {
   try {
     const now = new Date();
     const candidates = [];
+    const upcomingCache = [];
     let ongoingStream = null;
 
     const ongoingData = await getOngoingStream();
@@ -402,6 +376,7 @@ async function updateWorkflow() {
           const scheduledDate = new Date(streamData.scheduledStart);
           if (scheduledDate > now) {
             candidates.push(streamData);
+            upcomingCache.push(streamData);
           }
         } catch (itemErr) {
           youtubeLog("warn", "youtubePoller:upcoming-item failed", {
@@ -412,8 +387,16 @@ async function updateWorkflow() {
     }
 
     candidates.sort(
-      (a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart),
+      (a, b) =>
+        new Date(a.scheduledStart).getTime() -
+        new Date(b.scheduledStart).getTime(),
     );
+    upcomingCache.sort(
+      (a, b) =>
+        new Date(a.scheduledStart).getTime() -
+        new Date(b.scheduledStart).getTime(),
+    );
+    setState({ upcomingStreams: upcomingCache });
 
     const next = ongoingStream || candidates[0] || null;
 
@@ -448,11 +431,10 @@ async function updateWorkflow() {
 
 /**
  * Fast-poll core: re-fetch the currently tracked video and report whether it's
- * live, has ended, and how many viewers it has. Returns `null` when there's
- * nothing tracked or the API call failed.
+ * live, has ended, and how many viewers it has.
  *
  * @async
- * @returns {Promise<YouTubeCheckResult|null>}
+ * @returns {Promise<YouTubeCheckResult|null>} Data object or null.
  */
 async function checkWorkflow() {
   if (state.isPolling || !state.videoId) return null;
@@ -485,17 +467,10 @@ async function checkWorkflow() {
       youtubeLog(
         "warn",
         "youtubePoller:checkWorkflow updateStreamViewers failed",
-        {
-          err: err.message,
-          videoId: state.videoId,
-        },
+        { err: err.message, videoId: state.videoId },
       );
     }
-    return {
-      isLive: true,
-      viewers: viewerCount,
-      endTime: null,
-    };
+    return { isLive: true, viewers: viewerCount, endTime: null };
   }
 
   if (details.actualStartTime) {

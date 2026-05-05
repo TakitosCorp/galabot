@@ -26,9 +26,11 @@ const { setIdleStatus } = require("../../utils/discordPresence");
 const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
+ * Process a `streamOffline` EventSub event.
+ *
  * @async
- * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event
- * @param {import('../../clientManager')} clientManager
+ * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event - The Twurple stream offline event.
+ * @param {import('../../clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamEnd(event, clientManager) {

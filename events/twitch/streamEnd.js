@@ -1,13 +1,9 @@
 /**
  * @module events/twitch/streamEnd
  * @description
- * Reacts to a Twitch `streamOffline` EventSub by:
- *  1. Stopping the viewer-average poller for the active stream.
- *  2. Recording the end timestamp on the matching stream row.
- *  3. Editing the original Discord announcement embed in place to either
- *     (a) a "next streams" follow-up if a weekly schedule is published, or
- *     (b) a generic "stream ended" image otherwise.
- *  4. Posting the final stream stats to the configured webhook.
+ * Reacts to a Twitch `streamOffline` EventSub by recording the end time,
+ * editing the embed, posting final stats to the webhook, and completing the
+ * matching Discord scheduled event.
  */
 
 "use strict";
@@ -27,11 +23,9 @@ const {
 const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { stopViewersAverage } = require("../../utils/twitchViews");
 const { setIdleStatus } = require("../../utils/discordPresence");
+const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
- * Process a `streamOffline` EventSub event. Errors are logged at every step but
- * never thrown — the EventSub listener stays subscribed regardless.
- *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event
  * @param {import('../../clientManager')} clientManager
@@ -63,6 +57,8 @@ async function streamEnd(event, clientManager) {
       endTime,
       updated,
     });
+
+    await completeGuildStreamEvent(discordClient, streamId);
 
     const finalStream = await getStreamById(streamId);
     if (!finalStream) {
@@ -110,7 +106,6 @@ async function streamEnd(event, clientManager) {
     } catch (imgErr) {
       twitchLog("error", "twitch:streamEnd image-generation failed", {
         err: imgErr.message,
-        stack: imgErr.stack,
       });
     }
 
@@ -212,13 +207,12 @@ async function streamEnd(event, clientManager) {
     } catch (editErr) {
       twitchLog("error", "twitch:streamEnd edit-message failed", {
         err: editErr.message,
-        stack: editErr.stack,
       });
     }
 
     setIdleStatus(discordClient);
 
-    if (updated) {
+    if (updated && process.env.POST_DATA_WEBHOOK) {
       try {
         await axios.post(process.env.POST_DATA_WEBHOOK, {
           id: finalStream.id,
@@ -243,10 +237,7 @@ async function streamEnd(event, clientManager) {
       }
     }
   } catch (error) {
-    twitchLog("error", "twitch:streamEnd failed", {
-      err: error.message,
-      stack: error.stack,
-    });
+    twitchLog("error", "twitch:streamEnd failed", { err: error.message });
   }
 }
 

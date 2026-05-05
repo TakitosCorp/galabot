@@ -1,11 +1,9 @@
 /**
  * @module events/youtube/streamEnd
  * @description
- * Triggered by {@link module:handlers/youtube/startup.runFastPoll} when the
- * tracked video reports `actualEndTime`. Records the end time on the row,
- * resets poller state, edits the original announcement embed in place to a
- * "next streams" follow-up or generic ended image, and posts the final stream
- * stats to the configured webhook.
+ * Records the end time on the row, resets poller state, edits the original
+ * announcement embed in place, posts the final stream stats to the configured
+ * webhook, and completes the matching Discord scheduled event.
  */
 
 "use strict";
@@ -25,14 +23,13 @@ const {
   generateFollowupImage,
   generateEndedImage,
 } = require("../../utils/imageGenerator");
+const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
 const axios = require("axios");
 
 /**
- * Wrap up the just-ended YouTube stream.
- *
  * @async
  * @param {import('../../clientManager')} clientManager
- * @param {string|null} endTime - ISO-8601 actual end time reported by the API; falls back to "now" when unavailable.
+ * @param {string|null} endTime
  * @returns {Promise<void>}
  */
 async function streamEnd(clientManager, endTime) {
@@ -52,6 +49,8 @@ async function streamEnd(clientManager, endTime) {
       videoId: streamData.id,
       endTime: resolvedEndTime,
     });
+
+    await completeGuildStreamEvent(discordClient, streamData.id);
 
     setState({
       status: "ended",
@@ -86,6 +85,10 @@ async function streamEnd(clientManager, endTime) {
             });
           }
         }
+
+        streams.sort(
+          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+        );
       }
 
       if (streams.length > 0) {
@@ -104,7 +107,6 @@ async function streamEnd(clientManager, endTime) {
     } catch (imgErr) {
       youtubeLog("error", "youtube:streamEnd image-generation failed", {
         err: imgErr.message,
-        stack: imgErr.stack,
       });
     }
 
@@ -188,7 +190,6 @@ async function streamEnd(clientManager, endTime) {
     } catch (editErr) {
       youtubeLog("error", "youtube:streamEnd edit-message failed", {
         err: editErr.message,
-        stack: editErr.stack,
       });
     }
 
@@ -218,10 +219,7 @@ async function streamEnd(clientManager, endTime) {
       }
     }
   } catch (error) {
-    youtubeLog("error", "youtube:streamEnd failed", {
-      err: error.message,
-      stack: error.stack,
-    });
+    youtubeLog("error", "youtube:streamEnd failed", { err: error.message });
   }
 }
 

@@ -122,7 +122,9 @@ module.exports = {
         issuer: interaction.user.username,
         channelId: interaction.channelId,
       });
-      const { resource: { message: sentMessage } } = await interaction.reply({
+      const {
+        resource: { message: sentMessage },
+      } = await interaction.reply({
         embeds: [rulesEmbedEs, rulesEmbedEn],
         withResponse: true,
       });

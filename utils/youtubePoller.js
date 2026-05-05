@@ -378,8 +378,12 @@ async function updateWorkflow() {
           const streamData = extractStreamData(videoId, stats);
           if (!streamData) continue;
 
-          const liveBroadcastContent = stats?.items?.[0]?.snippet?.liveBroadcastContent;
-          if (liveBroadcastContent !== "upcoming" && liveBroadcastContent !== "live") {
+          const liveBroadcastContent =
+            stats?.items?.[0]?.snippet?.liveBroadcastContent;
+          if (
+            liveBroadcastContent !== "upcoming" &&
+            liveBroadcastContent !== "live"
+          ) {
             youtubeLog("debug", "youtubePoller:skip non-upcoming", {
               videoId,
               liveBroadcastContent,

@@ -1,10 +1,9 @@
 /**
  * @module events/youtube/streamStart
  * @description
- * Triggered by {@link module:handlers/youtube/startup.runFastPoll} once a tracked
- * video transitions to live. Generates a custom banner, posts the announcement
- * embed into the configured Discord notification channel, persists the stream
- * row, and flips state to `embedSent: true, status: "live"` so we don't repost.
+ * Triggered by the poller once a tracked video transitions to live.
+ * Generates a banner, posts the announcement, persists the stream,
+ * updates state, and activates the matching Discord scheduled event.
  */
 
 "use strict";
@@ -22,14 +21,12 @@ const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { setState } = require("../../utils/youtubePoller");
 const { setStreamingStatus } = require("../../utils/discordPresence");
+const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
- * Announce a YouTube live stream on Discord. Errors are logged but never thrown
- * — the polling loop must keep running.
- *
  * @async
  * @param {import('../../clientManager')} clientManager
- * @param {import('../../utils/types').YouTubeState} streamState - Snapshot of poller state at the moment the stream went live.
+ * @param {import('../../utils/types').YouTubeState} streamState
  * @returns {Promise<void>}
  */
 async function streamStart(clientManager, streamState) {
@@ -76,7 +73,6 @@ async function streamStart(clientManager, streamState) {
       youtubeLog("error", "youtube:streamStart banner-generation failed", {
         videoId,
         err: bannerErr.message,
-        stack: bannerErr.stack,
       });
       attachment = null;
     }
@@ -143,14 +139,12 @@ async function streamStart(clientManager, streamState) {
       discMsgId: sentMessage.id,
     });
 
+    await activateGuildStreamEvent(discordClient, videoId);
     setStreamingStatus(discordClient, cleanStreamTitle(title), streamUrl);
     setState({ embedSent: true, status: "live" });
     youtubeLog("info", "youtube:streamStart state -> live", { videoId });
   } catch (error) {
-    youtubeLog("error", "youtube:streamStart failed", {
-      err: error.message,
-      stack: error.stack,
-    });
+    youtubeLog("error", "youtube:streamStart failed", { err: error.message });
   }
 }
 

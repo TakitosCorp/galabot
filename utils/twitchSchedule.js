@@ -16,19 +16,17 @@ const { getValidTwitchConfig } = require("./twitchToken");
 const { twitchLog } = require("./loggers");
 
 /**
- * Resolve a Twitch login name to its broadcaster id via Helix `/users`.
- *
  * @async
- * @param {string} username - Twitch login (no leading `#`).
- * @param {string} clientId - Twitch app client id from the cached token.
- * @param {string} accessToken - Twitch user access token.
- * @returns {Promise<string>} The broadcaster id string.
- * @throws {Error} When the username is missing/invalid or Helix returns an error.
+ * @param {string} username
+ * @param {string} clientId
+ * @param {string} accessToken
+ * @returns {Promise<string>}
+ * @throws {Error}
  */
 async function getBroadcasterId(username, clientId, accessToken) {
   if (typeof username !== "string") {
     throw new Error(
-      `El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`,
+      `Username must be a string. Value received: ${JSON.stringify(username)}`,
     );
   }
   twitchLog("debug", "twitchSchedule:getBroadcasterId", { username });
@@ -42,7 +40,7 @@ async function getBroadcasterId(username, clientId, accessToken) {
     });
     const data = res.data;
     if (!data.data.length)
-      throw new Error(`Usuario no encontrado: ${username}`);
+      throw new Error(`User not found: ${username}`);
     return data.data[0].id;
   } catch (err) {
     if (err.response) {
@@ -52,7 +50,7 @@ async function getBroadcasterId(username, clientId, accessToken) {
         twitchError,
       });
       throw new Error(
-        `Error al obtener broadcasterId para "${username}": ${JSON.stringify(twitchError)}`,
+        `Error obtaining broadcasterId for "${username}": ${JSON.stringify(twitchError)}`,
       );
     }
     throw err;
@@ -60,9 +58,6 @@ async function getBroadcasterId(username, clientId, accessToken) {
 }
 
 /**
- * Resolve a category name to a high-resolution box-art URL via the Twurple
- * API client. Returns `null` on lookup failure or missing category.
- *
  * @async
  * @param {import('@twurple/api').ApiClient|null} twitchApiClient
  * @param {string} categoryName
@@ -86,20 +81,16 @@ async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
 }
 
 /**
- * Fetch all future scheduled segments for the streamer, starting from now.
- * Each segment is decorated with a pre-resolved box-art URL when available.
- * Used by the stream-end followup image pipeline and by the Discord event sync.
- *
  * @async
- * @param {string} username - Twitch login (no leading `#`).
- * @param {import('@twurple/api').ApiClient} twitchApiClient - Used to resolve box art for each segment.
+ * @param {string} username
+ * @param {import('@twurple/api').ApiClient} twitchApiClient
  * @returns {Promise<ScheduleSegment[]>}
- * @throws {Error} On invalid input or non-recoverable Helix errors.
+ * @throws {Error}
  */
 async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   if (typeof username !== "string") {
     throw new Error(
-      `El username debe ser un string. Valor recibido: ${JSON.stringify(username)}`,
+      `Username must be a string. Value received: ${JSON.stringify(username)}`,
     );
   }
   twitchLog("debug", "twitchSchedule:getStreamerScheduleThisWeek", {
@@ -130,9 +121,9 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
 
   const result = [];
   for (const seg of segments) {
-    const category = seg.category?.name || "Sin categoría";
+    const category = seg.category?.name || "No category";
     let gameBoxArtUrl = null;
-    if (category !== "Sin categoría" && twitchApiClient) {
+    if (category !== "No category" && twitchApiClient) {
       gameBoxArtUrl = await getGameBoxArtUrlByCategoryName(
         twitchApiClient,
         category,
@@ -147,6 +138,11 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
       gameBoxArtUrl,
     });
   }
+
+  result.sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+  );
+
   return result;
 }
 

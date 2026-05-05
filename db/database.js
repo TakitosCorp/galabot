@@ -96,7 +96,9 @@ async function initialize() {
         .addColumn("message_id", "text", (col) => col.notNull().unique())
         .addColumn("channel_id", "text", (col) => col.notNull())
         .addColumn("guild_id", "text", (col) => col.notNull())
-        .addColumn("group_name", "text", (col) => col.notNull().defaultTo("RULES"))
+        .addColumn("group_name", "text", (col) =>
+          col.notNull().defaultTo("RULES"),
+        )
         .addColumn("created_at", "datetime", (col) => col.notNull())
         .execute();
     });
@@ -169,7 +171,10 @@ async function initialize() {
         sqliteDb.exec(
           "ALTER TABLE reaction_role_messages ADD COLUMN group_name text NOT NULL DEFAULT 'RULES'",
         );
-        dbLog("info", "db:migration added group_name to reaction_role_messages");
+        dbLog(
+          "info",
+          "db:migration added group_name to reaction_role_messages",
+        );
       }
     }
 

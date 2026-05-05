@@ -170,14 +170,14 @@ Notes:
 
 ### Discord
 
-| Variable                       | Required | Description                                                                               |
-| ------------------------------ | -------- | ----------------------------------------------------------------------------------------- |
-| `DISCORD_TOKEN`                | yes      | Bot token from the Discord Developer Portal.                                              |
-| `DISCORD_ID`                   | yes      | Application (client) ID — used by `generate-cmds` to register slash commands.             |
-| `GALA_DISCORD_ID`              | yes      | The bot account's user ID. Used to detect when a user pings the bot in chat.              |
-| `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                      |
-| `DISCORD_NOTIFICATION_ROLE_ID` | no       | Role ID mentioned in Twitch and YouTube stream notifications. Leave blank for no mention. |
-| `SPANISH_CHANNEL_ID`           | no       | Channel ID treated as Spanish-locale. Any other channel falls back to English.            |
+| Variable                       | Required | Description                                                                                                                                                                                             |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DISCORD_TOKEN`                | yes      | Bot token from the Discord Developer Portal.                                                                                                                                                            |
+| `DISCORD_ID`                   | yes      | Application (client) ID — used by `generate-cmds` to register slash commands.                                                                                                                           |
+| `GALA_DISCORD_ID`              | yes      | The bot account's user ID. Used to detect when a user pings the bot in chat.                                                                                                                            |
+| `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                                                                                                                                    |
+| `DISCORD_NOTIFICATION_ROLE_ID` | no       | Role ID mentioned in Twitch and YouTube stream notifications. Leave blank for no mention.                                                                                                               |
+| `SPANISH_CHANNEL_ID`           | no       | Channel ID treated as Spanish-locale. Any other channel falls back to English.                                                                                                                          |
 | `REACTION_ROLE_{GROUP}_EMOJI*` | no       | Reaction role mappings, namespaced by group. Format: `REACTION_ROLE_RULES_EMOJI1=🦖:roleId`. Supports Unicode and custom Discord emojis (`<:name:id>`). Each command uses its own group (e.g. `RULES`). |
 
 ### Twitch
@@ -470,17 +470,17 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 
 ## Common tasks (recipes)
 
-| I want to…                                                | Edit                                                                                                      |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Add a Discord slash command                               | Add a new file under `commands/discord/` exporting `{ data, execute }`, then run `npm run generate-cmds`. |
-| Add a Discord chat behavior                               | Edit `events/discord/messageCreate.js` (or add a new handler — Discord auto-loads new files).             |
-| Add a Twitch chat command                                 | Add a branch to `events/twitch/interactionCreate.js`.                                                     |
+| I want to…                                                | Edit                                                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Add a Discord slash command                               | Add a new file under `commands/discord/` exporting `{ data, execute }`, then run `npm run generate-cmds`.     |
+| Add a Discord chat behavior                               | Edit `events/discord/messageCreate.js` (or add a new handler — Discord auto-loads new files).                 |
+| Add a Twitch chat command                                 | Add a branch to `events/twitch/interactionCreate.js`.                                                         |
 | Configure reaction roles on `/rules`                      | Add `REACTION_ROLE_RULES_EMOJI1=emoji:roleId` to `.env`. Use `REACTION_ROLE_{GROUP}_EMOJI*` for other embeds. |
-| Tune greeting cooldown / ban threshold / timeout duration | Edit constants in `utils/constants.js`.                                                                   |
-| Tune Twitch viewer poll cadence                           | `VIEWER_POLL_INTERVAL_MS` in `utils/constants.js`.                                                        |
-| Tune YouTube polling cadence                              | `YOUTUBE_FAST_POLL_MS` and `YOUTUBE_SLOW_POLL_MS` in `utils/constants.js` (mind the quota).               |
-| Change the stream banner art                              | Edit `templates/streamBanner.html`. Re-run the bot — Puppeteer reloads the file each render.              |
-| Disable a platform                                        | Set `ENABLE_DISCORD=false` / `ENABLE_TWITCH=false` / `ENABLE_YOUTUBE=false` in `.env`.                    |
+| Tune greeting cooldown / ban threshold / timeout duration | Edit constants in `utils/constants.js`.                                                                       |
+| Tune Twitch viewer poll cadence                           | `VIEWER_POLL_INTERVAL_MS` in `utils/constants.js`.                                                            |
+| Tune YouTube polling cadence                              | `YOUTUBE_FAST_POLL_MS` and `YOUTUBE_SLOW_POLL_MS` in `utils/constants.js` (mind the quota).                   |
+| Change the stream banner art                              | Edit `templates/streamBanner.html`. Re-run the bot — Puppeteer reloads the file each render.                  |
+| Disable a platform                                        | Set `ENABLE_DISCORD=false` / `ENABLE_TWITCH=false` / `ENABLE_YOUTUBE=false` in `.env`.                        |
 
 ---
 
@@ -542,14 +542,14 @@ One row per warning issued, used for the `/warn` escalation logic.
 
 Tracks messages with reaction roles enabled (for persistent role assignment across restarts).
 
-| Column      | Type               | Purpose                                           |
-| ----------- | ------------------ | ------------------------------------------------- |
-| `id`        | integer (PK, auto) | Row ID.                                           |
-| `message_id`| text (unique)      | Discord message ID of the message with reactions.|
-| `channel_id`| text               | Discord channel ID where the message was posted. |
-| `guild_id`  | text               | Discord guild (server) ID.                        |
-| `group_name`| text (default `RULES`) | Env var group name — drives which `REACTION_ROLE_{GROUP}_EMOJI*` vars are used. |
-| `created_at`| datetime           | When the message was tracked.                     |
+| Column       | Type                   | Purpose                                                                         |
+| ------------ | ---------------------- | ------------------------------------------------------------------------------- |
+| `id`         | integer (PK, auto)     | Row ID.                                                                         |
+| `message_id` | text (unique)          | Discord message ID of the message with reactions.                               |
+| `channel_id` | text                   | Discord channel ID where the message was posted.                                |
+| `guild_id`   | text                   | Discord guild (server) ID.                                                      |
+| `group_name` | text (default `RULES`) | Env var group name — drives which `REACTION_ROLE_{GROUP}_EMOJI*` vars are used. |
+| `created_at` | datetime               | When the message was tracked.                                                   |
 
 ---
 

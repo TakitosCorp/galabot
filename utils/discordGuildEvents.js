@@ -1,15 +1,8 @@
 /**
  * @module utils/discordGuildEvents
  * @description
- * Helpers for creating, syncing and cleaning up Discord Guild Scheduled Events
- * from upcoming Twitch and YouTube streams. Event creation is gated behind the
- * `DISCORD_EVENTS_ENABLED` env var (default: disabled) and requires the bot to
- * have the `MANAGE_EVENTS` permission in the target guild.
- *
- * Deduplication is handled via the `discord_scheduled_events` SQLite table —
- * each source id (Twitch segment UUID or YouTube videoId) is only ever used to
- * create one event. Cleanup compares the current schedule against DB rows and
- * deletes Discord events whose streams were removed or cancelled.
+ * Helpers for creating, syncing, activating, completing, and cleaning up
+ * Discord Guild Scheduled Events from upcoming Twitch and YouTube streams.
  *
  * @typedef {import('./types').DiscordScheduledEventRow} DiscordScheduledEventRow
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
@@ -20,6 +13,7 @@
 const {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
+  GuildScheduledEventStatus,
 } = require("discord.js");
 const { discordLog } = require("./loggers");
 const { cleanStreamTitle } = require("./streamTitleCleaner");
@@ -33,29 +27,15 @@ const {
 const { getStreamerScheduleThisWeek } = require("./twitchSchedule");
 
 /**
- * Create or update a Discord Guild Scheduled Event for an upcoming stream.
- * Three outcomes are possible:
- *  - **New**: no DB row → create the event and persist it.
- *  - **Changed**: DB row exists but title, start, or end time differs → edit
- *    the existing Discord event and update the DB row.
- *  - **Unchanged**: DB row matches current schedule → skip.
- *
- * Derives the guild from `DISCORD_NOTIFICATION_CHANNEL`. External entity type
- * is used so no stage/voice channel is needed; Discord requires `scheduledEndTime`
- * for external events — defaults to `scheduledStart + 3 h` when not supplied.
- *
- * Set `DISCORD_EVENTS_ENABLED=true` to activate (off by default). The bot also
- * needs the `MANAGE_EVENTS` guild permission.
- *
  * @async
  * @param {import('discord.js').Client|null} discordClient
  * @param {Object} opts
  * @param {("twitch"|"youtube")} opts.provider
- * @param {string} opts.sourceId - Twitch segment UUID or YouTube videoId.
- * @param {string} opts.title - Stream title used for the event name.
- * @param {string} opts.streamUrl - Public stream URL set as the event location.
- * @param {string|null} opts.scheduledStart - ISO-8601 start time.
- * @param {string|null} [opts.scheduledEnd] - ISO-8601 end time; defaults to start + 3 h.
+ * @param {string} opts.sourceId
+ * @param {string} opts.title
+ * @param {string} opts.streamUrl
+ * @param {string|null} opts.scheduledStart
+ * @param {string|null} [opts.scheduledEnd]
  * @returns {Promise<void>}
  */
 async function createGuildStreamEvent(discordClient, opts) {
@@ -75,9 +55,7 @@ async function createGuildStreamEvent(discordClient, opts) {
     discordLog(
       "warn",
       "discordGuildEvents:createGuildStreamEvent no-start-time",
-      {
-        sourceId,
-      },
+      { sourceId },
     );
     return;
   }
@@ -97,9 +75,7 @@ async function createGuildStreamEvent(discordClient, opts) {
       discordLog(
         "warn",
         "discordGuildEvents:createGuildStreamEvent guild-not-found",
-        {
-          channelId,
-        },
+        { channelId },
       );
       return;
     }
@@ -113,7 +89,45 @@ async function createGuildStreamEvent(discordClient, opts) {
       : new Date(startDate.getTime() + 3 * 60 * 60 * 1000).toISOString();
     const endDate = new Date(resolvedEnd);
 
-    const existing = await getDiscordEventBySourceId(sourceId);
+    let existing = await getDiscordEventBySourceId(sourceId);
+    let fetchedEvent = null;
+
+    if (existing) {
+      fetchedEvent = await channel.guild.scheduledEvents
+        .fetch(existing.discordEventId)
+        .catch(() => null);
+
+      const startChanged =
+        !existing.scheduledStart ||
+        new Date(existing.scheduledStart).getTime() !== startDate.getTime();
+      const isFinished =
+        fetchedEvent &&
+        (fetchedEvent.status === GuildScheduledEventStatus.Completed ||
+          fetchedEvent.status === GuildScheduledEventStatus.Canceled);
+      const isActiveAndStartChanged =
+        fetchedEvent &&
+        fetchedEvent.status === GuildScheduledEventStatus.Active &&
+        startChanged;
+
+      if (!fetchedEvent || isFinished || isActiveAndStartChanged) {
+        if (fetchedEvent) {
+          discordLog(
+            "info",
+            "discordGuildEvents:deleting old event for recreation",
+            { sourceId, eventId: existing.discordEventId },
+          );
+          await channel.guild.scheduledEvents
+            .delete(existing.discordEventId)
+            .catch((err) => {
+              discordLog("warn", "discordGuildEvents:delete old event failed", {
+                err: err.message,
+              });
+            });
+        }
+        await deleteDiscordEvent(sourceId);
+        existing = undefined;
+      }
+    }
 
     if (!existing) {
       const event = await channel.guild.scheduledEvents.create({
@@ -145,7 +159,6 @@ async function createGuildStreamEvent(discordClient, opts) {
       return;
     }
 
-    // Detect reschedules and renames using epoch comparison to avoid ISO string drift.
     const startChanged =
       !existing.scheduledStart ||
       new Date(existing.scheduledStart).getTime() !== startDate.getTime();
@@ -158,20 +171,34 @@ async function createGuildStreamEvent(discordClient, opts) {
       discordLog(
         "debug",
         "discordGuildEvents:createGuildStreamEvent skip (unchanged)",
-        {
-          sourceId,
-        },
+        { sourceId },
       );
       return;
     }
 
-    await channel.guild.scheduledEvents.edit(existing.discordEventId, {
+    const editPayload = {
       name: eventName,
-      scheduledStartTime: startDate,
-      scheduledEndTime: endDate,
       entityMetadata: { location: streamUrl },
       description: cleanedTitle,
-    });
+    };
+
+    if (
+      fetchedEvent &&
+      fetchedEvent.status === GuildScheduledEventStatus.Scheduled
+    ) {
+      editPayload.scheduledStartTime = startDate;
+      editPayload.scheduledEndTime = endDate;
+    } else if (
+      fetchedEvent &&
+      fetchedEvent.status === GuildScheduledEventStatus.Active
+    ) {
+      editPayload.scheduledEndTime = endDate;
+    }
+
+    await channel.guild.scheduledEvents.edit(
+      existing.discordEventId,
+      editPayload,
+    );
 
     await updateDiscordEvent(sourceId, {
       scheduledStart,
@@ -193,24 +220,87 @@ async function createGuildStreamEvent(discordClient, opts) {
       provider,
       sourceId,
       err: err.message,
-      stack: err.stack,
     });
   }
 }
 
 /**
- * Delete Discord Guild Scheduled Events whose source streams are no longer in
- * the current schedule. Compares `currentSourceIds` against every DB row for
- * `provider` and removes stale entries from both Discord and the DB.
- *
- * Errors from the Discord API (e.g. event already completed or not found) are
- * logged as warnings — the DB row is always cleaned up regardless so the dedup
- * table stays accurate.
- *
+ * @async
+ * @param {import('discord.js').Client|null} discordClient
+ * @param {string} sourceId
+ * @returns {Promise<void>}
+ */
+async function activateGuildStreamEvent(discordClient, sourceId) {
+  if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
+  if (!discordClient || !discordClient.isReady()) return;
+
+  try {
+    const row = await getDiscordEventBySourceId(sourceId);
+    if (!row) return;
+
+    const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
+    if (!channelId) return;
+
+    const channel = await discordClient.channels.fetch(channelId);
+    if (!channel || !channel.guild) return;
+
+    await channel.guild.scheduledEvents.edit(row.discordEventId, {
+      status: GuildScheduledEventStatus.Active,
+    });
+
+    discordLog("info", "discordGuildEvents:activate ok", {
+      sourceId,
+      eventId: row.discordEventId,
+    });
+  } catch (err) {
+    discordLog("error", "discordGuildEvents:activate failed", {
+      sourceId,
+      err: err.message,
+    });
+  }
+}
+
+/**
+ * @async
+ * @param {import('discord.js').Client|null} discordClient
+ * @param {string} sourceId
+ * @returns {Promise<void>}
+ */
+async function completeGuildStreamEvent(discordClient, sourceId) {
+  if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
+  if (!discordClient || !discordClient.isReady()) return;
+
+  try {
+    const row = await getDiscordEventBySourceId(sourceId);
+    if (!row) return;
+
+    const channelId = process.env.DISCORD_NOTIFICATION_CHANNEL;
+    if (!channelId) return;
+
+    const channel = await discordClient.channels.fetch(channelId);
+    if (!channel || !channel.guild) return;
+
+    await channel.guild.scheduledEvents.edit(row.discordEventId, {
+      status: GuildScheduledEventStatus.Completed,
+    });
+
+    discordLog("info", "discordGuildEvents:complete ok", {
+      sourceId,
+      eventId: row.discordEventId,
+    });
+  } catch (err) {
+    discordLog("error", "discordGuildEvents:complete failed", {
+      sourceId,
+      err: err.message,
+    });
+  }
+}
+
+/**
  * @async
  * @param {import('discord.js').Client|null} discordClient
  * @param {("twitch"|"youtube")} provider
- * @param {string[]} currentSourceIds - Source ids still present in the live schedule.
+ * @param {string[]} currentSourceIds
  * @returns {Promise<void>}
  */
 async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
@@ -262,17 +352,11 @@ async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
     discordLog("error", "discordGuildEvents:cleanupRemovedEvents failed", {
       provider,
       err: err.message,
-      stack: err.stack,
     });
   }
 }
 
 /**
- * Fetch all upcoming Twitch schedule segments, create Discord Guild Scheduled
- * Events for any that do not already have one, and delete events for segments
- * that were removed from the schedule. Called at Twitch bootstrap and then on
- * an hourly interval.
- *
  * @async
  * @param {import('../clientManager')} clientManager
  * @returns {Promise<void>}
@@ -326,13 +410,14 @@ async function syncTwitchScheduleEvents(clientManager) {
   } catch (err) {
     discordLog("error", "discordGuildEvents:syncTwitchScheduleEvents failed", {
       err: err.message,
-      stack: err.stack,
     });
   }
 }
 
 module.exports = {
   createGuildStreamEvent,
+  activateGuildStreamEvent,
+  completeGuildStreamEvent,
   cleanupRemovedEvents,
   syncTwitchScheduleEvents,
 };

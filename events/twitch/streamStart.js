@@ -2,12 +2,11 @@
  * @module events/twitch/streamStart
  * @description
  * Reacts to a Twitch `streamOnline` EventSub by:
- *  1. Generating a custom banner image via Puppeteer.
- *  2. Posting an embed announcement (with optional role mention) into the
- *     configured Discord notification channel.
- *  3. Persisting the stream row (or updating its Discord message id if it
- *     already exists from a re-fired event).
- *  4. Starting the rolling viewer-average poller.
+ * 1. Generating a custom banner image via Puppeteer.
+ * 2. Posting an embed announcement.
+ * 3. Persisting the stream row.
+ * 4. Starting the rolling viewer-average poller.
+ * 5. Activating the matching Discord Guild Scheduled Event if any.
  */
 
 "use strict";
@@ -29,11 +28,9 @@ const { generateStreamBanner } = require("../../utils/imageGenerator");
 const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
 const { startViewersAverage } = require("../../utils/twitchViews");
 const { setStreamingStatus } = require("../../utils/discordPresence");
+const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
 
 /**
- * Process a `streamOnline` EventSub event. Failures at any step are logged but
- * the function never throws — the EventSub listener should keep running.
- *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event
  * @param {import('../../clientManager')} clientManager
@@ -104,7 +101,6 @@ async function streamStart(event, clientManager) {
     } catch (error) {
       twitchLog("error", "twitch:streamStart banner-generation failed", {
         err: error.message,
-        stack: error.stack,
       });
       attachment = null;
     }
@@ -144,9 +140,7 @@ async function streamStart(event, clientManager) {
           : stream.getThumbnailUrl(1280, 720) + `?t=${Date.now()}`,
       )
       .setTimestamp(event.startDate)
-      .setFooter({
-        text: "Come say hi! ^^",
-      });
+      .setFooter({ text: "Come say hi! ^^" });
 
     const button = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -201,6 +195,8 @@ async function streamStart(event, clientManager) {
         });
       }
 
+      await activateGuildStreamEvent(discordClient, event.id);
+
       if (twitchApiClient && process.env.TWITCH_CHANNEL) {
         startViewersAverage(
           event.id,
@@ -218,10 +214,8 @@ async function streamStart(event, clientManager) {
       twitchLog("warn", "twitch:streamStart channel-not-text", { channelId });
     }
   } catch (error) {
-    twitchLog("error", "twitch:streamStart failed", {
-      err: error.message,
-      stack: error.stack,
-    });
+    twitchLog("error", "twitch:streamStart failed", { err: error.message });
   }
 }
+
 module.exports = streamStart;

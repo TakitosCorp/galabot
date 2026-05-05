@@ -43,12 +43,12 @@ async function resetGlobalCommands() {
     const deletePromises = commands.map((command) => {
       const deleteUrl = `${Routes.applicationCommands(process.env.DISCORD_ID)}/${command.id}`;
       console.log(
-        `[❎] Eliminando comando: ${command.name} (ID: ${command.id})`,
+        `[❎] Deleting command: ${command.name} (ID: ${command.id})`,
       );
       return rest.delete(deleteUrl);
     });
     await Promise.all(deletePromises);
-    console.log(`[✅] Todos los comandos han sido eliminados correctamente.`);
+    console.log(`[✅] All commands have been deleted successfully.`);
 
     const globalCommands = [];
     const commandsDir = path.join(__dirname, "../commands/discord");
@@ -64,9 +64,9 @@ async function resetGlobalCommands() {
     await rest.put(Routes.applicationCommands(process.env.DISCORD_ID), {
       body: globalCommands,
     });
-    console.log("[✅] Se han publicado los comandos globales.");
+    console.log("[✅] Global commands have been published.");
   } catch (e) {
-    console.error(`[❌] Error en el proceso: ${e.message}`);
+    console.error(`[❌] Error in process: ${e.message}`);
   }
 }
 

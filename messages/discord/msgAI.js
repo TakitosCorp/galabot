@@ -100,8 +100,6 @@ async function handleAI(message) {
       return;
     }
 
-    // Always include the schedule block — empty case is an explicit "(none)"
-    // marker so the model can't claim ignorance of the rule when no data exists.
     let upcomingCount = 0;
     let streamContext = "--- Upcoming Streams ---\n(none)";
     try {
@@ -124,8 +122,6 @@ async function handleAI(message) {
         upcomingCount,
       });
     } catch (err) {
-      // On fetch failure we still send the (none) block — better than letting
-      // the model invent dates if the context is silently dropped.
       discordLog("warn", "ai:upcoming-context fetch failed", {
         userId,
         channelId,

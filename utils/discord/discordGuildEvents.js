@@ -491,7 +491,6 @@ async function syncTwitchUpcomingStreams(clientManager) {
       });
     }
 
-    // Remove rows for segments that are no longer in the current schedule.
     const existing = await getUpcomingStreamsByProvider("twitch");
     for (const row of existing) {
       if (!currentIds.has(row.id)) {

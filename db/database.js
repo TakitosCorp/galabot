@@ -198,7 +198,6 @@ async function initialize() {
         sqliteDb.exec(
           "ALTER TABLE upcoming_streams ADD COLUMN scheduled_start_ts integer",
         );
-        // Backfill Unix timestamps from the ISO-8601 scheduled_start column.
         sqliteDb.exec(
           "UPDATE upcoming_streams SET scheduled_start_ts = CAST(strftime('%s', scheduled_start) AS INTEGER) WHERE scheduled_start_ts IS NULL",
         );

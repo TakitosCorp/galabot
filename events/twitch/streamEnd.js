@@ -8,22 +8,26 @@
 
 "use strict";
 
-const { twitchLog } = require("../../utils/loggers");
+const { twitchLog } = require("../../utils/core/loggers");
 const {
   getActiveStream,
   getStreamById,
   updateStreamEnd,
 } = require("../../db/streams");
 const axios = require("axios");
-const { getStreamerScheduleThisWeek } = require("../../utils/twitchSchedule");
+const {
+  getStreamerScheduleThisWeek,
+} = require("../../utils/twitch/twitchSchedule");
 const {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
-const { stopViewersAverage } = require("../../utils/twitchViews");
-const { setIdleStatus } = require("../../utils/discordPresence");
-const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
+} = require("../../utils/generators/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
+const { stopViewersAverage } = require("../../utils/twitch/twitchViews");
+const { setIdleStatus } = require("../../utils/discord/discordPresence");
+const {
+  completeGuildStreamEvent,
+} = require("../../utils/discord/discordGuildEvents");
 
 /**
  * Process a `streamOffline` EventSub event.

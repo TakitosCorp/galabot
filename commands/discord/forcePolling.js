@@ -15,7 +15,7 @@ const {
   MessageFlags,
 } = require("discord.js");
 const { runSlowPoll } = require("../../handlers/youtube/startup");
-const { discordLog } = require("../../utils/loggers");
+const { discordLog } = require("../../utils/core/loggers");
 
 /** @type {import('../../utils/types').DiscordSlashCommand} */
 module.exports = {

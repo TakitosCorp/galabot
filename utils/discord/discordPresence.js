@@ -10,7 +10,7 @@
 "use strict";
 
 const { ActivityType } = require("discord.js");
-const { discordLog } = require("./loggers");
+const { discordLog } = require("../core/loggers");
 
 /**
  * Set the bot's presence to "Streaming" with the given title and URL.
@@ -54,7 +54,7 @@ function setStreamingStatus(discordClient, streamTitle, streamUrl) {
 function setIdleStatus(discordClient) {
   if (!discordClient || !discordClient.isReady()) return;
   try {
-    const resources = require("../data/resources.json");
+    const resources = require("../../data/resources.json");
     const activities = resources.en.activities;
     const pick = activities[Math.floor(Math.random() * activities.length)];
     discordClient.user.setPresence({

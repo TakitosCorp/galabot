@@ -11,7 +11,7 @@
 
 "use strict";
 
-const { twitchLog } = require("../../utils/loggers");
+const { twitchLog } = require("../../utils/core/loggers");
 const {
   insertStream,
   streamExists,
@@ -24,11 +24,15 @@ const {
   ButtonStyle,
   AttachmentBuilder,
 } = require("discord.js");
-const { generateStreamBanner } = require("../../utils/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
-const { startViewersAverage } = require("../../utils/twitchViews");
-const { setStreamingStatus } = require("../../utils/discordPresence");
-const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
+const {
+  generateStreamBanner,
+} = require("../../utils/generators/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
+const { startViewersAverage } = require("../../utils/twitch/twitchViews");
+const { setStreamingStatus } = require("../../utils/discord/discordPresence");
+const {
+  activateGuildStreamEvent,
+} = require("../../utils/discord/discordGuildEvents");
 
 /**
  * Process a `streamOnline` EventSub event.

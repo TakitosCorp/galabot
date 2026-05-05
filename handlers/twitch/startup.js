@@ -11,13 +11,15 @@
 
 "use strict";
 
-const twitchLog = require("../../utils/loggers").twitchLog;
+const twitchLog = require("../../utils/core/loggers").twitchLog;
 const streamStartHandler = require("../../events/twitch/streamStart");
 const streamEndHandler = require("../../events/twitch/streamEnd");
 const messageHandler = require("../../events/twitch/messageCreate");
 const interactionHandler = require("../../events/twitch/interactionCreate");
 const { createEventData } = require("./eventData");
-const { syncTwitchScheduleEvents } = require("../../utils/discordGuildEvents");
+const {
+  syncTwitchScheduleEvents,
+} = require("../../utils/discord/discordGuildEvents");
 
 /** Interval reference for the hourly Twitch schedule → Discord events sync. */
 const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;

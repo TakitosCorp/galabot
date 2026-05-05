@@ -22,14 +22,14 @@ const {
   MessageFlags,
 } = require("discord.js");
 const { addWarn, getWarnCount } = require("../../db/warns");
-const { discordLog } = require("../../utils/loggers");
-const { getLanguage } = require("../../utils/language");
+const { discordLog } = require("../../utils/core/loggers");
+const { getLanguage } = require("../../utils/core/language");
 const strings = require("../../lang/warn");
 const {
   WARN_TIMEOUT_BASE_MS,
   MAX_WARN_BEFORE_BAN,
   MAX_WARN_REASON_LENGTH,
-} = require("../../utils/constants");
+} = require("../../utils/core/constants");
 
 /**
  * Permanently ban `user` from the guild and DM them the ban embed if possible.

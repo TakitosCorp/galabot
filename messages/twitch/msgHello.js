@@ -8,10 +8,10 @@
 
 "use strict";
 
-const { twitchLog } = require("../../utils/loggers");
+const { twitchLog } = require("../../utils/core/loggers");
 const resources = require("../../data/resources.json");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
-const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
+const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
 
 /**
  * Send a greeting reply in Twitch chat if the user is past the cooldown window.

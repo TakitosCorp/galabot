@@ -12,9 +12,9 @@
 
 "use strict";
 
-const fileUtils = require("./fileUtils");
+const fileUtils = require("../helpers/fileUtils");
 const axios = require("axios");
-const { twitchLog } = require("./loggers");
+const { twitchLog } = require("../core/loggers");
 
 /**
  * Absolute path to the token cache file inside `data/`.
@@ -118,7 +118,7 @@ async function getValidTwitchConfig() {
       twitchConfig.ACCESS_TOKEN = response.token;
       twitchConfig.REFRESH_TOKEN = response.refresh;
       twitchConfig.CLIENT_ID = response.client_id;
-      const { TOKEN_VALIDITY_MS } = require("./constants");
+      const { TOKEN_VALIDITY_MS } = require("../core/constants");
       twitchConfig.VALID_UNTIL = new Date(
         now + TOKEN_VALIDITY_MS,
       ).toISOString();

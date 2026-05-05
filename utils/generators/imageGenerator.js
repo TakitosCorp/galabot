@@ -19,8 +19,8 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
-const { sysLog } = require("./loggers");
-const { cleanStreamTitle } = require("./streamTitleCleaner");
+const { sysLog } = require("../core/loggers");
+const { cleanStreamTitle } = require("../helpers/streamTitleCleaner");
 const {
   PUPPETEER_PAGE_TIMEOUT_MS,
   PUPPETEER_GOTO_TIMEOUT_MS,
@@ -28,7 +28,7 @@ const {
   PUPPETEER_SELECTOR_TIMEOUT_MS,
   NEXT_STREAMS_SETTLE_MS,
   BANNER_SETTLE_MS,
-} = require("./constants");
+} = require("../core/constants");
 
 /**
  * Reusable Puppeteer browser instance. Lazily created by {@link getBrowser},
@@ -132,7 +132,12 @@ async function generateImageFromTemplate(
   const startedAt = Date.now();
   let page;
   try {
-    const templatePath = path.join(__dirname, "..", "templates", templateName);
+    const templatePath = path.join(
+      __dirname,
+      "../..",
+      "templates",
+      templateName,
+    );
     sysLog("debug", "imageGenerator:render start", {
       template: templateName,
       waitSelector,

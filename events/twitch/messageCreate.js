@@ -8,7 +8,7 @@
 
 "use strict";
 
-const { twitchLog } = require("../../utils/loggers");
+const { twitchLog } = require("../../utils/core/loggers");
 const resources = require("../../data/resources.json");
 const { handleHello } = require("../../messages/twitch/msgHello");
 

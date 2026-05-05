@@ -13,7 +13,7 @@
 "use strict";
 
 const { db } = require("./database");
-const { dbLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/core/loggers");
 
 /**
  * Insert a freshly-detected stream row. Caller is responsible for de-duplication

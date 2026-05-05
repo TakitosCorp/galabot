@@ -12,9 +12,9 @@
 
 "use strict";
 
-const { updateStreamViewers } = require("../db/streams");
-const { twitchLog } = require("./loggers");
-const { VIEWER_POLL_INTERVAL_MS } = require("./constants");
+const { updateStreamViewers } = require("../../db/streams");
+const { twitchLog } = require("../core/loggers");
+const { VIEWER_POLL_INTERVAL_MS } = require("../core/constants");
 
 /**
  * Active polling timers keyed by stream id.

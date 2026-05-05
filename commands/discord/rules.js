@@ -19,14 +19,14 @@ const {
   InteractionContextType,
   MessageFlags,
 } = require("discord.js");
-const { discordLog } = require("../../utils/loggers");
-const { getLanguage } = require("../../utils/language");
+const { discordLog } = require("../../utils/core/loggers");
+const { getLanguage } = require("../../utils/core/language");
 const strings = require("../../lang/rules");
 const {
   parseReactionRoleEnv,
   addReactionsToMessage,
   trackMessage,
-} = require("../../utils/reactionRoleManager");
+} = require("../../utils/discord/reactionRoleManager");
 
 /** @type {DiscordSlashCommand} */
 module.exports = {

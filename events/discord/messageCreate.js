@@ -16,8 +16,8 @@
 const resources = require("../../data/resources.json");
 const { handleHello } = require("../../messages/discord/msgHello");
 const { handlePing } = require("../../messages/discord/msgPing");
-const { getLanguage } = require("../../utils/language");
-const { discordLog } = require("../../utils/loggers");
+const { getLanguage } = require("../../utils/core/language");
+const { discordLog } = require("../../utils/core/loggers");
 
 /** @type {DiscordEventHandler} */
 module.exports = {

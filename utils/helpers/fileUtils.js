@@ -13,7 +13,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { sysLog } = require("./loggers");
+const { sysLog } = require("../core/loggers");
 
 /**
  * Read a JSON file from disk and parse it. If the file does not exist it is created
@@ -90,7 +90,7 @@ function ensureFileExists(filePath, defaultValue = {}) {
  * @returns {string} Absolute filesystem path.
  */
 function getFilePath(relativePath) {
-  return path.join(__dirname, "../data", relativePath);
+  return path.join(__dirname, "../../data", relativePath);
 }
 
 /**

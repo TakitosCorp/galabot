@@ -8,7 +8,7 @@
 
 "use strict";
 
-const twitchLog = require("../../utils/loggers").twitchLog;
+const twitchLog = require("../../utils/core/loggers").twitchLog;
 
 /**
  * @async

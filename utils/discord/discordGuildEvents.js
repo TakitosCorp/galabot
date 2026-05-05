@@ -15,16 +15,16 @@ const {
   GuildScheduledEventPrivacyLevel,
   GuildScheduledEventStatus,
 } = require("discord.js");
-const { discordLog } = require("./loggers");
-const { cleanStreamTitle } = require("./streamTitleCleaner");
+const { discordLog } = require("../core/loggers");
+const { cleanStreamTitle } = require("../helpers/streamTitleCleaner");
 const {
   insertDiscordEvent,
   getDiscordEventBySourceId,
   updateDiscordEvent,
   getDiscordEventsByProvider,
   deleteDiscordEvent,
-} = require("../db/discordEvents");
-const { getStreamerScheduleThisWeek } = require("./twitchSchedule");
+} = require("../../db/discordEvents");
+const { getStreamerScheduleThisWeek } = require("../twitch/twitchSchedule");
 
 /**
  * Create or update a Discord Guild Scheduled Event for an upcoming stream.

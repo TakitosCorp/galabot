@@ -13,7 +13,7 @@
 
 const axios = require("axios");
 const { getValidTwitchConfig } = require("./twitchToken");
-const { twitchLog } = require("./loggers");
+const { twitchLog } = require("../core/loggers");
 
 /**
  * Resolve a Twitch login name to its broadcaster id via Helix `/users`.

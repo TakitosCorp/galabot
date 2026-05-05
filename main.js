@@ -11,7 +11,7 @@
 
 require("dotenv").config({ quiet: true });
 const ClientManager = require("./clientManager");
-const { sysLog } = require("./utils/loggers");
+const { sysLog } = require("./utils/core/loggers");
 
 /**
  * Environment variables that must be set for the bot to start. Optional settings

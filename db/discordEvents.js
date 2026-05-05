@@ -13,7 +13,7 @@
 "use strict";
 
 const { db } = require("./database");
-const { dbLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/core/loggers");
 
 /**
  * Check whether a Discord Guild Scheduled Event has already been created for

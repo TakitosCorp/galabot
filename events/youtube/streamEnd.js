@@ -9,17 +9,19 @@
 
 "use strict";
 
-const { youtubeLog } = require("../../utils/loggers");
+const { youtubeLog } = require("../../utils/core/loggers");
 const { getActiveStream, updateStreamEnd } = require("../../db/streams");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
-const { setIdleStatus } = require("../../utils/discordPresence");
-const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
-const { getState, setState } = require("../../utils/youtubePoller");
+const { setIdleStatus } = require("../../utils/discord/discordPresence");
+const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
+const { getState, setState } = require("../../utils/youtube/youtubePoller");
 const {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/imageGenerator");
-const { completeGuildStreamEvent } = require("../../utils/discordGuildEvents");
+} = require("../../utils/generators/imageGenerator");
+const {
+  completeGuildStreamEvent,
+} = require("../../utils/discord/discordGuildEvents");
 const axios = require("axios");
 
 /**

@@ -13,8 +13,8 @@
 
 "use strict";
 
-const { db } = require("../db/database");
-const { discordLog } = require("./loggers");
+const { db } = require("../../db/database");
+const { discordLog } = require("../core/loggers");
 
 /**
  * Parse REACTION_ROLE_{GROUP}_EMOJI* env vars for a given group.

@@ -10,7 +10,7 @@
 "use strict";
 
 const { EmbedBuilder, PermissionFlagsBits } = require("discord.js");
-const { discordLog } = require("../../utils/loggers");
+const { discordLog } = require("../../utils/core/loggers");
 const { addWarn, getWarnCount } = require("../../db/warns");
 const strings = require("../../lang/ping");
 

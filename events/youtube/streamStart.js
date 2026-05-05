@@ -8,7 +8,7 @@
 
 "use strict";
 
-const { youtubeLog } = require("../../utils/loggers");
+const { youtubeLog } = require("../../utils/core/loggers");
 const { insertStream, streamExists } = require("../../db/streams");
 const {
   EmbedBuilder,
@@ -17,11 +17,15 @@ const {
   ButtonStyle,
   AttachmentBuilder,
 } = require("discord.js");
-const { generateStreamBanner } = require("../../utils/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/streamTitleCleaner");
-const { setState } = require("../../utils/youtubePoller");
-const { setStreamingStatus } = require("../../utils/discordPresence");
-const { activateGuildStreamEvent } = require("../../utils/discordGuildEvents");
+const {
+  generateStreamBanner,
+} = require("../../utils/generators/imageGenerator");
+const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
+const { setState } = require("../../utils/youtube/youtubePoller");
+const { setStreamingStatus } = require("../../utils/discord/discordPresence");
+const {
+  activateGuildStreamEvent,
+} = require("../../utils/discord/discordGuildEvents");
 
 /**
  * Announce a YouTube live stream on Discord and activate the scheduled event.

@@ -11,7 +11,7 @@
 "use strict";
 
 const { db } = require("./database");
-const { dbLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/core/loggers");
 
 /**
  * Fetch the most recent greeting row for a given user, if any.

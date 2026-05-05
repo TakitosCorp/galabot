@@ -11,7 +11,7 @@
 
 "use strict";
 
-const { discordLog: log } = require("../../utils/loggers");
+const { discordLog: log } = require("../../utils/core/loggers");
 const { Collection } = require("discord.js");
 const fs = require("fs").promises;
 const path = require("path");

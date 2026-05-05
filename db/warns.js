@@ -10,7 +10,7 @@
 "use strict";
 
 const { db } = require("./database");
-const { dbLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/core/loggers");
 
 /**
  * Return every warning row issued to a given user, newest first.

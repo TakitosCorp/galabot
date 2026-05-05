@@ -18,10 +18,13 @@
 "use strict";
 
 const axios = require("axios");
-const { youtubeLog } = require("./loggers");
-const fileUtils = require("./fileUtils");
-const { updateStreamViewers } = require("../db/streams");
-const { YOUTUBE_QUOTA_COOLDOWN_MS, YOUTUBE_RETRY_MAX } = require("./constants");
+const { youtubeLog } = require("../core/loggers");
+const fileUtils = require("../helpers/fileUtils");
+const { updateStreamViewers } = require("../../db/streams");
+const {
+  YOUTUBE_QUOTA_COOLDOWN_MS,
+  YOUTUBE_RETRY_MAX,
+} = require("../core/constants");
 
 /**
  * Mutable singleton state for the poller.

@@ -9,7 +9,7 @@
 "use strict";
 
 const { Events } = require("discord.js");
-const { setIdleStatus } = require("../../utils/discordPresence");
+const { setIdleStatus } = require("../../utils/discord/discordPresence");
 
 /** @type {import('../../utils/types').DiscordEventHandler} */
 module.exports = {

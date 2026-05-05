@@ -9,7 +9,7 @@
 
 const Database = require("better-sqlite3");
 const { Kysely, SqliteDialect } = require("kysely");
-const { dbLog } = require("../utils/loggers");
+const { dbLog } = require("../utils/core/loggers");
 const path = require("path");
 const fs = require("fs");
 

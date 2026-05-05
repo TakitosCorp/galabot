@@ -7,12 +7,12 @@
 
 "use strict";
 
-const { discordLog } = require("../../utils/loggers");
+const { discordLog } = require("../../utils/core/loggers");
 const {
   parseReactionRoleEnv,
   getTrackedMessage,
   getRoleForEmoji,
-} = require("../../utils/reactionRoleManager");
+} = require("../../utils/discord/reactionRoleManager");
 
 /** @type {import('../../utils/types').DiscordEventHandler} */
 module.exports = {

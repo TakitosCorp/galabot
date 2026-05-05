@@ -12,8 +12,8 @@
 "use strict";
 
 const { InteractionType, MessageFlags } = require("discord.js");
-const { discordLog } = require("../../utils/loggers");
-const { getLanguage } = require("../../utils/language");
+const { discordLog } = require("../../utils/core/loggers");
+const { getLanguage } = require("../../utils/core/language");
 
 /**
  * Look up and execute the slash command associated with `interaction`. On error,

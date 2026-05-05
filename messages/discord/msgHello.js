@@ -12,9 +12,9 @@
 
 const resources = require("../../data/resources.json");
 const emojis = require("../../data/emojis.json");
-const { discordLog } = require("../../utils/loggers");
+const { discordLog } = require("../../utils/core/loggers");
 const { getLastGreeting, updateGreeting } = require("../../db/greetings");
-const { GREETING_COOLDOWN_MS } = require("../../utils/constants");
+const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
 
 /**
  * Reply to a greeting message if the user is past the cooldown window.

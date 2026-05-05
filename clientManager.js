@@ -22,7 +22,7 @@ const {
 
 const { initialize: dbInitialize, db } = require("./db/database");
 const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
-const { discordLog, twitchLog, sysLog } = require("./utils/loggers");
+const { discordLog, twitchLog, sysLog } = require("./utils/core/loggers");
 
 /**
  * Owns and orchestrates every long-lived platform client.
@@ -159,7 +159,7 @@ class clientManager {
     const { ApiClient } = require("@twurple/api");
     const { EventSubWsListener } = require("@twurple/eventsub-ws");
     const { bootstrap: bootstrapTwitch } = require("./handlers/twitch/startup");
-    const { getValidTwitchConfig } = require("./utils/twitchToken");
+    const { getValidTwitchConfig } = require("./utils/twitch/twitchToken");
 
     try {
       const twitchConfig = await getValidTwitchConfig();
@@ -220,7 +220,7 @@ class clientManager {
     const {
       bootstrap: bootstrapYoutube,
     } = require("./handlers/youtube/startup");
-    const { youtubeLog } = require("./utils/loggers");
+    const { youtubeLog } = require("./utils/core/loggers");
     try {
       await bootstrapYoutube(this);
       youtubeLog("info", "youtube:initialized");
@@ -245,8 +245,8 @@ class clientManager {
   async shutdown(signal) {
     sysLog("info", "clientManager:shutdown start", { signal });
     try {
-      const { stopAllViewersIntervals } = require("./utils/twitchViews");
-      const { closeBrowser } = require("./utils/imageGenerator");
+      const { stopAllViewersIntervals } = require("./utils/twitch/twitchViews");
+      const { closeBrowser } = require("./utils/generators/imageGenerator");
 
       stopAllViewersIntervals();
       sysLog("debug", "clientManager:shutdown viewers-stopped");

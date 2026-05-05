@@ -24,20 +24,20 @@ const {
   getVideoStats,
   extractStreamData,
   isBlacklisted,
-} = require("../../utils/youtubePoller");
+} = require("../../utils/youtube/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
 const { updateStreamViewers, getActiveStream } = require("../../db/streams");
-const { youtubeLog } = require("../../utils/loggers");
+const { youtubeLog } = require("../../utils/core/loggers");
 const {
   YOUTUBE_FAST_POLL_MS,
   YOUTUBE_SLOW_POLL_MS,
   YOUTUBE_CATEGORY_POLL_MS,
-} = require("../../utils/constants");
+} = require("../../utils/core/constants");
 const {
   createGuildStreamEvent,
   cleanupRemovedEvents,
-} = require("../../utils/discordGuildEvents");
+} = require("../../utils/discord/discordGuildEvents");
 
 /**
  * Fetch all upcoming YouTube streams, create Discord Guild Scheduled Events for
@@ -62,9 +62,13 @@ async function syncYouTubeDiscordEvents(discordClient) {
         if (!vidId) continue;
 
         if (isBlacklisted(vidId)) {
-          youtubeLog("debug", "youtube:syncYouTubeDiscordEvents skip-blacklisted", {
-            videoId: vidId,
-          });
+          youtubeLog(
+            "debug",
+            "youtube:syncYouTubeDiscordEvents skip-blacklisted",
+            {
+              videoId: vidId,
+            },
+          );
           continue;
         }
 

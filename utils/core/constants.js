@@ -147,17 +147,40 @@ module.exports = {
   YOUTUBE_RETRY_MAX: 3,
 
   /**
-   * Maximum number of AI requests a single user may make within
-   * `AI_RATE_LIMIT_WINDOW_MS` before receiving a cooldown reply.
+   * Minimum delay between two AI requests from the same user. Users who ping
+   * the bot again before this elapses get a "slow down" reply instead of being
+   * queued. Bypassed for ids in `GEMINI_NO_LIMITS_IDS`.
    * @type {number}
    * @constant
    */
-  AI_RATE_LIMIT_MAX: 10,
+  AI_USER_COOLDOWN_MS: 5 * 1000, // 5 seconds
 
   /**
-   * Sliding-window duration for the per-user AI rate limiter.
+   * Hard cap on AI requests we will dispatch to Gemini per rolling minute.
+   * Set to match the free-tier `gemma-4-*` 15 RPM ceiling. Bump to 30 if you
+   * switch `GEMINI_MODEL` to a `gemma-3-*` variant (14,400 RPD / 30 RPM tier).
+   * The queue worker pauses (does not drop) requests that would exceed this —
+   * the message stays queued until a slot frees up.
    * @type {number}
    * @constant
    */
-  AI_RATE_LIMIT_WINDOW_MS: 60 * 1000, // 1 minute
+  AI_GLOBAL_RPM_LIMIT: 15,
+
+  /**
+   * Sliding-window duration used by `AI_GLOBAL_RPM_LIMIT`.
+   * @type {number}
+   * @constant
+   */
+  AI_GLOBAL_RPM_WINDOW_MS: 60 * 1000, // 1 minute
+
+  /**
+   * Cooldown applied after Gemini returns a 429 (RPM/RPD exhausted) on every
+   * configured key. While in cooldown the bot fails AI replies silently
+   * (warn-level log, no reply to user) instead of hammering the API. One hour
+   * is a pragmatic middle ground: short enough to recover automatically once
+   * RPD resets at midnight UTC, long enough not to retry every minute.
+   * @type {number}
+   * @constant
+   */
+  GEMINI_QUOTA_COOLDOWN_MS: 60 * 60 * 1000, // 1 hour
 };

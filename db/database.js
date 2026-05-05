@@ -101,6 +101,19 @@ async function initialize() {
         )
         .addColumn("created_at", "datetime", (col) => col.notNull())
         .execute();
+
+      await trx.schema
+        .createTable("upcoming_streams")
+        .ifNotExists()
+        .addColumn("id", "text", (col) => col.primaryKey().notNull())
+        .addColumn("provider", "text", (col) => col.notNull())
+        .addColumn("title", "text", (col) => col.notNull())
+        .addColumn("scheduled_start", "text", (col) => col.notNull())
+        .addColumn("scheduled_end", "text")
+        .addColumn("url", "text", (col) => col.notNull())
+        .addColumn("category", "text")
+        .addColumn("scheduled_start_ts", "integer")
+        .execute();
     });
 
     const streamsInfo = sqliteDb.pragma("table_info(streams)");
@@ -174,6 +187,24 @@ async function initialize() {
         dbLog(
           "info",
           "db:migration added group_name to reaction_role_messages",
+        );
+      }
+    }
+
+    const upcomingInfo = sqliteDb.pragma("table_info(upcoming_streams)");
+    if (upcomingInfo.length > 0) {
+      const cols = upcomingInfo.map((c) => c.name);
+      if (!cols.includes("scheduled_start_ts")) {
+        sqliteDb.exec(
+          "ALTER TABLE upcoming_streams ADD COLUMN scheduled_start_ts integer",
+        );
+        // Backfill Unix timestamps from the ISO-8601 scheduled_start column.
+        sqliteDb.exec(
+          "UPDATE upcoming_streams SET scheduled_start_ts = CAST(strftime('%s', scheduled_start) AS INTEGER) WHERE scheduled_start_ts IS NULL",
+        );
+        dbLog(
+          "info",
+          "db:migration added scheduled_start_ts to upcoming_streams",
         );
       }
     }

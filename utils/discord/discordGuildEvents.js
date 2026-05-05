@@ -3,6 +3,9 @@
  * @description
  * Helpers for creating, syncing, activating, completing, and cleaning up
  * Discord Guild Scheduled Events from upcoming Twitch and YouTube streams.
+ * Also exports {@link syncTwitchUpcomingStreams} which maintains the
+ * `upcoming_streams` DB table for AI context injection — this sync runs
+ * independently of `DISCORD_EVENTS_ENABLED`.
  *
  * @typedef {import('./types').DiscordScheduledEventRow} DiscordScheduledEventRow
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
@@ -25,6 +28,12 @@ const {
   deleteDiscordEvent,
 } = require("../../db/discordEvents");
 const { getStreamerScheduleThisWeek } = require("../twitch/twitchSchedule");
+const {
+  upsertUpcomingStream,
+  deleteExpiredStreams,
+  deleteUpcomingStream,
+  getUpcomingStreamsByProvider,
+} = require("../../db/upcomingStreams");
 
 /**
  * Create or update a Discord Guild Scheduled Event for an upcoming stream.
@@ -429,10 +438,87 @@ async function syncTwitchScheduleEvents(clientManager) {
   }
 }
 
+/**
+ * Fetch all upcoming Twitch schedule segments and sync them to the
+ * `upcoming_streams` DB table so the AI can answer schedule questions.
+ * Runs independently of `DISCORD_EVENTS_ENABLED` — the DB table is always kept
+ * current as long as Twitch is enabled.
+ *
+ * @async
+ * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @returns {Promise<void>}
+ */
+async function syncTwitchUpcomingStreams(clientManager) {
+  const { twitchApiClient } = clientManager;
+  if (!twitchApiClient) return;
+
+  const username = process.env.TWITCH_CHANNEL;
+  const streamUrl =
+    process.env.TWITCH_URL || `https://www.twitch.tv/${username}`;
+
+  if (!username) {
+    discordLog(
+      "warn",
+      "discordGuildEvents:syncTwitchUpcomingStreams no-username",
+    );
+    return;
+  }
+
+  discordLog("debug", "discordGuildEvents:syncTwitchUpcomingStreams start", {
+    username,
+  });
+
+  try {
+    const segments = await getStreamerScheduleThisWeek(
+      username,
+      twitchApiClient,
+    );
+
+    await deleteExpiredStreams();
+
+    const currentIds = new Set(segments.map((s) => s.id));
+
+    for (const seg of segments) {
+      await upsertUpcomingStream({
+        id: seg.id,
+        provider: "twitch",
+        title: seg.title,
+        scheduledStart: seg.start,
+        scheduledStartTs: Math.floor(new Date(seg.start).getTime() / 1000),
+        scheduledEnd: seg.end,
+        url: streamUrl,
+        category: seg.category,
+      });
+    }
+
+    // Remove rows for segments that are no longer in the current schedule.
+    const existing = await getUpcomingStreamsByProvider("twitch");
+    for (const row of existing) {
+      if (!currentIds.has(row.id)) {
+        await deleteUpcomingStream(row.id);
+      }
+    }
+
+    discordLog(
+      "info",
+      "discordGuildEvents:syncTwitchUpcomingStreams complete",
+      {
+        count: segments.length,
+      },
+    );
+  } catch (err) {
+    discordLog("error", "discordGuildEvents:syncTwitchUpcomingStreams failed", {
+      err: err.message,
+      stack: err.stack,
+    });
+  }
+}
+
 module.exports = {
   createGuildStreamEvent,
   activateGuildStreamEvent,
   completeGuildStreamEvent,
   cleanupRemovedEvents,
   syncTwitchScheduleEvents,
+  syncTwitchUpcomingStreams,
 };

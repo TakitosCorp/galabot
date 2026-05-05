@@ -18,8 +18,9 @@ const { sysLog } = require("./utils/core/loggers");
  * (`ENABLE_DISCORD`, `ENABLE_TWITCH`, `ENABLE_YOUTUBE`, `SPANISH_CHANNEL_ID`,
  * `YOUTUBE_API_KEY*`, `YOUTUBE_CHANNEL_ID`, `DISCORD_NOTIFICATION_ROLE_ID`,
  * `PUPPETEER_EXECUTABLE_PATH`, `YOUTUBE_SKIP_TITLES`,
- * `OLLAMA_URL`, `OLLAMA_MODEL`) are intentionally absent — the features they
- * control degrade gracefully when the variables are missing.
+ * `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_ENABLE`, `GEMINI_NO_LIMITS_IDS`) are
+ * intentionally absent — the features they control degrade gracefully when the
+ * variables are missing.
  *
  * `GALA_USER_ID` is the personal Discord user id of the streamer whose
  * @-mentions trigger the warn/ban escalation. `GALA_DISCORD_ID` is the

@@ -181,11 +181,27 @@
 /* ──────────────────────────── Discord handler types ──────────────────────────── */
 
 /**
- * Entry in the AI rate-limiter's in-memory map. Stored in `messages/discord/msgAI`
- * and never persisted — the window resets on bot restart.
- * @typedef {Object} AiRateLimitEntry
+ * Entry in the AI per-user cooldown map. Stored in `messages/discord/msgAI`
+ * and never persisted — resets on bot restart.
+ * @typedef {Object} AiCooldownEntry
  * @property {string} userId - Discord user id.
- * @property {number[]} timestamps - Epoch-ms timestamps of recent AI requests within the current window.
+ * @property {number} lastRequestMs - Epoch-ms timestamp of the user's most recent accepted AI request.
+ */
+
+/**
+ * Row shape for the `upcoming_streams` SQLite table. Rows are upserted on every
+ * Twitch schedule sync and YouTube slow poll, and auto-deleted once their
+ * `scheduledStart` time passes. Used to inject live schedule data into the
+ * AI system prompt at query time.
+ * @typedef {Object} UpcomingStreamRow
+ * @property {string} id - Twitch segment UUID or YouTube videoId (primary key).
+ * @property {("twitch"|"youtube")} provider - Source platform.
+ * @property {string} title - Stream title.
+ * @property {string} scheduled_start - ISO-8601 scheduled start time.
+ * @property {number|null} scheduled_start_ts - Unix timestamp (seconds) of the start time. Used to emit Discord `<t:TIMESTAMP:F>` markdown.
+ * @property {string|null} scheduled_end - ISO-8601 scheduled end time, or null when unavailable.
+ * @property {string} url - Watch URL (YouTube watch link or Twitch channel URL).
+ * @property {string|null} category - Game/category name, or null.
  */
 
 /**

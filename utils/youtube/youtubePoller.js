@@ -65,13 +65,34 @@ function setState(partial) {
 }
 
 /**
- * Pick the right API key for a given call.
+ * Return the API key the next request should use. Prefers the fallback key
+ * (`YOUTUBE_API_KEY_2`) once `state.usingFallbackKey` is set after a primary
+ * `quotaExceeded` 403 — the key choice is no longer endpoint-specific because
+ * YouTube's daily 10 000 unit cap is per project and shared across every
+ * endpoint, not per method.
  *
- * @param {boolean} [forSearch=false] - True when picking a key for search.list.
+ * **Always call this from inside the request closure** so each retry inside
+ * `withRetry` re-reads the current state. Capturing the return value before
+ * the retry loop pins the lambda to the dead key and the fallback never
+ * actually gets hit.
+ *
  * @returns {string|undefined} The selected API key.
  */
-function getApiKey(forSearch = false) {
-  if (forSearch && state.usingFallbackKey && process.env.YOUTUBE_API_KEY_2) {
+function getApiKey() {
+  // Daily quota auto-recovery: once the 24 h cooldown elapses, drop the
+  // fallback flag so the next call retries the primary key from scratch.
+  // Otherwise the in-memory flag would pin us to the fallback forever.
+  if (
+    state.quotaExhaustedUntil > 0 &&
+    state.quotaExhaustedUntil <= Date.now()
+  ) {
+    setState({ quotaExhaustedUntil: 0, usingFallbackKey: false });
+    youtubeLog(
+      "info",
+      "youtubePoller:quota cooldown ended, resetting key state",
+    );
+  }
+  if (state.usingFallbackKey && process.env.YOUTUBE_API_KEY_2) {
     return process.env.YOUTUBE_API_KEY_2;
   }
   return process.env.YOUTUBE_API_KEY;
@@ -147,11 +168,10 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
  */
 async function fetchAndCacheCategories() {
   youtubeLog("info", "youtubePoller:fetchAndCacheCategories start");
-  const key = getApiKey(false);
   const data = await withRetry(() =>
     axios
       .get("https://www.googleapis.com/youtube/v3/videoCategories", {
-        params: { part: "snippet", regionCode: "ES", key },
+        params: { part: "snippet", regionCode: "ES", key: getApiKey() },
       })
       .then((r) => r.data),
   );
@@ -180,7 +200,6 @@ async function fetchAndCacheCategories() {
  * @returns {Promise<any|null>} Raw API response.
  */
 async function getUpcomingStreams() {
-  const key = getApiKey(true);
   const channelId = process.env.YOUTUBE_CHANNEL_ID;
   youtubeLog("debug", "youtubePoller:getUpcomingStreams", { channelId });
   return withRetry(() =>
@@ -191,7 +210,7 @@ async function getUpcomingStreams() {
           channelId,
           eventType: "upcoming",
           type: "video",
-          key,
+          key: getApiKey(),
         },
       })
       .then((r) => r.data),
@@ -205,7 +224,6 @@ async function getUpcomingStreams() {
  * @returns {Promise<any|null>} Raw API response.
  */
 async function getOngoingStream() {
-  const key = getApiKey(true);
   const channelId = process.env.YOUTUBE_CHANNEL_ID;
   youtubeLog("debug", "youtubePoller:getOngoingStream", { channelId });
   return withRetry(() =>
@@ -216,7 +234,7 @@ async function getOngoingStream() {
           channelId,
           eventType: "live",
           type: "video",
-          key,
+          key: getApiKey(),
         },
       })
       .then((r) => r.data),
@@ -231,12 +249,15 @@ async function getOngoingStream() {
  * @returns {Promise<any|null>} Raw API response.
  */
 async function getVideoStats(videoId) {
-  const key = getApiKey(false);
   youtubeLog("debug", "youtubePoller:getVideoStats", { videoId });
   return withRetry(() =>
     axios
       .get("https://www.googleapis.com/youtube/v3/videos", {
-        params: { part: "liveStreamingDetails,snippet", id: videoId, key },
+        params: {
+          part: "liveStreamingDetails,snippet",
+          id: videoId,
+          key: getApiKey(),
+        },
       })
       .then((r) => r.data),
   );
@@ -357,28 +378,43 @@ async function updateWorkflow() {
     const upcomingCache = [];
     let ongoingStream = null;
 
-    const ongoingData = await getOngoingStream();
-    if (ongoingData?.items?.length) {
-      const videoId = ongoingData.items[0].id.videoId;
-      if (isBlacklisted(videoId)) {
-        youtubeLog(
-          "debug",
-          "youtubePoller:updateWorkflow ongoing-blacklisted",
-          {
-            videoId,
-          },
-        );
-      } else {
-        const stats = await getVideoStats(videoId);
-        const streamData = extractStreamData(videoId, stats);
-        if (streamData) {
-          ongoingStream = streamData;
-          candidates.push(streamData);
-          youtubeLog("debug", "youtubePoller:updateWorkflow ongoing-found", {
-            videoId,
-          });
+    // Skip the live-discovery search.list when we are already tracking a live
+    // stream — the fast poll handles the active stream, and the channel can
+    // only broadcast one live at a time. Saves 100 quota per slow poll for the
+    // duration of every live. Discovery still runs in any other state
+    // (`unknown`, `upcoming`, `ended`) so unscheduled-live detection survives.
+    if (state.status !== "live") {
+      const ongoingData = await getOngoingStream();
+      if (ongoingData?.items?.length) {
+        const videoId = ongoingData.items[0].id.videoId;
+        if (isBlacklisted(videoId)) {
+          youtubeLog(
+            "debug",
+            "youtubePoller:updateWorkflow ongoing-blacklisted",
+            {
+              videoId,
+            },
+          );
+        } else {
+          const stats = await getVideoStats(videoId);
+          const streamData = extractStreamData(videoId, stats);
+          if (streamData) {
+            ongoingStream = streamData;
+            candidates.push(streamData);
+            youtubeLog("debug", "youtubePoller:updateWorkflow ongoing-found", {
+              videoId,
+            });
+          }
         }
       }
+    } else {
+      youtubeLog(
+        "debug",
+        "youtubePoller:updateWorkflow ongoing-skip already-live",
+        {
+          videoId: state.videoId,
+        },
+      );
     }
 
     const upcomingData = await getUpcomingStreams();
@@ -487,6 +523,14 @@ async function updateWorkflow() {
  */
 async function checkWorkflow() {
   if (state.isPolling || !state.videoId) return null;
+
+  if (state.quotaExhaustedUntil > Date.now()) {
+    youtubeLog("debug", "youtubePoller:checkWorkflow quota-cooldown", {
+      until: new Date(state.quotaExhaustedUntil).toISOString(),
+      videoId: state.videoId,
+    });
+    return null;
+  }
 
   const stats = await getVideoStats(state.videoId);
   if (!stats?.items?.length) {

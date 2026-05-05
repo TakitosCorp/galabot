@@ -19,6 +19,7 @@ const interactionHandler = require("../../events/twitch/interactionCreate");
 const { createEventData } = require("./eventData");
 const {
   syncTwitchScheduleEvents,
+  syncTwitchUpcomingStreams,
 } = require("../../utils/discord/discordGuildEvents");
 
 /** Interval reference for the hourly Twitch schedule → Discord events sync. */
@@ -112,9 +113,24 @@ async function bootstrap(clientManager) {
       stack: err.stack,
     });
   });
+
+  // Sync upcoming streams to the DB for AI context (independent of DISCORD_EVENTS_ENABLED).
+  syncTwitchUpcomingStreams(clientManager).catch((err) => {
+    twitchLog("error", "twitch:bootstrap upcomingStreamsSync failed", {
+      err: err.message,
+      stack: err.stack,
+    });
+  });
+
   setInterval(() => {
     syncTwitchScheduleEvents(clientManager).catch((err) => {
       twitchLog("error", "twitch:scheduleSync interval failed", {
+        err: err.message,
+        stack: err.stack,
+      });
+    });
+    syncTwitchUpcomingStreams(clientManager).catch((err) => {
+      twitchLog("error", "twitch:upcomingStreamsSync interval failed", {
         err: err.message,
         stack: err.stack,
       });

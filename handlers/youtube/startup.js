@@ -20,10 +20,6 @@ const {
   getState,
   setState,
   fetchAndCacheCategories,
-  getUpcomingStreams,
-  getVideoStats,
-  extractStreamData,
-  isBlacklisted,
 } = require("../../utils/youtube/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
@@ -38,14 +34,21 @@ const {
   createGuildStreamEvent,
   cleanupRemovedEvents,
 } = require("../../utils/discord/discordGuildEvents");
+const {
+  upsertUpcomingStream,
+  deleteExpiredStreams,
+  deleteUpcomingStream,
+  getUpcomingStreamsByProvider,
+} = require("../../db/upcomingStreams");
 
 /**
- * Fetch all upcoming YouTube streams, create Discord Guild Scheduled Events for
- * any not yet tracked, and clean up events whose streams were removed. Mirrors
- * the Twitch schedule sync but uses the YouTube search API results.
+ * Create Discord Guild Scheduled Events from the `state.upcomingStreams`
+ * cache populated by the most recent `updateWorkflow()` run, and clean up
+ * events whose streams are no longer in the cache.
  *
- * Separated from `runSlowPoll` so it can be cleanly gated by
- * `DISCORD_EVENTS_ENABLED` without complicating the polling state machine.
+ * Reads from the in-memory cache instead of re-issuing `search.list` +
+ * `videos.list` calls — the slow-poll already paid that quota cost. Saves
+ * ~100 quota units per slow poll.
  *
  * @async
  * @param {import('discord.js').Client|null} discordClient
@@ -53,38 +56,18 @@ const {
  */
 async function syncYouTubeDiscordEvents(discordClient) {
   try {
-    const upcomingData = await getUpcomingStreams();
+    const upcoming = getState().upcomingStreams ?? [];
     const currentSourceIds = [];
 
-    if (upcomingData?.items?.length) {
-      for (const item of upcomingData.items) {
-        const vidId = item.id?.videoId;
-        if (!vidId) continue;
-
-        if (isBlacklisted(vidId)) {
-          youtubeLog(
-            "debug",
-            "youtube:syncYouTubeDiscordEvents skip-blacklisted",
-            {
-              videoId: vidId,
-            },
-          );
-          continue;
-        }
-
-        const stats = await getVideoStats(vidId);
-        const streamInfo = extractStreamData(vidId, stats);
-        if (!streamInfo) continue;
-
-        currentSourceIds.push(vidId);
-        await createGuildStreamEvent(discordClient, {
-          provider: "youtube",
-          sourceId: vidId,
-          title: streamInfo.title,
-          streamUrl: streamInfo.streamUrl,
-          scheduledStart: streamInfo.scheduledStart,
-        });
-      }
+    for (const stream of upcoming) {
+      currentSourceIds.push(stream.videoId);
+      await createGuildStreamEvent(discordClient, {
+        provider: "youtube",
+        sourceId: stream.videoId,
+        title: stream.title,
+        streamUrl: stream.streamUrl,
+        scheduledStart: stream.scheduledStart,
+      });
     }
 
     await cleanupRemovedEvents(discordClient, "youtube", currentSourceIds);
@@ -93,6 +76,60 @@ async function syncYouTubeDiscordEvents(discordClient) {
     });
   } catch (err) {
     youtubeLog("error", "youtube:slowPoll discordEventSync failed", {
+      err: err.message,
+      stack: err.stack,
+    });
+  }
+}
+
+/**
+ * Sync the `state.upcomingStreams` cache into the `upcoming_streams` DB table
+ * for AI context injection, then prune rows whose video ids are no longer in
+ * the cache. Runs on every slow poll regardless of `DISCORD_EVENTS_ENABLED`.
+ *
+ * Reads from the in-memory cache instead of re-issuing `search.list` +
+ * `videos.list` calls — saves ~100 quota units per slow poll.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
+async function syncYouTubeUpcomingStreamsToDb() {
+  try {
+    const upcoming = getState().upcomingStreams ?? [];
+    const currentIds = new Set();
+
+    await deleteExpiredStreams();
+
+    for (const stream of upcoming) {
+      currentIds.add(stream.videoId);
+      await upsertUpcomingStream({
+        id: stream.videoId,
+        provider: "youtube",
+        title: stream.title,
+        scheduledStart: stream.scheduledStart,
+        scheduledStartTs: Math.floor(
+          new Date(stream.scheduledStart).getTime() / 1000,
+        ),
+        scheduledEnd: null,
+        url: stream.streamUrl,
+        category: stream.category,
+      });
+    }
+
+    // Remove rows for YouTube streams no longer in the cache (cancelled or
+    // already started since last poll).
+    const existing = await getUpcomingStreamsByProvider("youtube");
+    for (const row of existing) {
+      if (!currentIds.has(row.id)) {
+        await deleteUpcomingStream(row.id);
+      }
+    }
+
+    youtubeLog("info", "youtube:slowPoll upcomingStreamsSync complete", {
+      upcoming: currentIds.size,
+    });
+  } catch (err) {
+    youtubeLog("error", "youtube:slowPoll upcomingStreamsSync failed", {
       err: err.message,
       stack: err.stack,
     });
@@ -126,6 +163,8 @@ async function runSlowPoll(clientManager) {
     if (process.env.DISCORD_EVENTS_ENABLED === "true") {
       await syncYouTubeDiscordEvents(clientManager.discordClient);
     }
+
+    await syncYouTubeUpcomingStreamsToDb();
   } catch (err) {
     youtubeLog("error", "youtube:slowPoll failed", {
       err: err.message,
@@ -259,4 +298,9 @@ async function bootstrap(clientManager) {
   });
 }
 
-module.exports = { bootstrap, runSlowPoll, syncYouTubeDiscordEvents };
+module.exports = {
+  bootstrap,
+  runSlowPoll,
+  syncYouTubeDiscordEvents,
+  syncYouTubeUpcomingStreamsToDb,
+};

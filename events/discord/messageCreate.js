@@ -67,7 +67,7 @@ module.exports = {
           lang,
         });
         await handleHello(message, lang);
-      } else {
+      } else if (process.env.GEMINI_ENABLE !== "false") {
         discordLog("debug", "messageCreate:bot-mention+ai", {
           userId: message.author.id,
           channelId: message.channelId,

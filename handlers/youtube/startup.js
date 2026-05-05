@@ -23,6 +23,7 @@ const {
   getUpcomingStreams,
   getVideoStats,
   extractStreamData,
+  isBlacklisted,
 } = require("../../utils/youtubePoller");
 const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
@@ -59,6 +60,13 @@ async function syncYouTubeDiscordEvents(discordClient) {
       for (const item of upcomingData.items) {
         const vidId = item.id?.videoId;
         if (!vidId) continue;
+
+        if (isBlacklisted(vidId)) {
+          youtubeLog("debug", "youtube:syncYouTubeDiscordEvents skip-blacklisted", {
+            videoId: vidId,
+          });
+          continue;
+        }
 
         const stats = await getVideoStats(vidId);
         const streamInfo = extractStreamData(vidId, stats);

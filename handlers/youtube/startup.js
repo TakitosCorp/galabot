@@ -255,4 +255,4 @@ async function bootstrap(clientManager) {
   });
 }
 
-module.exports = { bootstrap };
+module.exports = { bootstrap, runSlowPoll, syncYouTubeDiscordEvents };

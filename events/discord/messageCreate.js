@@ -80,7 +80,10 @@ module.exports = {
           channelId: message.channelId,
           lang,
         });
-        await handleHello(message, lang);
+        const greeted = await handleHello(message, lang);
+        if (greeted === false && process.env.GEMINI_ENABLE !== "false") {
+          await handleAI(message);
+        }
       } else if (process.env.GEMINI_ENABLE !== "false") {
         discordLog("debug", "messageCreate:bot-mention+ai", {
           userId: message.author.id,
@@ -91,19 +94,26 @@ module.exports = {
       return;
     }
 
-    // Reply to bot or bot name mentioned → AI reply (unless greeting).
-    if (
-      (isBotReply || isBotNameMentioned) &&
-      !isGreeting &&
-      process.env.GEMINI_ENABLE !== "false"
-    ) {
-      discordLog("debug", "messageCreate:bot-reply-or-name+ai", {
-        userId: message.author.id,
-        channelId: message.channelId,
-        isBotReply,
-        isBotNameMentioned,
-      });
-      await handleAI(message);
+    // Reply to bot or bot name mentioned → AI reply (unless greeting, or greeting is on cooldown).
+    if ((isBotReply || isBotNameMentioned) && process.env.GEMINI_ENABLE !== "false") {
+      if (isGreeting) {
+        const greeted = await handleHello(message, lang);
+        if (greeted === false) {
+          discordLog("debug", "messageCreate:bot-reply-or-name+greeting-cooldown+ai", {
+            userId: message.author.id,
+            channelId: message.channelId,
+          });
+          await handleAI(message);
+        }
+      } else {
+        discordLog("debug", "messageCreate:bot-reply-or-name+ai", {
+          userId: message.author.id,
+          channelId: message.channelId,
+          isBotReply,
+          isBotNameMentioned,
+        });
+        await handleAI(message);
+      }
       return;
     }
 

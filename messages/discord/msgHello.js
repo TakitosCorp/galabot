@@ -43,7 +43,7 @@ async function handleHello(message, lang) {
       username: message.author.username,
       lastGreeting: lastGreeting.timestamp,
     });
-    return;
+    return false;
   }
 
   const userName = message.member?.displayName || message.author.username;

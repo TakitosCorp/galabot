@@ -33,8 +33,9 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { GoogleGenAI } = require("@google/genai");
-const { discordLog, sysLog, aiLog } = require("../core/loggers");
+const { aiLog } = require("../core/loggers");
 const { GEMINI_QUOTA_COOLDOWN_MS } = require("../core/constants");
 
 /** Max retries for transient (5xx) Gemini errors before surfacing to caller. */
@@ -45,26 +46,53 @@ const TRANSIENT_RETRY_DELAY_MS = 2_000;
 const PROMPT_PATH = path.join(__dirname, "..", "..", "data", "AIPrompt.md");
 
 /**
- * System prompt loaded from `data/AIPrompt.md`. Cached at startup so the file
- * is only read once per process. Template variables ({{VAR_NAME}}) are injected
- * from environment variables at load time.
- * @type {string}
+ * Read, substitute template variables, and return the processed prompt string.
+ * @returns {string}
  */
-let systemPrompt = fs.readFileSync(PROMPT_PATH, "utf8");
-systemPrompt = systemPrompt.replace(
-  /\{\{GALA_USER_ID\}\}/g,
-  process.env.GALA_USER_ID || "{{GALA_USER_ID}}",
-);
-systemPrompt = systemPrompt.replace(
-  /\{\{BOT_NAME\}\}/g,
-  process.env.BOT_NAME || "GalaBot",
-);
-systemPrompt = systemPrompt.trim();
+function readPrompt() {
+  let raw = fs.readFileSync(PROMPT_PATH, "utf8");
+  raw = raw.replace(/\{\{GALA_USER_ID\}\}/g, process.env.GALA_USER_ID || "{{GALA_USER_ID}}");
+  raw = raw.replace(/\{\{BOT_NAME\}\}/g, process.env.BOT_NAME || "GalaBot");
+  return raw.trim();
+}
 
-sysLog("info", "geminiClient:prompt loaded", {
+/**
+ * SHA-256 of the raw file bytes — used to detect prompt changes without
+ * keeping the full content in memory twice.
+ * @returns {string}
+ */
+function hashPromptFile() {
+  const raw = fs.readFileSync(PROMPT_PATH);
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+/** Processed system prompt, refreshed automatically when the file changes. */
+let systemPrompt = readPrompt();
+/** SHA-256 of the file content at last load — used for change detection. */
+let promptHash = hashPromptFile();
+
+aiLog("info", "geminiClient:prompt loaded", {
   path: PROMPT_PATH,
   promptLength: systemPrompt.length,
+  hash: promptHash,
 });
+
+/**
+ * Re-read and reprocess the prompt if the file has changed since last load.
+ * Called at the top of every `queryGemini` invocation so prompt edits take
+ * effect on the next query without restarting the bot.
+ */
+function refreshPromptIfChanged() {
+  const current = hashPromptFile();
+  if (current === promptHash) return;
+  systemPrompt = readPrompt();
+  promptHash = current;
+  aiLog("info", "geminiClient:prompt reloaded", {
+    path: PROMPT_PATH,
+    promptLength: systemPrompt.length,
+    hash: current,
+  });
+}
 
 /**
  * Mutable in-memory state for quota fallback handling.
@@ -92,7 +120,7 @@ function getApiKey() {
     state.quotaExhaustedUntil > 0 &&
     state.quotaExhaustedUntil <= Date.now()
   ) {
-    discordLog(
+    aiLog(
       "info",
       "geminiClient:quota cooldown ended, resetting key state",
     );
@@ -159,6 +187,8 @@ async function queryGemini(userContent, additionalContext = null) {
     throw new Error("GEMINI quota exhausted");
   }
 
+  refreshPromptIfChanged();
+
   const model = process.env.GEMINI_MODEL ?? "gemma-4-26b-a4b-it";
 
   // Gemma rejects `systemInstruction`, so the system prompt is folded into
@@ -183,7 +213,7 @@ async function queryGemini(userContent, additionalContext = null) {
 
   for (let attempt = 0; attempt < maxKeyAttempts; attempt++) {
     const apiKey = getApiKey();
-    discordLog("debug", "geminiClient:queryGemini start", {
+    aiLog("debug", "geminiClient:queryGemini start", {
       model,
       contentLength: userContent.length,
       hasContext: Boolean(additionalContext),
@@ -218,7 +248,7 @@ async function queryGemini(userContent, additionalContext = null) {
           });
         }
 
-        discordLog("info", "geminiClient:queryGemini complete", {
+        aiLog("info", "geminiClient:queryGemini complete", {
           model,
           durationMs,
           responseLength: cleaned.length,
@@ -262,7 +292,7 @@ async function queryGemini(userContent, additionalContext = null) {
     }
 
     if (process.env.GEMINI_API_KEY_2 && !state.usingFallbackKey) {
-      discordLog(
+      aiLog(
         "warn",
         "geminiClient:quota primary-exhausted, switching to fallback key",
         { err: lastErr.message },
@@ -272,7 +302,7 @@ async function queryGemini(userContent, additionalContext = null) {
     }
 
     state.quotaExhaustedUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
-    discordLog("error", "geminiClient:quota exhausted on all keys", {
+    aiLog("error", "geminiClient:quota exhausted on all keys", {
       cooldownMs: GEMINI_QUOTA_COOLDOWN_MS,
       err: lastErr.message,
     });

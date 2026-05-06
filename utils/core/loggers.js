@@ -32,7 +32,7 @@ const path = require("path");
  * @returns {string} Absolute path to the `logs/` directory.
  */
 function ensureLogsFolder() {
-  const logsDir = path.join(__dirname, "..", "logs");
+  const logsDir = path.join(__dirname, "..", "..", "logs");
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }

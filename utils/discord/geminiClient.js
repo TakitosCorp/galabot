@@ -51,7 +51,10 @@ const PROMPT_PATH = path.join(__dirname, "..", "..", "data", "AIPrompt.md");
  */
 function readPrompt() {
   let raw = fs.readFileSync(PROMPT_PATH, "utf8");
-  raw = raw.replace(/\{\{GALA_USER_ID\}\}/g, process.env.GALA_USER_ID || "{{GALA_USER_ID}}");
+  raw = raw.replace(
+    /\{\{GALA_USER_ID\}\}/g,
+    process.env.GALA_USER_ID || "{{GALA_USER_ID}}",
+  );
   raw = raw.replace(/\{\{BOT_NAME\}\}/g, process.env.BOT_NAME || "GalaBot");
   return raw.trim();
 }
@@ -120,10 +123,7 @@ function getApiKey() {
     state.quotaExhaustedUntil > 0 &&
     state.quotaExhaustedUntil <= Date.now()
   ) {
-    aiLog(
-      "info",
-      "geminiClient:quota cooldown ended, resetting key state",
-    );
+    aiLog("info", "geminiClient:quota cooldown ended, resetting key state");
     state.quotaExhaustedUntil = 0;
     state.usingFallbackKey = false;
   }

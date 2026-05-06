@@ -95,14 +95,21 @@ module.exports = {
     }
 
     // Reply to bot or bot name mentioned → AI reply (unless greeting, or greeting is on cooldown).
-    if ((isBotReply || isBotNameMentioned) && process.env.GEMINI_ENABLE !== "false") {
+    if (
+      (isBotReply || isBotNameMentioned) &&
+      process.env.GEMINI_ENABLE !== "false"
+    ) {
       if (isGreeting) {
         const greeted = await handleHello(message, lang);
         if (greeted === false) {
-          discordLog("debug", "messageCreate:bot-reply-or-name+greeting-cooldown+ai", {
-            userId: message.author.id,
-            channelId: message.channelId,
-          });
+          discordLog(
+            "debug",
+            "messageCreate:bot-reply-or-name+greeting-cooldown+ai",
+            {
+              userId: message.author.id,
+              channelId: message.channelId,
+            },
+          );
           await handleAI(message);
         }
       } else {

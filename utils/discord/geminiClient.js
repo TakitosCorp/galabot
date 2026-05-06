@@ -41,10 +41,16 @@ const PROMPT_PATH = path.join(__dirname, "..", "..", "data", "AIPrompt.md");
 
 /**
  * System prompt loaded from `data/AIPrompt.md`. Cached at startup so the file
- * is only read once per process.
+ * is only read once per process. Template variables ({{VAR_NAME}}) are injected
+ * from environment variables at load time.
  * @type {string}
  */
-const systemPrompt = fs.readFileSync(PROMPT_PATH, "utf8").trim();
+let systemPrompt = fs.readFileSync(PROMPT_PATH, "utf8");
+systemPrompt = systemPrompt.replace(
+  /\{\{GALA_USER_ID\}\}/g,
+  process.env.GALA_USER_ID || "{{GALA_USER_ID}}",
+);
+systemPrompt = systemPrompt.trim();
 
 sysLog("info", "geminiClient:prompt loaded", {
   path: PROMPT_PATH,
@@ -99,8 +105,6 @@ function getApiKey() {
 function isQuotaError(err) {
   if (!err || typeof err !== "object") return false;
   if (err.status === 429) return true;
-  // The SDK sometimes embeds the status in the message rather than as a numeric
-  // field — fall back to a string sniff to be safe.
   const msg = String(err.message ?? "");
   return /429|RESOURCE_EXHAUSTED|quotaExceeded/i.test(msg);
 }
@@ -141,8 +145,6 @@ async function queryGemini(userContent, additionalContext = null) {
   parts.push(userContent);
   const resolvedUser = parts.join("\n\n");
 
-  // Up to two attempts: primary key, then fallback (if configured). A 429
-  // from both terminates the loop and sets the cooldown.
   const maxAttempts = process.env.GEMINI_API_KEY_2 ? 2 : 1;
   let lastErr = null;
 
@@ -194,7 +196,6 @@ async function queryGemini(userContent, additionalContext = null) {
       lastErr = err;
 
       if (!isQuotaError(err)) {
-        // Non-quota error — don't retry, surface immediately.
         throw err;
       }
 
@@ -208,7 +209,6 @@ async function queryGemini(userContent, additionalContext = null) {
         continue;
       }
 
-      // Either no fallback configured, or fallback also exhausted.
       state.quotaExhaustedUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
       discordLog("error", "geminiClient:quota exhausted on all keys", {
         cooldownMs: GEMINI_QUOTA_COOLDOWN_MS,
@@ -218,7 +218,6 @@ async function queryGemini(userContent, additionalContext = null) {
     }
   }
 
-  // Defensive: shouldn't reach here, but rethrow whatever we last saw.
   throw lastErr ?? new Error("GEMINI quota exhausted");
 }
 

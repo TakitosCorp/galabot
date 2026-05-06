@@ -214,35 +214,35 @@ Notes:
 
 When `GEMINI_API_KEY` is set (and `GEMINI_ENABLE` is not `false`), bot @-mentions that are not greetings are forwarded to Google Gemini and replied to with the AI response. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). The default model is `gemini-2.5-flash`; check your project's Quotas page for the exact free-tier RPD/RPM/TPM limits, since they vary by account. A global FIFO queue (`utils/discord/aiQueue.js`) and a 5 s per-user cooldown enforce that GalaBot never bursts past `AI_GLOBAL_RPM_LIMIT` requests per minute. The system prompt is `data/AIPrompt.md` — edit it to change personality without touching code. At query time the bot automatically injects upcoming Twitch and YouTube stream data from the `upcoming_streams` DB table into the prompt, so GalaMiau can answer schedule questions accurately.
 
-| Variable               | Required | Description                                                                                                         |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`       | no       | Google AI Studio API key. Feature is disabled when absent.                                                                                                                |
+| Variable               | Required | Description                                                                                                                                                              |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GEMINI_API_KEY`       | no       | Google AI Studio API key. Feature is disabled when absent.                                                                                                               |
 | `GEMINI_API_KEY_2`     | no       | Optional fallback API key used automatically when the primary returns 429. After both keys are exhausted, AI replies pause for `GEMINI_QUOTA_COOLDOWN_MS` (1 h default). |
-| `GEMINI_MODEL`         | no       | Model name to use. Defaults to `gemma-4-26b-a4b-it` when unset.                                                                                                           |
-| `GEMINI_NO_LIMITS_IDS` | no       | Comma-separated Discord user IDs that bypass the AI rate limit entirely (useful for the bot owner / trusted users).                                                       |
-| `GEMINI_ENABLE`        | no       | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Defaults to enabled when unset.                                                          |
+| `GEMINI_MODEL`         | no       | Model name to use. Defaults to `gemma-4-26b-a4b-it` when unset.                                                                                                          |
+| `GEMINI_NO_LIMITS_IDS` | no       | Comma-separated Discord user IDs that bypass the AI rate limit entirely (useful for the bot owner / trusted users).                                                      |
+| `GEMINI_ENABLE`        | no       | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Defaults to enabled when unset.                                                         |
 
 ### Tunable constants (not env vars)
 
 If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils/constants.js`:
 
-| Constant                     | Default | Meaning                                                                                                     |
-| ---------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
-| `GREETING_COOLDOWN_MS`       | 4 h     | Time before a user can trigger a greeting response again. Shared between Discord and Twitch.                |
-| `WARN_TIMEOUT_BASE_MS`       | 10 min  | Per-warn timeout. A user with N warns gets a `N * 10 min` timeout.                                          |
-| `MAX_WARN_BEFORE_BAN`        | 3       | Number of warns at which the user is permanently banned.                                                    |
-| `MAX_WARN_REASON_LENGTH`     | 512     | Max characters allowed in a `/warn` reason.                                                                 |
-| `TOKEN_VALIDITY_MS`          | 59 days | How long a refreshed Twitch token is considered valid before re-refreshing.                                 |
-| `VIEWER_POLL_INTERVAL_MS`    | 60 s    | Twitch viewer-count sampling interval during a live stream.                                                 |
-| `YOUTUBE_FAST_POLL_MS`       | 60 s    | Cadence of the lightweight `videos.list` poll (1 quota unit per call).                                      |
-| `YOUTUBE_SLOW_POLL_MS`       | 3 h     | Cadence of the heavier `search.list` poll (100 quota units per call).                                       |
-| `YOUTUBE_CATEGORY_POLL_MS`   | 48 h    | Cadence for fetching and caching YouTube category mappings via the `videoCategories` endpoint.              |
-| `YOUTUBE_STREAM_VALID_HOURS` | 12      | How long after publish a discovered video is still tracked.                                                 |
-| `YOUTUBE_QUOTA_COOLDOWN_MS`  | 24 h    | Pause on `search.list` calls after a quota error.                                                           |
-| `PUPPETEER_*_TIMEOUT_MS`     | various | Puppeteer page/goto/screenshot/selector timeouts. Bump these on slow hardware.                              |
-| `AI_USER_COOLDOWN_MS`        | 5 s     | Minimum delay between AI requests from the same user. A user pinging again sooner gets a "slow down" reply. |
-| `AI_GLOBAL_RPM_LIMIT`        | 15      | Hard cap on AI requests dispatched to Gemini per rolling minute (matches free-tier `gemma-4-*` quota; bump to 30 for `gemma-3-*`). |
-| `AI_GLOBAL_RPM_WINDOW_MS`    | 60 s    | Sliding-window duration used by `AI_GLOBAL_RPM_LIMIT`.                                                      |
+| Constant                     | Default | Meaning                                                                                                                                         |
+| ---------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GREETING_COOLDOWN_MS`       | 4 h     | Time before a user can trigger a greeting response again. Shared between Discord and Twitch.                                                    |
+| `WARN_TIMEOUT_BASE_MS`       | 10 min  | Per-warn timeout. A user with N warns gets a `N * 10 min` timeout.                                                                              |
+| `MAX_WARN_BEFORE_BAN`        | 3       | Number of warns at which the user is permanently banned.                                                                                        |
+| `MAX_WARN_REASON_LENGTH`     | 512     | Max characters allowed in a `/warn` reason.                                                                                                     |
+| `TOKEN_VALIDITY_MS`          | 59 days | How long a refreshed Twitch token is considered valid before re-refreshing.                                                                     |
+| `VIEWER_POLL_INTERVAL_MS`    | 60 s    | Twitch viewer-count sampling interval during a live stream.                                                                                     |
+| `YOUTUBE_FAST_POLL_MS`       | 60 s    | Cadence of the lightweight `videos.list` poll (1 quota unit per call).                                                                          |
+| `YOUTUBE_SLOW_POLL_MS`       | 3 h     | Cadence of the heavier `search.list` poll (100 quota units per call).                                                                           |
+| `YOUTUBE_CATEGORY_POLL_MS`   | 48 h    | Cadence for fetching and caching YouTube category mappings via the `videoCategories` endpoint.                                                  |
+| `YOUTUBE_STREAM_VALID_HOURS` | 12      | How long after publish a discovered video is still tracked.                                                                                     |
+| `YOUTUBE_QUOTA_COOLDOWN_MS`  | 24 h    | Pause on `search.list` calls after a quota error.                                                                                               |
+| `PUPPETEER_*_TIMEOUT_MS`     | various | Puppeteer page/goto/screenshot/selector timeouts. Bump these on slow hardware.                                                                  |
+| `AI_USER_COOLDOWN_MS`        | 5 s     | Minimum delay between AI requests from the same user. A user pinging again sooner gets a "slow down" reply.                                     |
+| `AI_GLOBAL_RPM_LIMIT`        | 15      | Hard cap on AI requests dispatched to Gemini per rolling minute (matches free-tier `gemma-4-*` quota; bump to 30 for `gemma-3-*`).              |
+| `AI_GLOBAL_RPM_WINDOW_MS`    | 60 s    | Sliding-window duration used by `AI_GLOBAL_RPM_LIMIT`.                                                                                          |
 | `GEMINI_QUOTA_COOLDOWN_MS`   | 1 h     | After both Gemini keys return 429, pause AI replies for this duration before retrying. Auto-resets the fallback flag when the cooldown expires. |
 
 ---

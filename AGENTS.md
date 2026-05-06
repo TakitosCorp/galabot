@@ -339,15 +339,15 @@ credentials, so it's only practical in production. For local changes:
 Some features are guarded by optional environment variables. The bot starts and
 runs without them — the feature is simply skipped or degraded gracefully.
 
-| Variable               | Purpose                                                                                                                                                                              | Required?    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
-| `GALA_USER_ID`         | Personal Discord user id of the streamer. Bot @-mentions of this account trigger the warn/ban escalation in `messages/discord/msgPing.js`.                                           | **Required** |
-| `GALA_DISCORD_ID`      | Discord guild/server id. Used only by the `npm run sync-emojis` CLI script (`utils/helpers/botEmojis.js`) to fetch guild emojis. **Not** a user id.                                  | Required     |
-| `GEMINI_API_KEY`       | Google AI Studio API key for Gemini AI replies. When absent, bot @-mentions that are not greetings are silently dropped (no reply). Get a key at https://aistudio.google.com/apikey. | Optional     |
+| Variable               | Purpose                                                                                                                                                                                                | Required?    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| `GALA_USER_ID`         | Personal Discord user id of the streamer. Bot @-mentions of this account trigger the warn/ban escalation in `messages/discord/msgPing.js`.                                                             | **Required** |
+| `GALA_DISCORD_ID`      | Discord guild/server id. Used only by the `npm run sync-emojis` CLI script (`utils/helpers/botEmojis.js`) to fetch guild emojis. **Not** a user id.                                                    | Required     |
+| `GEMINI_API_KEY`       | Google AI Studio API key for Gemini AI replies. When absent, bot @-mentions that are not greetings are silently dropped (no reply). Get a key at https://aistudio.google.com/apikey.                   | Optional     |
 | `GEMINI_API_KEY_2`     | Optional fallback key used automatically when the primary returns 429. Mirrors the YouTube `YOUTUBE_API_KEY_2` fallback pattern; cooldown after both keys are exhausted is `GEMINI_QUOTA_COOLDOWN_MS`. | Optional     |
-| `GEMINI_MODEL`         | Gemini/Gemma model name to use for AI replies. Defaults to `gemma-3-27b-it` when unset (free-tier: 14,400 RPD / 30 RPM / 15K TPM).                                                   | Optional     |
-| `GEMINI_NO_LIMITS_IDS` | Comma-separated Discord user ids exempt from the AI rate limit. Parsed once at startup into a `Set` in `messages/discord/msgAI.js`.                                                  | Optional     |
-| `GEMINI_ENABLE`        | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Feature is on by default when unset.                                                                | Optional     |
+| `GEMINI_MODEL`         | Gemini/Gemma model name to use for AI replies. Defaults to `gemma-3-27b-it` when unset (free-tier: 14,400 RPD / 30 RPM / 15K TPM).                                                                     | Optional     |
+| `GEMINI_NO_LIMITS_IDS` | Comma-separated Discord user ids exempt from the AI rate limit. Parsed once at startup into a `Set` in `messages/discord/msgAI.js`.                                                                    | Optional     |
+| `GEMINI_ENABLE`        | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Feature is on by default when unset.                                                                                  | Optional     |
 
 The AI reply path lives in:
 

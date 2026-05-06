@@ -326,7 +326,7 @@ function extractStreamData(videoId, statsData) {
   if (!item.snippet || !item.liveStreamingDetails) return null;
 
   const details = item.liveStreamingDetails;
-  const startTime = details.actualStartTime || details.scheduledStartTime;
+  const startTime = details.scheduledStartTime;
   if (!startTime) return null;
 
   const thumbs = item.snippet.thumbnails;

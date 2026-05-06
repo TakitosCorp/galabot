@@ -70,6 +70,34 @@ async function getWarnCount(userId) {
 }
 
 /**
+ * Count how many warnings have been issued across the server in the last N minutes.
+ *
+ * @async
+ * @param {number} minutes - Time window in minutes.
+ * @returns {Promise<number>} Total warnings issued in that window.
+ * @throws {Error} When the SQLite read fails.
+ */
+async function getRecentWarnCount(minutes) {
+  dbLog("debug", "warns:getRecentWarnCount", { minutes });
+  try {
+    const since = new Date(Date.now() - minutes * 60000).toISOString();
+    const result = await db
+      .selectFrom("warns")
+      .select((eb) => eb.fn.countAll().as("count"))
+      .where("timestamp", ">=", since)
+      .executeTakeFirst();
+    return Number(result?.count ?? 0);
+  } catch (err) {
+    dbLog("error", "warns:getRecentWarnCount failed", {
+      minutes,
+      err: err.message,
+      stack: err.stack,
+    });
+    throw err;
+  }
+}
+
+/**
  * Append a new warning for `userId` with the supplied `reason`. The timestamp is
  * generated server-side at insert time so callers do not need to coordinate clocks.
  *
@@ -103,5 +131,6 @@ async function addWarn(userId, reason) {
 module.exports = {
   getUserWarns,
   getWarnCount,
+  getRecentWarnCount,
   addWarn,
 };

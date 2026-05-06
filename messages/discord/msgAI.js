@@ -7,13 +7,13 @@
  * refreshed every 9 s so it stays visible for slow responses.
  *
  * Three layers of throttling protect the free-tier quota:
- *  1. Per-user cooldown (`AI_USER_COOLDOWN_MS`): a user pinging the bot again
- *     before the cooldown elapses receives a "slow down" reply and the
- *     message is **not** queued.
- *  2. Global FIFO queue (`utils/discord/aiQueue.js`): only one Gemini request
- *     is in flight at a time, regardless of how many users ping in parallel.
- *  3. Global rolling-minute RPM cap (`AI_GLOBAL_RPM_LIMIT`): the queue worker
- *     waits, never drops, when dispatching the next item would exceed the cap.
+ * 1. Per-user cooldown (`AI_USER_COOLDOWN_MS`): a user pinging the bot again
+ * before the cooldown elapses receives a "slow down" reply and the
+ * message is **not** queued.
+ * 2. Global FIFO queue (`utils/discord/aiQueue.js`): only one Gemini request
+ * is in flight at a time, regardless of how many users ping in parallel.
+ * 3. Global rolling-minute RPM cap (`AI_GLOBAL_RPM_LIMIT`): the queue worker
+ * waits, never drops, when dispatching the next item would exceed the cap.
  *
  * Ids in `GEMINI_NO_LIMITS_IDS` bypass the per-user cooldown but still go
  * through the queue and global RPM cap (the upstream limit is hard).
@@ -32,6 +32,8 @@ const { discordLog, aiLog } = require("../../utils/core/loggers");
 const { queryGemini } = require("../../utils/discord/geminiClient");
 const { enqueue, getQueueLength } = require("../../utils/discord/aiQueue");
 const { getAllUpcomingStreams } = require("../../db/upcomingStreams");
+const { getWarnCount, getRecentWarnCount } = require("../../db/warns");
+const { getActiveStream } = require("../../db/streams");
 const { AI_USER_COOLDOWN_MS } = require("../../utils/core/constants");
 
 /**
@@ -63,12 +65,13 @@ function formatDuration(ms) {
 
 /**
  * Build a compact user-info block from the incoming message so the model has
- * context about who it's talking to (display name, server tenure, roles, etc.).
+ * context about who it's talking to (display name, server tenure, roles, warnings, etc.).
  *
  * @param {import('discord.js').Message} message
+ * @param {number} warnCount
  * @returns {string}
  */
-function buildUserContext(message) {
+function buildUserContext(message, warnCount) {
   const { author, member } = message;
   const now = Date.now();
   const lines = [];
@@ -96,6 +99,8 @@ function buildUserContext(message) {
   if (roles?.length) lines.push(`Roles: ${roles.join(", ")}`);
 
   if (member?.premiumSince) lines.push("Server booster: yes");
+
+  if (warnCount > 0) lines.push(`Warnings: ${warnCount}`);
 
   return `--- User Info ---\n${lines.join("\n")}`;
 }
@@ -206,8 +211,49 @@ async function handleAI(message) {
       });
     }
 
+    let userWarnCount = 0;
+    let recentWarns = 0;
+    let twitchLive = null;
+    let ytLive = null;
+
+    try {
+      [userWarnCount, recentWarns, twitchLive, ytLive] = await Promise.all([
+        getWarnCount(userId),
+        getRecentWarnCount(15),
+        getActiveStream("twitch"),
+        getActiveStream("youtube"),
+      ]);
+    } catch (err) {
+      discordLog("warn", "ai:extra-context fetch failed", { err: err.message });
+    }
+
+    const nowTime = new Date().toLocaleString("en-US", {
+      timeZone: "Europe/Madrid",
+      dateStyle: "full",
+      timeStyle: "long",
+    });
+    const channelName = message.channel?.name || "unknown-channel";
+    const channelTopic = message.channel?.topic || "none";
+
+    const envContext = `--- Environment ---\nTime: ${nowTime} (Spain)\nChannel: #${channelName}\nTopic: ${channelTopic}`;
+    const userContext = buildUserContext(message, userWarnCount);
+
+    let serverStatusLines = [];
+    if (twitchLive)
+      serverStatusLines.push(
+        `Currently Live: [Twitch] "${twitchLive.title}" with ${twitchLive.viewers} viewers.`,
+      );
+    if (ytLive)
+      serverStatusLines.push(
+        `Currently Live: [YouTube] "${ytLive.title}" with ${ytLive.viewers} viewers.`,
+      );
+    if (recentWarns > 0)
+      serverStatusLines.push(
+        `Recent Server Activity: ${recentWarns} warning(s) issued in the last 15 minutes.`,
+      );
+
     let upcomingCount = 0;
-    let streamContext = "--- Upcoming Streams ---\n(none)";
+    let upcomingContext = "--- Upcoming Streams ---\n(none)";
     try {
       const upcoming = await getAllUpcomingStreams();
       upcomingCount = upcoming.length;
@@ -220,7 +266,7 @@ async function handleAI(message) {
             : ` ${s.scheduled_start}`;
           return `[${provider}]${cat} "${s.title}" |${ts} | ${s.url}`;
         });
-        streamContext = `--- Upcoming Streams ---\n${lines.join("\n")}`;
+        upcomingContext = `--- Upcoming Streams ---\n${lines.join("\n")}`;
       }
       discordLog("debug", "ai:upcoming-context fetched", {
         userId,
@@ -235,9 +281,16 @@ async function handleAI(message) {
       });
     }
 
-    const userContext = buildUserContext(message);
+    const statusContext = serverStatusLines.length
+      ? `--- Server Status ---\n${serverStatusLines.join("\n")}\n\n${upcomingContext}`
+      : upcomingContext;
 
-    const additionalContext = [userContext, conversationHistory, streamContext]
+    const additionalContext = [
+      envContext,
+      userContext,
+      conversationHistory,
+      statusContext,
+    ]
       .filter(Boolean)
       .join("\n\n");
 
@@ -258,7 +311,7 @@ async function handleAI(message) {
         userMessage: stripped,
         userInfo: userContext,
         conversationHistory: conversationHistory ?? "(none)",
-        streamContext,
+        streamContext: statusContext,
       });
     }
 

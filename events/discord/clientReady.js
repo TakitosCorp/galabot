@@ -20,6 +20,9 @@ module.exports = {
    * @returns {void}
    */
   execute(client) {
+    if (!process.env.BOT_NAME) {
+      process.env.BOT_NAME = client.user.username;
+    }
     setIdleStatus(client);
   },
 };

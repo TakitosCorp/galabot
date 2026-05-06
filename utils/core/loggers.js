@@ -86,6 +86,7 @@ const discordLogger = buildLogger("Discord", "discord.log");
 const dbLogger = buildLogger("DB", "db.log");
 const sysLogger = buildLogger("SYS", "system.log");
 const youtubeLogger = buildLogger("YouTube", "youtube.log");
+const aiLogger = buildLogger("AI", "ai.log");
 
 /**
  * Format an optional context object so it tail-attaches to the log message.
@@ -145,6 +146,14 @@ function youtubeLog(level, message, context) {
   youtubeLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
+/**
+ * Emit a log line on the AI channel (Gemini queries, injected context, retries).
+ * @type {DomainLogFn}
+ */
+function aiLog(level, message, context) {
+  aiLogger.log({ level, message: `${message}${formatContext(context)}` });
+}
+
 module.exports = {
   ensureLogsFolder,
   twitchLog,
@@ -152,4 +161,5 @@ module.exports = {
   dbLog,
   sysLog,
   youtubeLog,
+  aiLog,
 };

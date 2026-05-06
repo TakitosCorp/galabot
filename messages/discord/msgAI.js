@@ -28,7 +28,7 @@
 
 "use strict";
 
-const { discordLog } = require("../../utils/core/loggers");
+const { discordLog, aiLog } = require("../../utils/core/loggers");
 const { queryGemini } = require("../../utils/discord/geminiClient");
 const { enqueue, getQueueLength } = require("../../utils/discord/aiQueue");
 const { getAllUpcomingStreams } = require("../../db/upcomingStreams");
@@ -40,6 +40,100 @@ const { AI_USER_COOLDOWN_MS } = require("../../utils/core/constants");
  * @type {Map<string, number>}
  */
 const lastRequestMs = new Map();
+
+/** Max reply-chain messages included as conversation history. */
+const MAX_HISTORY_DEPTH = 4;
+
+/**
+ * Format a duration in ms into a human-readable string like "2y 3mo" or "5d".
+ * @param {number} ms
+ * @returns {string}
+ */
+function formatDuration(ms) {
+  const days = Math.floor(ms / 86_400_000);
+  if (days < 1) return "less than a day";
+  const years = Math.floor(days / 365);
+  const months = Math.floor((days % 365) / 30);
+  const parts = [];
+  if (years) parts.push(`${years}y`);
+  if (months) parts.push(`${months}mo`);
+  if (!years && !months) parts.push(`${days}d`);
+  return parts.join(" ");
+}
+
+/**
+ * Build a compact user-info block from the incoming message so the model has
+ * context about who it's talking to (display name, server tenure, roles, etc.).
+ *
+ * @param {import('discord.js').Message} message
+ * @returns {string}
+ */
+function buildUserContext(message) {
+  const { author, member } = message;
+  const now = Date.now();
+  const lines = [];
+
+  const displayName = member?.displayName ?? author.username;
+  lines.push(`Username: ${author.username}`);
+  if (displayName !== author.username)
+    lines.push(`Server nickname: ${displayName}`);
+
+  if (member?.joinedAt) {
+    lines.push(
+      `Member since: ${formatDuration(now - member.joinedAt.getTime())} ago`,
+    );
+  }
+
+  if (author.createdAt) {
+    lines.push(
+      `Account age: ${formatDuration(now - author.createdAt.getTime())}`,
+    );
+  }
+
+  const roles = member?.roles?.cache
+    .filter((r) => r.name !== "@everyone")
+    .map((r) => r.name);
+  if (roles?.length) lines.push(`Roles: ${roles.join(", ")}`);
+
+  if (member?.premiumSince) lines.push("Server booster: yes");
+
+  return `--- User Info ---\n${lines.join("\n")}`;
+}
+
+/**
+ * Walk the Discord reply chain up to MAX_HISTORY_DEPTH messages and return
+ * them oldest-first as a formatted context block. Returns null when the
+ * message is not a reply or no referenced messages can be fetched.
+ *
+ * @param {import('discord.js').Message} message
+ * @returns {Promise<string|null>}
+ */
+async function fetchConversationHistory(message) {
+  if (!message.reference) return null;
+
+  const history = [];
+  let current = message;
+
+  for (let i = 0; i < MAX_HISTORY_DEPTH && current.reference; i++) {
+    const ref = await current.channel.messages
+      .fetch(current.reference.messageId)
+      .catch(() => null);
+    if (!ref) break;
+    history.unshift(ref);
+    current = ref;
+  }
+
+  if (!history.length) return null;
+
+  const botName = process.env.BOT_NAME || "Bot";
+  const lines = history.map((msg) => {
+    const label = msg.author.bot ? botName : "User";
+    const text = msg.content.replace(/<@!?\d+>/g, "").trim();
+    return `${label}: ${text}`;
+  });
+
+  return `--- Conversation History ---\n${lines.join("\n")}`;
+}
 
 /**
  * Set of Discord user ids that bypass the per-user cooldown entirely.
@@ -100,6 +194,18 @@ async function handleAI(message) {
       return;
     }
 
+    // Fetch reply-chain history (up to MAX_HISTORY_DEPTH messages back).
+    let conversationHistory = null;
+    try {
+      conversationHistory = await fetchConversationHistory(message);
+    } catch (err) {
+      discordLog("warn", "ai:conversation-history fetch failed", {
+        userId,
+        channelId,
+        err: err.message,
+      });
+    }
+
     let upcomingCount = 0;
     let streamContext = "--- Upcoming Streams ---\n(none)";
     try {
@@ -129,13 +235,32 @@ async function handleAI(message) {
       });
     }
 
+    const userContext = buildUserContext(message);
+
+    const additionalContext = [userContext, conversationHistory, streamContext]
+      .filter(Boolean)
+      .join("\n\n");
+
     discordLog("debug", "ai:queueing gemini", {
       userId,
       channelId,
       contentLength: stripped.length,
       upcomingCount,
+      historyDepth: conversationHistory
+        ? conversationHistory.split("\n").length - 1
+        : 0,
       queueDepth: getQueueLength(),
     });
+    if (process.env.GEMINI_DEBUG_LOG === "true") {
+      aiLog("info", "ai:injected-context", {
+        userId,
+        channelId,
+        userMessage: stripped,
+        userInfo: userContext,
+        conversationHistory: conversationHistory ?? "(none)",
+        streamContext,
+      });
+    }
 
     // Show typing indicator and refresh it every 9 s (Discord clears it after
     // 10 s). It must stay visible across the queue wait, RPM throttle wait, and
@@ -151,7 +276,9 @@ async function handleAI(message) {
     const startMs = Date.now();
     let aiResponse;
     try {
-      aiResponse = await enqueue(() => queryGemini(stripped, streamContext));
+      aiResponse = await enqueue(() =>
+        queryGemini(stripped, additionalContext || null),
+      );
     } finally {
       clearInterval(typingInterval);
     }
@@ -167,6 +294,14 @@ async function handleAI(message) {
       durationMs,
       responseLength: aiResponse.length,
     });
+    if (process.env.GEMINI_DEBUG_LOG === "true") {
+      aiLog("info", "ai:reply sent", {
+        userId,
+        channelId,
+        durationMs,
+        reply: aiResponse,
+      });
+    }
   } catch (err) {
     // Treat both "no key configured" and "quota exhausted on all keys" as
     // expected/recoverable conditions — warn level, no user-facing error.
@@ -178,6 +313,12 @@ async function handleAI(message) {
       userId,
       channelId,
       guildId,
+      err: err.message,
+      stack: err.stack,
+    });
+    aiLog(isExpected ? "warn" : "error", "ai:handleAI failed", {
+      userId,
+      channelId,
       err: err.message,
       stack: err.stack,
     });

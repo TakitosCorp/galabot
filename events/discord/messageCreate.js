@@ -5,8 +5,10 @@
  *  - the ping handler when Gala's personal account (`GALA_USER_ID`) is mentioned,
  *  - the greeting handler when the bot itself is mentioned and the message matches
  *    a known greeting in the user's resolved language,
- *  - the AI handler when the bot itself is mentioned with a non-greeting message, or
- *  - the greeting handler when no mention is present but the message is a greeting.
+ *  - the AI handler when the bot itself is mentioned with a non-greeting message,
+ *    when the message is a reply to the bot, when the bot's name appears in the
+ *    message (case-insensitive), or when no mention is present but the message
+ *    is a greeting.
  *
  * Bot-authored messages and DMs are ignored.
  *
@@ -58,6 +60,18 @@ module.exports = {
       return;
     }
 
+    // Check if replying to the bot or mentioning bot's name (case-insensitive).
+    const isBotReply = message.reference
+      ? (
+          await message.channel.messages
+            .fetch(message.reference.messageId)
+            .catch(() => null)
+        )?.author?.id === client.user.id
+      : false;
+
+    const botNameLower = client.user.username.toLowerCase();
+    const isBotNameMentioned = content.includes(botNameLower);
+
     // Bot @mention → greeting or AI reply.
     if (message.content.includes(`<@${client.user.id}>`)) {
       if (isGreeting) {
@@ -74,6 +88,22 @@ module.exports = {
         });
         await handleAI(message);
       }
+      return;
+    }
+
+    // Reply to bot or bot name mentioned → AI reply (unless greeting).
+    if (
+      (isBotReply || isBotNameMentioned) &&
+      !isGreeting &&
+      process.env.GEMINI_ENABLE !== "false"
+    ) {
+      discordLog("debug", "messageCreate:bot-reply-or-name+ai", {
+        userId: message.author.id,
+        channelId: message.channelId,
+        isBotReply,
+        isBotNameMentioned,
+      });
+      await handleAI(message);
       return;
     }
 

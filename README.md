@@ -37,7 +37,7 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
 - Reaction roles: When `/rules` is posted, configured emoji reactions grant roles automatically. Reactions persist across bot restarts.
 - Greeting responses with a per-user cooldown (greetings on Discord and Twitch share the same cooldown).
 - Auto-moderation: pinging the streamer's personal account (`GALA_USER_ID`) issues a warning automatically (warn → timeout → ban escalation).
-- AI replies: pinging the bot (`@GalaBot`) with a non-greeting message forwards the text to Google Gemini and replies with the result. A 5 s per-user cooldown rejects spam, and a global FIFO queue serialises calls behind a 30 RPM cap so the free-tier quota is never breached (configurable exemptions via `GEMINI_NO_LIMITS_IDS`). Requires `GEMINI_API_KEY` to be set.
+- AI replies via Google Gemini: triggered by @mentioning the bot, replying to one of its messages, or typing its name in a message. Each query automatically injects the sender's server profile (username, tenure, roles, booster status), up to 4 messages of reply-chain history, and upcoming stream data so the bot can answer contextually. A 5 s per-user cooldown rejects spam; a global FIFO queue and 30 RPM cap protect the free-tier quota (configurable via `GEMINI_NO_LIMITS_IDS`). Transient 5xx errors are retried up to twice before surfacing. The bot character name, personality, and all example dialogue live in `data/AIPrompt.md` — edit it without touching code. Requires `GEMINI_API_KEY`.
 - Stream announcements posted as rich embeds with a custom-rendered banner attachment and an optional role mention; the same message is updated when the stream ends with the final stats.
 
 **Twitch**
@@ -212,15 +212,25 @@ Notes:
 
 ### Gemini AI replies (optional)
 
-When `GEMINI_API_KEY` is set (and `GEMINI_ENABLE` is not `false`), bot @-mentions that are not greetings are forwarded to Google Gemini and replied to with the AI response. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). The default model is `gemini-2.5-flash`; check your project's Quotas page for the exact free-tier RPD/RPM/TPM limits, since they vary by account. A global FIFO queue (`utils/discord/aiQueue.js`) and a 5 s per-user cooldown enforce that GalaBot never bursts past `AI_GLOBAL_RPM_LIMIT` requests per minute. The system prompt is `data/AIPrompt.md` — edit it to change personality without touching code. At query time the bot automatically injects upcoming Twitch and YouTube stream data from the `upcoming_streams` DB table into the prompt, so GalaMiau can answer schedule questions accurately.
+When `GEMINI_API_KEY` is set (and `GEMINI_ENABLE` is not `false`), AI replies are triggered by @mentioning the bot, replying to one of its messages, or typing its name (case-insensitive). Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). The default model is `gemma-4-26b-a4b-it`; check your project's Quotas page for exact free-tier limits.
 
-| Variable               | Required | Description                                                                                                                                                              |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GEMINI_API_KEY`       | no       | Google AI Studio API key. Feature is disabled when absent.                                                                                                               |
-| `GEMINI_API_KEY_2`     | no       | Optional fallback API key used automatically when the primary returns 429. After both keys are exhausted, AI replies pause for `GEMINI_QUOTA_COOLDOWN_MS` (1 h default). |
-| `GEMINI_MODEL`         | no       | Model name to use. Defaults to `gemma-4-26b-a4b-it` when unset.                                                                                                          |
-| `GEMINI_NO_LIMITS_IDS` | no       | Comma-separated Discord user IDs that bypass the AI rate limit entirely (useful for the bot owner / trusted users).                                                      |
-| `GEMINI_ENABLE`        | no       | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Defaults to enabled when unset.                                                         |
+Every query builds a context block injected before the user's message:
+1. **User info** — Discord username, server nickname (if set), how long they've been a member, account age, roles, and booster status.
+2. **Conversation history** — up to 4 messages of reply-chain context so the bot doesn't lose thread.
+3. **Upcoming streams** — fetched from the `upcoming_streams` DB table so the bot can answer schedule questions with accurate Discord timestamps.
+
+The bot character, personality, rules, and all example dialogues live in `data/AIPrompt.md`. Template variables (`{{BOT_NAME}}`, `{{GALA_USER_ID}}`) are injected at startup from env/Discord. Edit the file to change personality without touching code.
+
+Transient Gemini errors (5xx / INTERNAL) are retried up to **2 times** with a 2 s delay before the query fails silently to the user. Quota errors (429) switch to the fallback key and then enter a cooldown.
+
+| Variable               | Required | Description                                                                                                                                                                                                   |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`       | no       | Google AI Studio API key. Feature is disabled when absent.                                                                                                                                                    |
+| `GEMINI_API_KEY_2`     | no       | Optional fallback API key used automatically when the primary returns 429. After both keys are exhausted, AI replies pause for `GEMINI_QUOTA_COOLDOWN_MS` (1 h default).                                      |
+| `GEMINI_MODEL`         | no       | Model name to use. Defaults to `gemma-4-26b-a4b-it` when unset.                                                                                                                                               |
+| `GEMINI_NO_LIMITS_IDS` | no       | Comma-separated Discord user IDs that bypass the per-user cooldown entirely (useful for the bot owner / trusted users).                                                                                       |
+| `GEMINI_ENABLE`        | no       | Set to `false` to disable AI replies entirely without removing `GEMINI_API_KEY`. Defaults to enabled when unset.                                                                                              |
+| `GEMINI_DEBUG_LOG`     | no       | Set to `true` to write the full injected context (user info, conversation history, stream data) and the raw model response to `logs/ai.log`. **Off by default** — only enable when debugging prompt behaviour, as it logs user data. |
 
 ### Tunable constants (not env vars)
 
@@ -379,10 +389,17 @@ GalaBot/
 │   ├── twitch.json            Cached Twitch tokens.
 │   ├── resources.json         Greeting/response pool used at runtime.
 │   ├── emojis.json            Custom emoji mapping.
-│   ├── AIPrompt.md            System prompt for Gemini AI replies (edit to change bot personality).
+│   ├── AIPrompt.md            System prompt for Gemini AI replies. Uses {{BOT_NAME}} and {{GALA_USER_ID}} placeholders injected at startup.
 │   └── youtubeCategories.json Cached YouTube category mappings.
 │
 └── logs/                      Winston log output (created on first boot).
+    ├── combined.log           Aggregated output from all loggers.
+    ├── discord.log            Discord-specific events.
+    ├── twitch.log             Twitch-specific events.
+    ├── youtube.log            YouTube-specific events.
+    ├── system.log             Startup/shutdown/fatal events.
+    ├── db.log                 Database operations.
+    └── ai.log                 Gemini AI events (retries, errors; full context if GEMINI_DEBUG_LOG=true).
 ```
 
 ---
@@ -504,6 +521,8 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 | Tune YouTube polling cadence                              | `YOUTUBE_FAST_POLL_MS` and `YOUTUBE_SLOW_POLL_MS` in `utils/constants.js` (mind the quota).                   |
 | Change the stream banner art                              | Edit `templates/streamBanner.html`. Re-run the bot — Puppeteer reloads the file each render.                  |
 | Disable a platform                                        | Set `ENABLE_DISCORD=false` / `ENABLE_TWITCH=false` / `ENABLE_YOUTUBE=false` in `.env`.                        |
+| Change the AI bot personality / rules / examples          | Edit `data/AIPrompt.md`. Use `{{BOT_NAME}}` and `{{GALA_USER_ID}}` as placeholders — injected at startup.      |
+| Debug why the AI is replying unexpectedly                 | Set `GEMINI_DEBUG_LOG=true` in `.env`, restart, and inspect `logs/ai.log` for the full injected context.       |
 
 ---
 
@@ -594,14 +613,15 @@ Stores future Twitch and YouTube streams for AI context injection. Rows are upse
 
 ### Log files
 
-| File                | Contents                                                                 |
-| ------------------- | ------------------------------------------------------------------------ |
-| `logs/combined.log` | Everything from every logger.                                            |
-| `logs/discord.log`  | Discord client events (login, command execution, embed posts).           |
-| `logs/twitch.log`   | Twurple chat connect/disconnect, EventSub subscriptions, viewer polling. |
-| `logs/youtube.log`  | Slow/fast poll outcomes and state transitions.                           |
-| `logs/system.log`   | Startup, shutdown, fatal failures.                                       |
-| `logs/db.log`       | Database operations.                                                     |
+| File                | Contents                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `logs/combined.log` | Everything from every logger.                                                                                                      |
+| `logs/discord.log`  | Discord client events (login, command execution, embed posts, AI reply metadata).                                                  |
+| `logs/twitch.log`   | Twurple chat connect/disconnect, EventSub subscriptions, viewer polling.                                                           |
+| `logs/youtube.log`  | Slow/fast poll outcomes and state transitions.                                                                                     |
+| `logs/system.log`   | Startup, shutdown, fatal failures.                                                                                                 |
+| `logs/db.log`       | Database operations.                                                                                                               |
+| `logs/ai.log`       | AI-specific events: retries, non-quota errors, think-block stripping. When `GEMINI_DEBUG_LOG=true`, also logs injected context and raw responses. |
 
 `docker compose logs -f bot` shows everything that hits stdout.
 
@@ -626,7 +646,10 @@ Run `npm run generate-cmds`. Global slash commands can take a few minutes to pro
 `GALA_USER_ID` must be set to Gala's _personal_ Discord user ID (not the bot's). The bot detects its own @mention via `client.user.id` at runtime — no env var needed for that. `GALA_DISCORD_ID` is the guild/server ID and is unrelated to mention detection.
 
 **AI replies return "I can't reply right now"**
-`GEMINI_API_KEY` is either unset or invalid. Get a key from [Google AI Studio](https://aistudio.google.com/apikey) and set `GEMINI_API_KEY` in `.env`. Also ensure `GEMINI_ENABLE` is not set to `false`. If the model name in `GEMINI_MODEL` is wrong or unavailable on the free tier, requests will fail — leave it unset to use the default `gemini-2.5-flash`.
+`GEMINI_API_KEY` is either unset or invalid. Get a key from [Google AI Studio](https://aistudio.google.com/apikey) and set `GEMINI_API_KEY` in `.env`. Also ensure `GEMINI_ENABLE` is not set to `false`. If the model name in `GEMINI_MODEL` is wrong or unavailable on the free tier, requests will fail — leave it unset to use the default `gemma-4-26b-a4b-it`.
+
+**AI replies feel wrong / bot is ignoring context**
+Set `GEMINI_DEBUG_LOG=true` in `.env` and restart. `logs/ai.log` will show the exact context block (user info, conversation history, stream data) and raw model response for every query. Turn it off again after debugging — it logs user data.
 
 ---
 

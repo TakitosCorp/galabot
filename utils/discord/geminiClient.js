@@ -34,8 +34,13 @@
 const fs = require("fs");
 const path = require("path");
 const { GoogleGenAI } = require("@google/genai");
-const { discordLog, sysLog } = require("../core/loggers");
+const { discordLog, sysLog, aiLog } = require("../core/loggers");
 const { GEMINI_QUOTA_COOLDOWN_MS } = require("../core/constants");
+
+/** Max retries for transient (5xx) Gemini errors before surfacing to caller. */
+const TRANSIENT_RETRY_LIMIT = 2;
+/** Delay in ms between transient-error retries. */
+const TRANSIENT_RETRY_DELAY_MS = 2_000;
 
 const PROMPT_PATH = path.join(__dirname, "..", "..", "data", "AIPrompt.md");
 
@@ -49,6 +54,10 @@ let systemPrompt = fs.readFileSync(PROMPT_PATH, "utf8");
 systemPrompt = systemPrompt.replace(
   /\{\{GALA_USER_ID\}\}/g,
   process.env.GALA_USER_ID || "{{GALA_USER_ID}}",
+);
+systemPrompt = systemPrompt.replace(
+  /\{\{BOT_NAME\}\}/g,
+  process.env.BOT_NAME || "GalaBot",
 );
 systemPrompt = systemPrompt.trim();
 
@@ -110,6 +119,21 @@ function isQuotaError(err) {
 }
 
 /**
+ * Detect whether a thrown error is a transient server-side error (5xx) worth
+ * retrying rather than surfacing immediately to the user.
+ *
+ * @param {unknown} err
+ * @returns {boolean}
+ */
+function isTransientError(err) {
+  if (!err || typeof err !== "object") return false;
+  const status = err.status ?? 0;
+  if (status >= 500 && status < 600) return true;
+  const msg = String(err.message ?? "");
+  return /5\d{2}|INTERNAL|UNAVAILABLE|overloaded/i.test(msg);
+}
+
+/**
  * Send a single user message to the configured Gemini model and return the
  * assistant's reply. Each invocation is stateless — no history is carried over.
  *
@@ -145,10 +169,19 @@ async function queryGemini(userContent, additionalContext = null) {
   parts.push(userContent);
   const resolvedUser = parts.join("\n\n");
 
-  const maxAttempts = process.env.GEMINI_API_KEY_2 ? 2 : 1;
+  const maxKeyAttempts = process.env.GEMINI_API_KEY_2 ? 2 : 1;
   let lastErr = null;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  if (process.env.GEMINI_DEBUG_LOG === "true") {
+    aiLog("debug", "geminiClient:request", {
+      model,
+      userContentLength: userContent.length,
+      contextLength: additionalContext?.length ?? 0,
+      context: additionalContext ?? "(none)",
+    });
+  }
+
+  for (let attempt = 0; attempt < maxKeyAttempts; attempt++) {
     const apiKey = getApiKey();
     discordLog("debug", "geminiClient:queryGemini start", {
       model,
@@ -159,63 +192,91 @@ async function queryGemini(userContent, additionalContext = null) {
     });
 
     const ai = new GoogleGenAI({ apiKey });
-    const startMs = Date.now();
 
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: resolvedUser,
-      });
-
-      const durationMs = Date.now() - startMs;
-      const raw = response.text ?? "";
-
-      const thinkMatches = (raw.match(/<think>[\s\S]*?<\/think>/gi) ?? [])
-        .length;
-      const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-
-      if (thinkMatches > 0) {
-        discordLog("warn", "geminiClient:think-blocks stripped", {
+    // Inner retry loop for transient 5xx errors on the same key.
+    for (let retry = 0; retry <= TRANSIENT_RETRY_LIMIT; retry++) {
+      const startMs = Date.now();
+      try {
+        const response = await ai.models.generateContent({
           model,
-          count: thinkMatches,
-          rawLength: raw.length,
-          cleanedLength: cleaned.length,
+          contents: resolvedUser,
         });
+
+        const durationMs = Date.now() - startMs;
+        const raw = response.text ?? "";
+
+        const thinkMatches = (raw.match(/<think>[\s\S]*?<\/think>/gi) ?? [])
+          .length;
+        const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+        if (thinkMatches > 0) {
+          aiLog("warn", "geminiClient:think-blocks stripped", {
+            model,
+            count: thinkMatches,
+            rawLength: raw.length,
+            cleanedLength: cleaned.length,
+          });
+        }
+
+        discordLog("info", "geminiClient:queryGemini complete", {
+          model,
+          durationMs,
+          responseLength: cleaned.length,
+          thinkBlocksStripped: thinkMatches,
+          usingFallbackKey: state.usingFallbackKey,
+        });
+        if (process.env.GEMINI_DEBUG_LOG === "true") {
+          aiLog("info", "geminiClient:response", {
+            model,
+            durationMs,
+            responseLength: cleaned.length,
+            response: cleaned,
+          });
+        }
+
+        return cleaned;
+      } catch (err) {
+        lastErr = err;
+
+        if (isTransientError(err) && retry < TRANSIENT_RETRY_LIMIT) {
+          aiLog("warn", "geminiClient:transient-error retrying", {
+            model,
+            attempt: attempt + 1,
+            retry: retry + 1,
+            err: err.message,
+          });
+          await new Promise((r) => setTimeout(r, TRANSIENT_RETRY_DELAY_MS));
+          continue;
+        }
+
+        if (!isQuotaError(err)) {
+          aiLog("error", "geminiClient:non-quota error", {
+            model,
+            err: err.message,
+          });
+          throw err;
+        }
+
+        break; // quota error — fall through to key-switching logic
       }
-
-      discordLog("info", "geminiClient:queryGemini complete", {
-        model,
-        durationMs,
-        responseLength: cleaned.length,
-        thinkBlocksStripped: thinkMatches,
-        usingFallbackKey: state.usingFallbackKey,
-      });
-
-      return cleaned;
-    } catch (err) {
-      lastErr = err;
-
-      if (!isQuotaError(err)) {
-        throw err;
-      }
-
-      if (process.env.GEMINI_API_KEY_2 && !state.usingFallbackKey) {
-        discordLog(
-          "warn",
-          "geminiClient:quota primary-exhausted, switching to fallback key",
-          { err: err.message },
-        );
-        state.usingFallbackKey = true;
-        continue;
-      }
-
-      state.quotaExhaustedUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
-      discordLog("error", "geminiClient:quota exhausted on all keys", {
-        cooldownMs: GEMINI_QUOTA_COOLDOWN_MS,
-        err: err.message,
-      });
-      throw new Error("GEMINI quota exhausted");
     }
+
+    if (process.env.GEMINI_API_KEY_2 && !state.usingFallbackKey) {
+      discordLog(
+        "warn",
+        "geminiClient:quota primary-exhausted, switching to fallback key",
+        { err: lastErr.message },
+      );
+      state.usingFallbackKey = true;
+      continue;
+    }
+
+    state.quotaExhaustedUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
+    discordLog("error", "geminiClient:quota exhausted on all keys", {
+      cooldownMs: GEMINI_QUOTA_COOLDOWN_MS,
+      err: lastErr.message,
+    });
+    throw new Error("GEMINI quota exhausted");
   }
 
   throw lastErr ?? new Error("GEMINI quota exhausted");

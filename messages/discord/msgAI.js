@@ -17,6 +17,8 @@
  *
  * Ids in `GEMINI_NO_LIMITS_IDS` bypass the per-user cooldown but still go
  * through the queue and global RPM cap (the upstream limit is hard).
+ * When `GEMINI_WHITELIST_ONLY=true`, only ids in `GEMINI_NO_LIMITS_IDS` may
+ * trigger AI replies at all — all other users are silently ignored.
  *
  * Before each query, upcoming stream data is fetched from the `upcoming_streams`
  * DB table and prepended to the user message (via `queryGemini`) so GalaMiau can
@@ -153,6 +155,13 @@ const noLimitIds = new Set(
 );
 
 /**
+ * When true, only ids in {@link noLimitIds} may trigger AI replies.
+ * All other users are silently ignored.
+ * @type {boolean}
+ */
+const whitelistOnly = process.env.GEMINI_WHITELIST_ONLY === "true";
+
+/**
  * Handle a bot @mention that does not match a greeting. Enforces per-user
  * cooldown, strips the mention from the message, queues a Gemini call, and
  * replies with the AI-generated text once the worker reaches it.
@@ -167,6 +176,11 @@ async function handleAI(message) {
   const guildId = message.guildId;
 
   discordLog("debug", "ai:handleAI", { userId, channelId, guildId });
+
+  if (whitelistOnly && !noLimitIds.has(userId)) {
+    discordLog("debug", "ai:whitelist-only block", { userId, channelId });
+    return;
+  }
 
   try {
     const now = Date.now();

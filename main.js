@@ -18,7 +18,7 @@ const { sysLog } = require("./utils/core/loggers");
  * (`ENABLE_DISCORD`, `ENABLE_TWITCH`, `ENABLE_YOUTUBE`, `SPANISH_CHANNEL_ID`,
  * `YOUTUBE_API_KEY*`, `YOUTUBE_CHANNEL_ID`, `DISCORD_NOTIFICATION_ROLE_ID`,
  * `PUPPETEER_EXECUTABLE_PATH`, `YOUTUBE_SKIP_TITLES`,
- * `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_ENABLE`, `GEMINI_NO_LIMITS_IDS`) are
+ * `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_ENABLE`, `GEMINI_NO_LIMITS_IDS`, `GEMINI_WHITELIST_ONLY`) are
  * intentionally absent — the features they control degrade gracefully when the
  * variables are missing.
  *

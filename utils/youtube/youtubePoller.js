@@ -471,6 +471,41 @@ async function updateWorkflow() {
       }
     }
 
+    // search.list(eventType=upcoming) is unreliable and sometimes omits streams
+    // that are genuinely still scheduled. For every stream that was in the
+    // previous cache but is absent from these results, do a cheap videos.list
+    // call to confirm it's actually gone before dropping it.
+    const newCacheIds = new Set(upcomingCache.map((s) => s.videoId));
+    for (const prev of state.upcomingStreams) {
+      if (newCacheIds.has(prev.videoId)) continue;
+      const verifyStats = await getVideoStats(prev.videoId);
+      const liveBroadcastContent =
+        verifyStats?.items?.[0]?.snippet?.liveBroadcastContent;
+      const verifiedStart =
+        verifyStats?.items?.[0]?.liveStreamingDetails?.scheduledStartTime;
+      if (
+        liveBroadcastContent === "upcoming" &&
+        verifiedStart &&
+        new Date(verifiedStart) > now
+      ) {
+        youtubeLog(
+          "info",
+          "youtubePoller:updateWorkflow search-miss recovered",
+          { videoId: prev.videoId },
+        );
+        upcomingCache.push(prev);
+        newCacheIds.add(prev.videoId);
+        if (!candidates.find((c) => c.videoId === prev.videoId)) {
+          candidates.push(prev);
+        }
+      } else {
+        youtubeLog("debug", "youtubePoller:updateWorkflow search-miss dropped", {
+          videoId: prev.videoId,
+          liveBroadcastContent,
+        });
+      }
+    }
+
     candidates.sort(
       (a, b) =>
         new Date(a.scheduledStart).getTime() -

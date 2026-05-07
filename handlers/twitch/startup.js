@@ -21,6 +21,8 @@ const {
   syncTwitchScheduleEvents,
   syncTwitchUpcomingStreams,
 } = require("../../utils/discord/discordGuildEvents");
+const { setStreamingStatus } = require("../../utils/discord/discordPresence");
+const { getActiveStream } = require("../../db/streams");
 
 /** Interval reference for the hourly Twitch schedule → Discord events sync. */
 const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;
@@ -38,6 +40,21 @@ async function bootstrap(clientManager) {
     clientManager;
   const channelName = process.env.TWITCH_CHANNEL;
   const username = process.env.TWITCH_USERNAME;
+
+  // Rehydrate state from DB if a stream was already live at boot
+  const activeStream = await getActiveStream("twitch");
+  if (activeStream) {
+    twitchLog("info", "twitch:bootstrap rehydrated", {
+      videoId: activeStream.id,
+      title: activeStream.title,
+    });
+    // Set streaming presence if a stream is already live on boot
+    setStreamingStatus(
+      clientManager.discordClient,
+      activeStream.title,
+      `https://twitch.tv/${channelName.replace("#", "")}`,
+    );
+  }
 
   twitchChatClient.onConnect(() => {
     twitchLog("info", "twitch:chat connected", { username });

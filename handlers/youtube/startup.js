@@ -25,6 +25,7 @@ const streamStartHandler = require("../../events/youtube/streamStart");
 const streamEndHandler = require("../../events/youtube/streamEnd");
 const { updateStreamViewers, getActiveStream } = require("../../db/streams");
 const { youtubeLog } = require("../../utils/core/loggers");
+const { setStreamingStatus } = require("../../utils/discord/discordPresence");
 const {
   YOUTUBE_FAST_POLL_MS,
   YOUTUBE_SLOW_POLL_MS,
@@ -268,6 +269,12 @@ async function bootstrap(clientManager) {
       videoId: activeStream.id,
       title: activeStream.title,
     });
+    // Set streaming presence if a stream is already live on boot
+    setStreamingStatus(
+      clientManager.discordClient,
+      activeStream.title,
+      `https://youtube.com/watch?v=${activeStream.id}`,
+    );
   }
 
   await fetchAndCacheCategories();

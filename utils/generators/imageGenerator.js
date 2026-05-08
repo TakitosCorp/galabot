@@ -107,6 +107,7 @@ function getCommonTemplateVars(provider) {
       ? "bg-gradient-to-br from-red-600 to-pink-500"
       : "bg-gradient-to-br from-purple-600 to-pink-500",
     "{{LINK_TEXT}}": isYt ? process.env.YOUTUBE_URL : process.env.TWITCH_URL,
+    "{{THUMB_CLASS}}": isYt ? "w-24 h-14" : "w-12 h-16",
   };
 }
 

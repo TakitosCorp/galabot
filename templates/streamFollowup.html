@@ -64,7 +64,7 @@
 
           el.innerHTML = `
             <div class="col-span-1 flex justify-center">
-              <img src="${stream.gameBoxArtUrl || ''}" class="rounded-md shadow-md w-12 h-16 object-cover">
+              <img src="${stream.gameBoxArtUrl || ''}" class="rounded-md shadow-md {{THUMB_CLASS}} object-cover">
             </div>
             <div class="col-span-5 space-y-0.5">
               <h2 class="text-base font-bold text-gray-900 truncate">${stream.title}</h2>

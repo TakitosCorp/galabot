@@ -518,7 +518,11 @@ async function updateWorkflow() {
     );
     setState({ upcomingStreams: upcomingCache });
 
-    const next = ongoingStream || candidates[0] || null;
+    // When already live and the live-search was skipped (ongoingStream is null),
+    // don't replace the tracked stream with an upcoming candidate — fast poll owns the live state.
+    const next = (state.status === "live" && !ongoingStream)
+      ? null
+      : (ongoingStream || candidates[0] || null);
 
     if (next) {
       const isNewStream = next.videoId !== state.videoId;

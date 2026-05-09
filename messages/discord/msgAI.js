@@ -108,6 +108,46 @@ function buildUserContext(message, warnCount) {
 }
 
 /**
+ * Helper to build user context lines without the header.
+ * @param {import('discord.js').Message} message
+ * @param {number} warnCount
+ * @returns {string[]}
+ */
+function buildUserContextLines(message, warnCount) {
+  const { author, member } = message;
+  const now = Date.now();
+  const lines = [];
+
+  const displayName = member?.displayName ?? author.username;
+  lines.push(`Username: ${author.username}`);
+  if (displayName !== author.username)
+    lines.push(`Server nickname: ${displayName}`);
+
+  if (member?.joinedAt) {
+    lines.push(
+      `Member since: ${formatDuration(now - member.joinedAt.getTime())} ago`,
+    );
+  }
+
+  if (author.createdAt) {
+    lines.push(
+      `Account age: ${formatDuration(now - author.createdAt.getTime())}`,
+    );
+  }
+
+  const roles = member?.roles?.cache
+    .filter((r) => r.name !== "@everyone")
+    .map((r) => r.name);
+  if (roles?.length) lines.push(`Roles: ${roles.join(", ")}`);
+
+  if (member?.premiumSince) lines.push("Server booster: yes");
+
+  if (warnCount > 0) lines.push(`Warnings: ${warnCount}`);
+
+  return lines;
+}
+
+/**
  * Walk the Discord reply chain up to MAX_HISTORY_DEPTH messages and return
  * them oldest-first as a formatted context block. Returns null when the
  * message is not a reply or no referenced messages can be fetched.
@@ -140,6 +180,89 @@ async function fetchConversationHistory(message) {
   });
 
   return `--- Conversation History ---\n${lines.join("\n")}`;
+}
+
+/**
+ * Build thread participant context by walking the reply chain and collecting
+ * all unique participants with their user info.
+ *
+ * @param {import('discord.js').Message} message - The triggering message
+ * @returns {Promise<{context: string, repliedToMsg: import('discord.js').Message|null}>}
+ */
+async function buildThreadParticipantsContext(message) {
+  const participants = new Map(); // userId -> {message, warnCount, isPrimary}
+
+  // Mark the primary user (who triggered the bot)
+  participants.set(message.author.id, {
+    message,
+    warnCount: 0,
+    isPrimary: true,
+  });
+
+  let repliedToMsg = null;
+
+  // Walk the reply chain to collect all participants
+  if (message.reference) {
+    let current = message;
+    let depth = 0;
+
+    while (current.reference && depth < MAX_HISTORY_DEPTH) {
+      try {
+        const repliedTo = await current.channel.messages.fetch(
+          current.reference.messageId,
+        );
+        if (!repliedTo) break;
+
+        // Store the first replied-to message (the one directly being replied to)
+        if (!repliedToMsg) repliedToMsg = repliedTo;
+
+        // Add to participants if not already there
+        if (!participants.has(repliedTo.author.id)) {
+          participants.set(repliedTo.author.id, {
+            message: repliedTo,
+            warnCount: 0,
+            isPrimary: false,
+          });
+        }
+
+        current = repliedTo;
+        depth++;
+      } catch (err) {
+        break;
+      }
+    }
+  }
+
+  // Fetch warn counts for all participants
+  try {
+    const warnPromises = Array.from(participants.entries()).map(
+      ([userId, info]) =>
+        getWarnCount(userId)
+          .then((count) => {
+            participants.set(userId, { ...info, warnCount: count });
+          })
+          .catch(() => {
+            // Keep existing warnCount on error
+          }),
+    );
+    await Promise.all(warnPromises);
+  } catch (err) {
+    discordLog("warn", "ai:warn-counts fetch failed", { err: err.message });
+  }
+
+  // Build context string
+  const participantLines = Array.from(participants.entries())
+    .map(([userId, info]) => {
+      const userLines = buildUserContextLines(info.message, info.warnCount);
+      const primaryMarker = info.isPrimary ? " (PRIMARY - triggered bot)" : "";
+      return `--- Participant: ${info.message.author.username}${primaryMarker} ---\n${userLines.join(
+        "\n",
+      )}`;
+    });
+
+  const context = `--- Thread Participants ---\n${participantLines.join("\n\n")}`;
+
+  return { context, repliedToMsg };
 }
 
 /**
@@ -225,6 +348,21 @@ async function handleAI(message) {
       });
     }
 
+    // Build thread participant context
+    let participantContext = null;
+    let repliedToMessage = null;
+    try {
+      const result = await buildThreadParticipantsContext(message);
+      participantContext = result.context;
+      repliedToMessage = result.repliedToMsg;
+    } catch (err) {
+      discordLog("warn", "ai:thread-participants fetch failed", {
+        userId,
+        channelId,
+        err: err.message,
+      });
+    }
+
     let userWarnCount = 0;
     let recentWarns = 0;
     let twitchLive = null;
@@ -299,9 +437,21 @@ async function handleAI(message) {
       ? `--- Server Status ---\n${serverStatusLines.join("\n")}\n\n${upcomingContext}`
       : upcomingContext;
 
+    // Build replied-to message context if this is a reply to another user's message
+    let repliedToContext = null;
+    if (repliedToMessage && !repliedToMessage.author.bot) {
+      const repliedAuthor = repliedToMessage.author.username;
+      const repliedText = repliedToMessage.content
+        .replace(/<@!?\d+>/g, "")
+        .trim();
+      repliedToContext = `--- Original Message (replied to) ---\nFrom: ${repliedAuthor}\nMessage: ${repliedText}`;
+    }
+
     const additionalContext = [
+      participantContext,
       envContext,
       userContext,
+      repliedToContext,
       conversationHistory,
       statusContext,
     ]
@@ -316,6 +466,10 @@ async function handleAI(message) {
       historyDepth: conversationHistory
         ? conversationHistory.split("\n").length - 1
         : 0,
+      participantCount: participantContext
+        ? (participantContext.match(/--- Participant:/g) || []).length
+        : 0,
+      hasRepliedTo: !!repliedToContext,
       queueDepth: getQueueLength(),
     });
     if (process.env.GEMINI_DEBUG_LOG === "true") {
@@ -323,7 +477,8 @@ async function handleAI(message) {
         userId,
         channelId,
         userMessage: stripped,
-        userInfo: userContext,
+        threadParticipants: participantContext ?? "(none)",
+        repliedToMessage: repliedToContext ?? "(none)",
         conversationHistory: conversationHistory ?? "(none)",
         streamContext: statusContext,
       });

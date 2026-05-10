@@ -498,6 +498,18 @@ async function updateWorkflow() {
         if (!candidates.find((c) => c.videoId === prev.videoId)) {
           candidates.push(prev);
         }
+      } else if (liveBroadcastContent === "live" && !ongoingStream) {
+        youtubeLog(
+          "info",
+          "youtubePoller:updateWorkflow search-miss live-promoted",
+          { videoId: prev.videoId },
+        );
+        const liveData =
+          extractStreamData(prev.videoId, verifyStats) ?? { ...prev };
+        ongoingStream = liveData;
+        if (!candidates.find((c) => c.videoId === prev.videoId)) {
+          candidates.push(liveData);
+        }
       } else {
         youtubeLog("debug", "youtubePoller:updateWorkflow search-miss dropped", {
           videoId: prev.videoId,

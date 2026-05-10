@@ -117,12 +117,10 @@ async function createGuildStreamEvent(discordClient, opts) {
         fetchedEvent &&
         (fetchedEvent.status === GuildScheduledEventStatus.Completed ||
           fetchedEvent.status === GuildScheduledEventStatus.Canceled);
-      const isActiveAndStartChanged =
-        fetchedEvent &&
-        fetchedEvent.status === GuildScheduledEventStatus.Active &&
-        startChanged;
+      const isActive =
+        fetchedEvent?.status === GuildScheduledEventStatus.Active;
 
-      if (!fetchedEvent || isFinished || isActiveAndStartChanged) {
+      if (!fetchedEvent || isFinished || isActive) {
         if (fetchedEvent) {
           discordLog(
             "info",

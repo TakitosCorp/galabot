@@ -49,7 +49,7 @@ async function resetGlobalCommands() {
     console.log(`[✅] All commands have been deleted successfully.`);
 
     const globalCommands = [];
-    const commandsDir = path.join(__dirname, "../commands/discord");
+    const commandsDir = path.join(__dirname, "../../commands/discord");
     const commandFiles = fs
       .readdirSync(commandsDir)
       .filter((archivo) => archivo.endsWith(".js"));

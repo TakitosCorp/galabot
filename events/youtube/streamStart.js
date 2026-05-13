@@ -143,6 +143,7 @@ async function streamStart(clientManager, streamState) {
       viewers: 0,
       thumbnail: thumbnail || null,
       discMsgId: sentMessage.id,
+      category,
     });
 
     await activateGuildStreamEvent(discordClient, videoId);

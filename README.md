@@ -33,10 +33,11 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
 
 **Discord**
 
-- Slash commands: `/rules` (post or DM the server rules) and `/warn` (warn → timeout → ban escalation).
+- Slash commands: `/rules` (post or DM the server rules), `/warn` (warn → timeout → ban escalation), and `/scam-image` (manage the scam image hash database).
 - Reaction roles: When `/rules` is posted, configured emoji reactions grant roles automatically. Reactions persist across bot restarts.
 - Greeting responses with a per-user cooldown (greetings on Discord and Twitch share the same cooldown).
 - Auto-moderation: pinging the streamer's personal account (`GALA_USER_ID`) issues a warning automatically (warn → timeout → ban escalation).
+- Scam image detection: every incoming message with an image attachment is compared against a database of known scam image perceptual hashes. On a match the message is deleted and the author is permanently banned. Hashes are registered by administrators via `/scam-image add` and are resilient to minor resizing and cropping (blockhash 256-bit, Hamming distance threshold).
 - AI replies via Google Gemini: triggered by @mentioning the bot, replying to one of its messages, or typing its name in a message. Each query automatically injects the sender's server profile (username, tenure, roles, booster status), up to 4 messages of reply-chain history, and upcoming stream data so the bot can answer contextually. A 5 s per-user cooldown rejects spam; a global FIFO queue and 30 RPM cap protect the free-tier quota (configurable via `GEMINI_NO_LIMITS_IDS`). Transient 5xx errors are retried up to twice before surfacing. The bot character name, personality, and all example dialogue live in `data/AIPrompt.md` — edit it without touching code. Requires `GEMINI_API_KEY`.
 - Stream announcements posted as rich embeds with a custom-rendered banner attachment and an optional role mention; the same message is updated when the stream ends with the final stats.
 
@@ -347,6 +348,8 @@ If you tighten `YOUTUBE_SLOW_POLL_MS` to faster than ~25 minutes you'll start to
 | Rebuild and restart     | `bash init.sh`                 | Convenience wrapper.                                     |
 | Tail logs               | `docker compose logs -f bot`   | All Winston output.                                      |
 | Register slash commands | `npm run generate-cmds`        | Or `docker compose exec bot node utils/generateCmds.js`. |
+| Format source files     | `npm run format`               | Runs Prettier over all `*.js` files.                     |
+| Check formatting (CI)   | `npm run format:check`         | Exits non-zero if any file is not formatted.             |
 
 The bot handles `SIGTERM` and `SIGINT` gracefully: it stops Twitch viewer polling, closes Puppeteer, clears YouTube intervals, destroys the Discord client, and disconnects Twitch chat + EventSub before exiting.
 
@@ -364,6 +367,8 @@ GalaBot/
 ├── init.sh                    Rebuild-and-restart helper.
 ├── .env.example               Template — copy to .env and fill in.
 │
+├── .prettierrc                Prettier config (double quotes, semicolons, 2-space indent, 80-char width).
+│
 ├── commands/discord/          Slash commands. Auto-loaded; one file per command.
 │
 ├── events/                    Event handlers, organized by platform.
@@ -378,8 +383,13 @@ GalaBot/
 ├── lang/                      Localized strings (en + es).
 │
 ├── db/                        Kysely-backed SQLite layer.
+│   ├── database.js            Schema creation and migrations.
+│   ├── warns.js               Warn read/write helpers.
+│   ├── scamHashes.js          Scam image hash CRUD.
+│   └── …                      Other topical helpers (greetings, streams, etc.).
 │
 ├── utils/                     Shared helpers.
+│   └── discord/imageHash.js   Perceptual hash utilities (computeHash, hammingDistance, isSimilar).
 │
 ├── templates/                 Unified HTML templates for Puppeteer.
 │   ├── streamBanner.html      Live stream template.
@@ -437,6 +447,18 @@ module.exports = {
 ```
 
 After adding a new file, run `npm run generate-cmds` to push it to Discord — the auto-loader makes the bot _aware_ of the command, but Discord still needs the schema registered.
+
+**Current commands**
+
+| Command | Permission | Description |
+| --- | --- | --- |
+| `/rules` | Manage Messages | Posts or DMs the server rules embed with reaction roles. |
+| `/warn` | Manage Messages | Issues a warning. Escalates: warn → timeout → ban at threshold. |
+| `/scam-image add` | Administrator | Downloads up to 3 image attachments, computes their perceptual hash, and stores them in `scam_image_hashes`. |
+| `/scam-image list` | Administrator | Lists all registered hashes with their IDs and optional descriptions. |
+| `/scam-image remove` | Administrator | Deletes a registered hash by its database ID. |
+| `/ai-docs` | — | Posts AI usage documentation. |
+| `/force-polling` | Administrator | Forces an immediate YouTube poll cycle. |
 
 ### Discord event auto-loading
 
@@ -525,6 +547,11 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 | Disable a platform                                        | Set `ENABLE_DISCORD=false` / `ENABLE_TWITCH=false` / `ENABLE_YOUTUBE=false` in `.env`.                        |
 | Change the AI bot personality / rules / examples          | Edit `data/AIPrompt.md`. Use `{{BOT_NAME}}` and `{{GALA_USER_ID}}` as placeholders — injected at startup.     |
 | Debug why the AI is replying unexpectedly                 | Set `GEMINI_DEBUG_LOG=true` in `.env`, restart, and inspect `logs/ai.log` for the full injected context.      |
+| Register a known scam image                               | Run `/scam-image add image1:<attachment>` as an Administrator. Up to 3 images per call; optional `description:` note. |
+| Review registered scam hashes                             | Run `/scam-image list` to see all IDs, hash previews, and dates.                                              |
+| Remove a false-positive scam hash                         | Run `/scam-image remove id:<id>` with the ID shown by `/scam-image list`.                                     |
+| Tune scam image similarity threshold                      | Edit `HASH_THRESHOLD` in `utils/discord/imageHash.js` (default `10` out of 256 bits, ~4%).                   |
+| Format all source files                                   | Run `npm run format`. Run `npm run format:check` in CI to verify without writing.                             |
 
 ---
 
@@ -594,6 +621,18 @@ Tracks messages with reaction roles enabled (for persistent role assignment acro
 | `guild_id`   | text                   | Discord guild (server) ID.                                                      |
 | `group_name` | text (default `RULES`) | Env var group name — drives which `REACTION_ROLE_{GROUP}_EMOJI*` vars are used. |
 | `created_at` | datetime               | When the message was tracked.                                                   |
+
+### `scam_image_hashes`
+
+Stores perceptual hashes of known scam images. On every incoming message with an image attachment, the bot computes the attachment's blockhash and compares it against every row here using Hamming distance. A match (≤ 10 bits different out of 256) triggers an auto-ban.
+
+| Column        | Type               | Purpose                                                  |
+| ------------- | ------------------ | -------------------------------------------------------- |
+| `id`          | integer (PK, auto) | Row ID. Used by `/scam-image remove`.                    |
+| `hash`        | text               | 64-char hex blockhash (256-bit, computed with `image-hash` + `sharp`). |
+| `description` | text (nullable)    | Optional admin note set via `/scam-image add description:`. |
+| `added_by`    | text               | Discord user ID of the admin who registered the hash.    |
+| `added_at`    | integer            | Unix timestamp (ms) when the hash was added.             |
 
 ### `upcoming_streams`
 

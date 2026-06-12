@@ -56,6 +56,10 @@ function readPrompt() {
     process.env.GALA_USER_ID || "{{GALA_USER_ID}}",
   );
   raw = raw.replace(/\{\{BOT_NAME\}\}/g, process.env.BOT_NAME || "GalaBot");
+  raw = raw.replace(
+    /\{\{MOD_ROLE_ID\}\}/g,
+    process.env.MOD_ROLE_ID || "{{MOD_ROLE_ID}}",
+  );
   return raw.trim();
 }
 

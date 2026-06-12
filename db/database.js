@@ -114,6 +114,16 @@ async function initialize() {
         .addColumn("category", "text")
         .addColumn("scheduled_start_ts", "integer")
         .execute();
+
+      await trx.schema
+        .createTable("scam_image_hashes")
+        .ifNotExists()
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("hash", "text", (col) => col.notNull())
+        .addColumn("description", "text")
+        .addColumn("added_by", "text", (col) => col.notNull())
+        .addColumn("added_at", "integer", (col) => col.notNull())
+        .execute();
     });
 
     const streamsInfo = sqliteDb.pragma("table_info(streams)");

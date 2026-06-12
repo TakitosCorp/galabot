@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node main.js",
     "generate-cmds": "node utils/generators/generateCmds.js",
-    "sync-emojis": "node utils/generators/botEmojis.js"
+    "sync-emojis": "node utils/generators/botEmojis.js",
+    "format": "prettier --write \"**/*.js\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.js\" --ignore-path .gitignore"
   },
   "type": "commonjs",
   "dependencies": {
@@ -20,8 +22,13 @@
     "discord-api-types": "^0.38.18",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
+    "image-hash": "^7.0.1",
     "kysely": "^0.28.4",
     "puppeteer": "^24.16.1",
+    "sharp": "^0.35.1",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.4"
   }
 }

@@ -251,14 +251,15 @@ async function buildThreadParticipantsContext(message) {
   }
 
   // Build context string
-  const participantLines = Array.from(participants.entries())
-    .map(([userId, info]) => {
+  const participantLines = Array.from(participants.entries()).map(
+    ([userId, info]) => {
       const userLines = buildUserContextLines(info.message, info.warnCount);
       const primaryMarker = info.isPrimary ? " (PRIMARY - triggered bot)" : "";
       return `--- Participant: ${info.message.author.username}${primaryMarker} ---\n${userLines.join(
         "\n",
       )}`;
-    });
+    },
+  );
 
   const context = `--- Thread Participants ---\n${participantLines.join("\n\n")}`;
 

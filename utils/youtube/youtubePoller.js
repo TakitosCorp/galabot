@@ -504,17 +504,22 @@ async function updateWorkflow() {
           "youtubePoller:updateWorkflow search-miss live-promoted",
           { videoId: prev.videoId },
         );
-        const liveData =
-          extractStreamData(prev.videoId, verifyStats) ?? { ...prev };
+        const liveData = extractStreamData(prev.videoId, verifyStats) ?? {
+          ...prev,
+        };
         ongoingStream = liveData;
         if (!candidates.find((c) => c.videoId === prev.videoId)) {
           candidates.push(liveData);
         }
       } else {
-        youtubeLog("debug", "youtubePoller:updateWorkflow search-miss dropped", {
-          videoId: prev.videoId,
-          liveBroadcastContent,
-        });
+        youtubeLog(
+          "debug",
+          "youtubePoller:updateWorkflow search-miss dropped",
+          {
+            videoId: prev.videoId,
+            liveBroadcastContent,
+          },
+        );
       }
     }
 
@@ -532,9 +537,10 @@ async function updateWorkflow() {
 
     // When already live and the live-search was skipped (ongoingStream is null),
     // don't replace the tracked stream with an upcoming candidate — fast poll owns the live state.
-    const next = (state.status === "live" && !ongoingStream)
-      ? null
-      : (ongoingStream || candidates[0] || null);
+    const next =
+      state.status === "live" && !ongoingStream
+        ? null
+        : ongoingStream || candidates[0] || null;
 
     if (next) {
       const isNewStream = next.videoId !== state.videoId;

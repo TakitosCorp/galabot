@@ -53,7 +53,8 @@ module.exports = {
       },
     ],
     embedFooter: "Tiny arms, big rules. Behave, fossil 💜",
-    logPosted: (username) => `AI docs posted in channel by request of ${username}`,
+    logPosted: (username) =>
+      `AI docs posted in channel by request of ${username}`,
   },
   es: {
     embedTitle: "CÓMO CHATEAR CONMIGO",

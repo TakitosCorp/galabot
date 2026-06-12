@@ -17,12 +17,121 @@
 
 "use strict";
 
+const { PermissionFlagsBits } = require("discord.js");
+const axios = require("axios");
 const resources = require("../../data/resources.json");
 const { handleHello } = require("../../messages/discord/msgHello");
 const { handlePing } = require("../../messages/discord/msgPing");
 const { handleAI } = require("../../messages/discord/msgAI");
 const { getLanguage } = require("../../utils/core/language");
 const { discordLog } = require("../../utils/core/loggers");
+const { getAllScamHashes } = require("../../db/scamHashes");
+const { computeHash, isSimilar } = require("../../utils/discord/imageHash");
+
+/**
+ * Download, hash, and compare every image attachment against registered scam hashes.
+ * Deletes the message and bans the author if a match is found.
+ *
+ * @async
+ * @param {import('discord.js').Message} message
+ * @returns {Promise<boolean>} true when a scam was detected and action was taken.
+ */
+async function handleScamImageCheck(message) {
+  const imageAttachments = [...message.attachments.values()].filter((a) =>
+    a.contentType?.startsWith("image/"),
+  );
+  if (imageAttachments.length === 0) return false;
+
+  let knownHashes;
+  try {
+    knownHashes = await getAllScamHashes();
+  } catch (err) {
+    discordLog("error", "messageCreate:scam-check db failed", {
+      err: err.message,
+    });
+    return false;
+  }
+  if (knownHashes.length === 0) return false;
+
+  for (const att of imageAttachments) {
+    let buffer;
+    try {
+      const response = await axios.get(att.url, {
+        responseType: "arraybuffer",
+      });
+      buffer = Buffer.from(response.data);
+    } catch (err) {
+      discordLog("warn", "messageCreate:scam-check download failed", {
+        url: att.url,
+        err: err.message,
+      });
+      continue;
+    }
+
+    let hash;
+    try {
+      hash = await computeHash(buffer);
+    } catch (err) {
+      discordLog("warn", "messageCreate:scam-check hash failed", {
+        err: err.message,
+      });
+      continue;
+    }
+
+    const matched = knownHashes.find((row) => isSimilar(row.hash, hash));
+    if (!matched) continue;
+
+    discordLog("info", "messageCreate:scam-detected", {
+      userId: message.author.id,
+      username: message.author.username,
+      channelId: message.channelId,
+      matchedHashId: matched.id,
+    });
+
+    try {
+      await message.delete();
+    } catch (err) {
+      discordLog("warn", "messageCreate:scam-delete failed", {
+        err: err.message,
+      });
+    }
+
+    const member = message.member;
+    if (!member || member.permissions.has(PermissionFlagsBits.Administrator)) {
+      discordLog("warn", "messageCreate:scam-skip-ban", {
+        userId: message.author.id,
+        reason: !member ? "no member" : "is admin",
+      });
+      return true;
+    }
+
+    if (
+      message.guild.members.me?.permissions.has(PermissionFlagsBits.BanMembers)
+    ) {
+      try {
+        await member.ban({ reason: "Scam detected: known scam image." });
+        discordLog("info", "messageCreate:scam-banned", {
+          userId: message.author.id,
+          username: message.author.username,
+        });
+      } catch (err) {
+        discordLog("error", "messageCreate:scam-ban failed", {
+          userId: message.author.id,
+          err: err.message,
+          stack: err.stack,
+        });
+      }
+    } else {
+      discordLog("warn", "messageCreate:scam-no-ban-perms", {
+        userId: message.author.id,
+      });
+    }
+
+    return true;
+  }
+
+  return false;
+}
 
 /** @type {DiscordEventHandler} */
 module.exports = {
@@ -36,6 +145,11 @@ module.exports = {
    */
   async execute(message, client, clientManager) {
     if (message.author.bot || !message.guild) return;
+
+    if (message.attachments.size > 0) {
+      const scamDetected = await handleScamImageCheck(message);
+      if (scamDetected) return;
+    }
 
     const lang = getLanguage(message.channelId);
 

@@ -5,37 +5,110 @@
  * database used by the automated scam-image ban system.
  *
  * Subcommands:
- *  - `add`    — register one to three images (computes blockhash, stores in DB).
- *  - `list`   — display all registered hashes.
+ *  - `add`    — register up to four images (computes blockhash, saves thumbnail, stores in DB).
+ *  - `list`   — paginated embed (one hash per page) with image preview and navigation buttons.
  *  - `remove` — delete a hash by its database ID.
+ *  - `check`  — test whether an image would trigger the ban without posting it publicly.
  *
  * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
 
+const path = require("path");
+const fs = require("fs");
 const {
   SlashCommandBuilder,
   EmbedBuilder,
+  AttachmentBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   PermissionFlagsBits,
   InteractionContextType,
   MessageFlags,
 } = require("discord.js");
 const axios = require("axios");
+const sharp = require("sharp");
 const {
   addScamHash,
+  updateScamHashFilename,
   listScamHashes,
+  getAllScamHashes,
   removeScamHash,
 } = require("../../db/scamHashes");
-const { computeHash } = require("../../utils/discord/imageHash");
+const {
+  computeHash,
+  hammingDistance,
+  isSimilar,
+} = require("../../utils/discord/imageHash");
 const { discordLog } = require("../../utils/core/loggers");
+
+const dataDir = path.join(__dirname, "../../data");
+const scamImagesDir = path.join(dataDir, "scam-images");
+
+/**
+ * Build a single paginated list page for a given index.
+ * Returns the embed, an optional image attachment, and an optional navigation row.
+ *
+ * @param {Array} hashes - Full ordered list from listScamHashes().
+ * @param {number} page - Zero-based page index.
+ * @returns {{ embed: EmbedBuilder, attachment: AttachmentBuilder|null, row: ActionRowBuilder|null }}
+ */
+function buildListPage(hashes, page) {
+  const total = hashes.length;
+  const entry = hashes[page];
+  const date = new Date(entry.added_at).toLocaleDateString("en-US");
+
+  const embed = new EmbedBuilder()
+    .setColor(0xff4444)
+    .setTitle("Scam image hashes")
+    .addFields(
+      { name: "Hash", value: `\`${entry.hash}\``, inline: false },
+      {
+        name: "Description",
+        value: entry.description || "*No description*",
+        inline: true,
+      },
+      { name: "Added by", value: `<@${entry.added_by}>`, inline: true },
+      { name: "Date", value: date, inline: true },
+    )
+    .setFooter({ text: `Page ${page + 1} / ${total} · ID ${entry.id}` });
+
+  let attachment = null;
+  if (entry.filename) {
+    const thumbPath = path.join(scamImagesDir, entry.filename);
+    if (fs.existsSync(thumbPath)) {
+      attachment = new AttachmentBuilder(thumbPath, { name: entry.filename });
+      embed.setImage(`attachment://${entry.filename}`);
+    }
+  }
+
+  let row = null;
+  if (total > 1) {
+    row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`scam-list:page:${page - 1}`)
+        .setLabel("◀")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === 0),
+      new ButtonBuilder()
+        .setCustomId(`scam-list:page:${page + 1}`)
+        .setLabel("▶")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === total - 1),
+    );
+  }
+
+  return { embed, attachment, row };
+}
 
 /**
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  */
 async function handleAdd(interaction) {
   const description = interaction.options.getString("description");
-  const attachments = ["image1", "image2", "image3"]
+  const attachments = ["image1", "image2", "image3", "image4"]
     .map((key) => interaction.options.getAttachment(key))
     .filter(Boolean)
     .filter((a) => a.contentType?.startsWith("image/"));
@@ -54,17 +127,24 @@ async function handleAdd(interaction) {
 
   for (const att of attachments) {
     try {
-      const response = await axios.get(att.url, {
-        responseType: "arraybuffer",
-      });
+      const response = await axios.get(att.url, { responseType: "arraybuffer" });
       const buffer = Buffer.from(response.data);
       const hash = await computeHash(buffer);
-      await addScamHash(hash, description, interaction.user.id);
+      const insertedId = await addScamHash(hash, description, interaction.user.id);
+
+      const filename = `${insertedId}.webp`;
+      await sharp(buffer)
+        .resize({ width: 300, height: 300, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 60 })
+        .toFile(path.join(scamImagesDir, filename));
+      await updateScamHashFilename(insertedId, filename);
+
       added++;
       discordLog("info", "scamimage:add registered", {
         hash: hash.slice(0, 8),
         by: interaction.user.id,
         filename: att.name,
+        id: insertedId,
       });
     } catch (err) {
       discordLog("error", "scamimage:add failed", {
@@ -96,21 +176,14 @@ async function handleList(interaction) {
     });
   }
 
-  const embed = new EmbedBuilder()
-    .setColor(0xff4444)
-    .setTitle("Scam image hashes")
-    .setDescription(`Total registered: **${hashes.length}**`);
+  const { embed, attachment, row } = buildListPage(hashes, 0);
 
-  for (const row of hashes.slice(0, 25)) {
-    const date = new Date(row.added_at).toLocaleDateString("en-US");
-    embed.addFields({
-      name: `ID ${row.id} — ${date}`,
-      value: `\`${row.hash.slice(0, 16)}…\`${row.description ? `\n${row.description}` : ""}`,
-      inline: true,
-    });
-  }
-
-  return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+  return interaction.reply({
+    embeds: [embed],
+    files: attachment ? [attachment] : [],
+    components: row ? [row] : [],
+    flags: MessageFlags.Ephemeral,
+  });
 }
 
 /**
@@ -134,8 +207,75 @@ async function handleRemove(interaction) {
   });
 }
 
+/**
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ */
+async function handleCheck(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const att = interaction.options.getAttachment("image1");
+
+  if (!att.contentType?.startsWith("image/")) {
+    return interaction.editReply({ content: "Please provide a valid image attachment." });
+  }
+
+  let buffer;
+  try {
+    const response = await axios.get(att.url, { responseType: "arraybuffer" });
+    buffer = Buffer.from(response.data);
+  } catch (err) {
+    return interaction.editReply({
+      content: `Failed to download image: ${err.message}`,
+    });
+  }
+
+  let hash;
+  try {
+    hash = await computeHash(buffer);
+  } catch (err) {
+    return interaction.editReply({
+      content: `Failed to hash image: ${err.message}`,
+    });
+  }
+
+  const knownHashes = await getAllScamHashes();
+
+  if (knownHashes.length === 0) {
+    return interaction.editReply({ content: "ℹ️ No scam hashes registered yet." });
+  }
+
+  let minDist = Infinity;
+  let closest = null;
+  for (const row of knownHashes) {
+    const dist = hammingDistance(row.hash, hash);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = row;
+    }
+  }
+
+  discordLog("info", "scamimage:check", {
+    by: interaction.user.id,
+    minDist,
+    closestId: closest.id,
+    matched: isSimilar(closest.hash, hash),
+  });
+
+  if (isSimilar(closest.hash, hash)) {
+    return interaction.editReply({
+      content: `✅ **Match found!**\nID **${closest.id}**${closest.description ? ` — ${closest.description}` : ""}\nHamming distance: **${minDist}/256 bits**`,
+    });
+  }
+
+  return interaction.editReply({
+    content: `❌ **No match.** Closest: ID **${closest.id}** at **${minDist}/256 bits** (threshold is 10).`,
+  });
+}
+
 /** @type {DiscordSlashCommand} */
 module.exports = {
+  buildListPage,
+
   data: new SlashCommandBuilder()
     .setName("scam-image")
     .setDescription("Manage the scam image hash database.")
@@ -157,6 +297,9 @@ module.exports = {
         .addAttachmentOption((opt) =>
           opt.setName("image3").setDescription("Third scam image (optional)."),
         )
+        .addAttachmentOption((opt) =>
+          opt.setName("image4").setDescription("Fourth scam image (optional)."),
+        )
         .addStringOption((opt) =>
           opt
             .setName("description")
@@ -164,7 +307,9 @@ module.exports = {
         ),
     )
     .addSubcommand((sub) =>
-      sub.setName("list").setDescription("List all registered scam hashes."),
+      sub
+        .setName("list")
+        .setDescription("List all registered scam hashes."),
     )
     .addSubcommand((sub) =>
       sub
@@ -176,6 +321,17 @@ module.exports = {
             .setDescription("ID of the hash to remove.")
             .setRequired(true)
             .setMinValue(1),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("check")
+        .setDescription("Test if an image would trigger the scam ban.")
+        .addAttachmentOption((opt) =>
+          opt
+            .setName("image1")
+            .setDescription("Image to test.")
+            .setRequired(true),
         ),
     ),
 
@@ -191,5 +347,6 @@ module.exports = {
     if (sub === "add") return handleAdd(interaction);
     if (sub === "list") return handleList(interaction);
     if (sub === "remove") return handleRemove(interaction);
+    if (sub === "check") return handleCheck(interaction);
   },
 };

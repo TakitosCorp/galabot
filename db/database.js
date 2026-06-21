@@ -18,6 +18,11 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+const scamImagesDir = path.join(dataDir, "scam-images");
+if (!fs.existsSync(scamImagesDir)) {
+  fs.mkdirSync(scamImagesDir, { recursive: true });
+}
+
 const sqliteDb = new Database(path.join(dataDir, "galabot.sqlite"));
 
 const db = new Kysely({
@@ -216,6 +221,12 @@ async function initialize() {
           "db:migration added scheduled_start_ts to upcoming_streams",
         );
       }
+    }
+
+    const scamInfo = sqliteDb.pragma("table_info(scam_image_hashes)");
+    if (scamInfo.length > 0 && !scamInfo.map((c) => c.name).includes("filename")) {
+      sqliteDb.exec("ALTER TABLE scam_image_hashes ADD COLUMN filename text");
+      dbLog("info", "db:migration added filename to scam_image_hashes");
     }
 
     dbLog("info", "db:initialize complete");

@@ -14,6 +14,8 @@
 const { InteractionType, MessageFlags } = require("discord.js");
 const { discordLog } = require("../../utils/core/loggers");
 const { getLanguage } = require("../../utils/core/language");
+const { listScamHashes } = require("../../db/scamHashes");
+const { buildListPage } = require("../../commands/discord/scamimage");
 
 /**
  * Look up and execute the slash command associated with `interaction`. On error,
@@ -88,6 +90,30 @@ module.exports = {
   async execute(interaction, client, clientManager) {
     if (interaction.type === InteractionType.ApplicationCommand) {
       await executeCommand(interaction, client, clientManager);
+    } else if (interaction.isButton()) {
+      const parts = interaction.customId.split(":");
+      if (parts[0] !== "scam-list") return;
+
+      const page = parseInt(parts[2], 10);
+      const hashes = await listScamHashes();
+
+      if (!hashes.length) {
+        return interaction.update({
+          content: "No hashes registered.",
+          embeds: [],
+          files: [],
+          components: [],
+        });
+      }
+
+      const safePage = Math.max(0, Math.min(page, hashes.length - 1));
+      const { embed, attachment, row } = buildListPage(hashes, safePage);
+
+      await interaction.update({
+        embeds: [embed],
+        files: attachment ? [attachment] : [],
+        components: row ? [row] : [],
+      });
     }
   },
 };

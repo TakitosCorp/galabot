@@ -30,5 +30,8 @@
   },
   "devDependencies": {
     "prettier": "^3.8.4"
+  },
+  "overrides": {
+    "undici": "6.27.0"
   }
 }

@@ -7,7 +7,7 @@
  *
  * Restricted to members with `Manage Messages` permission and to guild contexts.
  *
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
@@ -19,7 +19,7 @@ const {
   InteractionContextType,
 } = require("discord.js");
 const { discordLog } = require("../../utils/core/loggers");
-const strings = require("../../lang/aidocs");
+const strings = require("../../lang/discord/aidocs");
 
 /** @type {DiscordSlashCommand} */
 module.exports = {

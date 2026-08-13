@@ -1,5 +1,5 @@
 /**
- * @module utils/loggers
+ * @module utils/core/loggers
  * @description
  * Winston-backed logging facade. Five domain channels (Twitch, Discord, DB, SYS, YouTube)
  * each write to a dedicated `logs/<channel>.log` file plus a shared `logs/combined.log`

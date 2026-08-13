@@ -17,8 +17,8 @@ const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
  * Send a greeting reply in Twitch chat if the user is past the cooldown window.
  *
  * @async
- * @param {import('../../utils/types').TwitchEventData} eventData
- * @param {import('../../clientManager')} clientManager
+ * @param {import('../../utils/core/types').TwitchEventData} eventData
+ * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
 async function handleHello(eventData, clientManager) {

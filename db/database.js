@@ -23,7 +23,26 @@ if (!fs.existsSync(scamImagesDir)) {
   fs.mkdirSync(scamImagesDir, { recursive: true });
 }
 
-const sqliteDb = new Database(path.join(dataDir, "galabot.sqlite"));
+const runtimeDir = path.join(dataDir, "runtime");
+if (!fs.existsSync(runtimeDir)) {
+  fs.mkdirSync(runtimeDir, { recursive: true });
+}
+
+const sqlitePath = path.join(runtimeDir, "galabot.sqlite");
+
+// One-time migration: earlier versions kept the db at data/galabot.sqlite.
+// If a deploy still has the old file and nothing at the new path yet, move
+// it into place so existing warns/streams/etc. aren't silently orphaned.
+const legacySqlitePath = path.join(dataDir, "galabot.sqlite");
+if (!fs.existsSync(sqlitePath) && fs.existsSync(legacySqlitePath)) {
+  fs.renameSync(legacySqlitePath, sqlitePath);
+  dbLog("info", "database:migrated legacy sqlite path", {
+    from: legacySqlitePath,
+    to: sqlitePath,
+  });
+}
+
+const sqliteDb = new Database(sqlitePath);
 
 const db = new Kysely({
   dialect: new SqliteDialect({

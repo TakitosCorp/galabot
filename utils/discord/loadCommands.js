@@ -4,7 +4,7 @@
  * Shared directory-scan for `commands/discord/*.js`. Used by both the runtime
  * command loader ({@link module:handlers/discord/startup.registerCommands})
  * and the Discord REST publish path ({@link module:utils/discord/publishCommands},
- * `utils/generators/generateCmds.js`) so the two can never read a different
+ * `utils/helpers/generateCmds.js`) so the two can never read a different
  * list of command files from one another.
  *
  * @typedef {import('../core/types').DiscordSlashCommand} DiscordSlashCommand

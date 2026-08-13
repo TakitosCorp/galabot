@@ -6,7 +6,7 @@
  * logged with the full stack and surfaced to the user as an ephemeral message
  * in their resolved language.
  *
- * @typedef {import('../../utils/types').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
  */
 
 "use strict";
@@ -24,7 +24,7 @@ const { buildListPage } = require("../../commands/discord/scamimage");
  * @async
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {import('discord.js').Client} client
- * @param {import('../../clientManager')} clientManager
+ * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
 async function executeCommand(interaction, client, clientManager) {
@@ -84,7 +84,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').Interaction} interaction
    * @param {import('discord.js').Client} client
-   * @param {import('../../clientManager')} clientManager
+   * @param {import('../../handlers/clientManager')} clientManager
    * @returns {Promise<void>}
    */
   async execute(interaction, client, clientManager) {

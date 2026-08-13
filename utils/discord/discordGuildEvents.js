@@ -380,7 +380,7 @@ async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
  * Fetch all upcoming Twitch schedule segments and sync them to Discord Guild Scheduled Events.
  *
  * @async
- * @param {import('../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function syncTwitchScheduleEvents(clientManager) {
@@ -443,7 +443,7 @@ async function syncTwitchScheduleEvents(clientManager) {
  * current as long as Twitch is enabled.
  *
  * @async
- * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function syncTwitchUpcomingStreams(clientManager) {

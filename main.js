@@ -10,7 +10,7 @@
 "use strict";
 
 require("dotenv").config({ quiet: true });
-const ClientManager = require("./clientManager");
+const ClientManager = require("./handlers/clientManager");
 const { sysLog } = require("./utils/core/loggers");
 
 /**

@@ -12,7 +12,7 @@
  *
  * Bot-authored messages and DMs are ignored.
  *
- * @typedef {import('../../utils/types').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
  */
 
 "use strict";
@@ -140,7 +140,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').Message} message - Incoming Discord message.
    * @param {import('discord.js').Client} client - Gateway client (used to resolve the bot's own user id).
-   * @param {import('../../clientManager')} clientManager - Lifecycle owner (unused here).
+   * @param {import('../../handlers/clientManager')} clientManager - Lifecycle owner (unused here).
    * @returns {Promise<void>}
    */
   async execute(message, client, clientManager) {

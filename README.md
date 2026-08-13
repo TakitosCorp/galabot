@@ -103,7 +103,7 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
             │  (all providers)   │    │                      │
             └────────────────────┘    └──────────────────────┘
 
-         Logging is per-platform via Winston (utils/loggers.js → logs/*.log)
+         Logging is per-platform via Winston (utils/core/loggers.js → logs/*.log)
 ```
 
 Three properties worth keeping in mind as you read the code:
@@ -358,7 +358,6 @@ The bot handles `SIGTERM` and `SIGINT` gracefully: it stops Twitch viewer pollin
 ```text
 GalaBot/
 ├── main.js                    Entry point. Validates env, instantiates clientManager.
-├── clientManager.js           Owns Discord/Twitch/YouTube clients and shutdown logic.
 ├── package.json               Dependencies and npm scripts.
 ├── Dockerfile                 Multi-stage Node 22-slim build + Chromium for Puppeteer.
 ├── docker-compose.yml         Mounts ./data, ./logs, ./.env into the container.
@@ -375,31 +374,31 @@ GalaBot/
 │   └── youtube/               Wired up explicitly in handlers/youtube/startup.js.
 │
 ├── handlers/                  Per-platform startup/bootstrap.
+│   └── clientManager.js       Owns Discord/Twitch/YouTube clients and shutdown logic.
 │
 ├── messages/                  Response builders (greetings, ping replies, etc.).
 │
-├── lang/                      Localized strings (en + es).
+├── lang/discord/               Localized strings (en + es), split by platform.
 │
-├── db/                        Kysely-backed SQLite layer.
+├── db/                        Kysely-backed SQLite layer (flat — some tables are cross-platform).
 │   ├── database.js            Schema creation and migrations.
 │   ├── warns.js               Warn read/write helpers.
 │   ├── scamHashes.js          Scam image hash CRUD.
 │   └── …                      Other topical helpers (greetings, streams, etc.).
 │
 ├── utils/                     Shared helpers.
+│   ├── core/                  Zero-dependency cross-cutting code (loggers, constants, types, i18n).
+│   ├── helpers/                Platform-agnostic app-aware utilities, image generation and its templates/.
+│   │   └── templates/         HTML templates for Puppeteer (streamBanner/Followup/Ended.html).
 │   └── discord/imageHash.js   Perceptual hash utilities (computeHash, hammingDistance, isSimilar).
 │
-├── templates/                 Unified HTML templates for Puppeteer.
-│   ├── streamBanner.html      Live stream template.
-│   ├── streamFollowup.html    Upcoming schedule template.
-│   └── streamEnded.html       Fallback end-of-stream template.
-│
-├── data/                      Runtime state (created on first boot, mounted in Docker).
-│   ├── galabot.sqlite         SQLite database file.
+├── data/                      Static reference data + runtime state (mounted in Docker).
+│   ├── runtime/galabot.sqlite SQLite database file.
 │   ├── twitch.json            Cached Twitch tokens.
 │   ├── resources.json         Greeting/response pool used at runtime.
 │   ├── emojis.json            Custom emoji mapping.
 │   ├── AIPrompt.md            System prompt for Gemini AI replies. Uses {{BOT_NAME}} and {{GALA_USER_ID}} placeholders injected at startup.
+│   ├── aiprompt-drafts/       Superseded AI-prompt draft history.
 │   └── youtubeCategories.json Cached YouTube category mappings.
 │
 └── logs/                      Winston log output (created on first boot).
@@ -495,7 +494,7 @@ All DB access goes through Kysely. `db/database.js` declares the schema; the top
 2. Create a new `db/<name>.js` with the helpers.
 3. Import and call those helpers from your event handlers.
 
-There are no migrations — `ifNotExists()` means new tables are added on next boot, but **column additions to existing tables require a manual `ALTER TABLE`** against `data/galabot.sqlite`.
+There are no migrations — `ifNotExists()` means new tables are added on next boot, but **column additions to existing tables require a manual `ALTER TABLE`** against `data/runtime/galabot.sqlite`.
 
 ### YouTube polling state machine
 
@@ -556,7 +555,7 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 
 ## Database schema reference
 
-The schema is created by `db/database.js` on first boot. The file lives at `data/galabot.sqlite`. All stream data — regardless of whether it came from Twitch or YouTube — is stored in the single `streams` table. The `provider` column (`'twitch'` | `'youtube'`) distinguishes rows.
+The schema is created by `db/database.js` on first boot. The file lives at `data/runtime/galabot.sqlite`. All stream data — regardless of whether it came from Twitch or YouTube — is stored in the single `streams` table. The `provider` column (`'twitch'` | `'youtube'`) distinguishes rows.
 
 `db/streams.js` exposes a provider-aware API:
 

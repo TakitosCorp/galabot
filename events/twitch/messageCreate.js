@@ -14,8 +14,8 @@ const { handleHello } = require("../../messages/twitch/msgHello");
 
 /**
  * @async
- * @param {import('../../utils/types').TwitchEventData} eventData
- * @param {import('../../clientManager')} clientManager
+ * @param {import('../../utils/core/types').TwitchEventData} eventData
+ * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
 module.exports = async function (eventData, clientManager) {

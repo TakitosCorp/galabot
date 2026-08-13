@@ -23,7 +23,7 @@ const path = require("path");
  *
  * @async
  * @param {import('discord.js').Client} discordClient - The discord.js client.
- * @param {import('../../clientManager')} clientManager - Lifecycle owner forwarded to handlers.
+ * @param {import('../clientManager')} clientManager - Lifecycle owner forwarded to handlers.
  * @returns {Promise<void>}
  */
 async function bootstrap(discordClient, clientManager) {
@@ -43,7 +43,7 @@ async function bootstrap(discordClient, clientManager) {
  *
  * @async
  * @param {import('discord.js').Client} discordClient
- * @param {import('../../clientManager')} clientManager
+ * @param {import('../clientManager')} clientManager
  * @returns {Promise<void>}
  */
 async function registerEvents(discordClient, clientManager) {

@@ -1,5 +1,5 @@
 /**
- * @module utils/generators/generateCmds
+ * @module utils/helpers/generateCmds
  * @description
  * Standalone CLI script (`npm run generate-cmds`) for forcing an immediate
  * slash-command republish without restarting the bot process. The bot itself

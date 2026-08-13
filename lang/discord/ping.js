@@ -1,5 +1,5 @@
 /**
- * @module lang/ping
+ * @module lang/discord/ping
  * @description
  * Localised string tables for the streamer-ping warn/ban flow in
  * {@link module:messages/discord/msgPing}. Each top-level key (`en`, `es`)

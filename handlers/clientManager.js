@@ -1,5 +1,5 @@
 /**
- * @module clientManager
+ * @module handlers/clientManager
  * @description
  * Lifecycle owner for every platform client the bot uses (Discord gateway client,
  * Twitch chat + Helix + EventSub, YouTube polling intervals). Holds the only
@@ -20,9 +20,9 @@ const {
   Events,
 } = require("discord.js");
 
-const { initialize: dbInitialize, db } = require("./db/database");
-const { bootstrap: bootstrapDiscord } = require("./handlers/discord/startup");
-const { discordLog, twitchLog, sysLog } = require("./utils/core/loggers");
+const { initialize: dbInitialize, db } = require("../db/database");
+const { bootstrap: bootstrapDiscord } = require("./discord/startup");
+const { discordLog, twitchLog, sysLog } = require("../utils/core/loggers");
 
 /**
  * Owns and orchestrates every long-lived platform client.
@@ -158,8 +158,8 @@ class clientManager {
     const { StaticAuthProvider } = require("@twurple/auth");
     const { ApiClient } = require("@twurple/api");
     const { EventSubWsListener } = require("@twurple/eventsub-ws");
-    const { bootstrap: bootstrapTwitch } = require("./handlers/twitch/startup");
-    const { getValidTwitchConfig } = require("./utils/twitch/twitchToken");
+    const { bootstrap: bootstrapTwitch } = require("./twitch/startup");
+    const { getValidTwitchConfig } = require("../utils/twitch/twitchToken");
 
     try {
       const twitchConfig = await getValidTwitchConfig();
@@ -217,10 +217,8 @@ class clientManager {
    */
   async initializeYoutube() {
     sysLog("debug", "clientManager:initializeYoutube start");
-    const {
-      bootstrap: bootstrapYoutube,
-    } = require("./handlers/youtube/startup");
-    const { youtubeLog } = require("./utils/core/loggers");
+    const { bootstrap: bootstrapYoutube } = require("./youtube/startup");
+    const { youtubeLog } = require("../utils/core/loggers");
     try {
       await bootstrapYoutube(this);
       youtubeLog("info", "youtube:initialized");
@@ -245,8 +243,10 @@ class clientManager {
   async shutdown(signal) {
     sysLog("info", "clientManager:shutdown start", { signal });
     try {
-      const { stopAllViewersIntervals } = require("./utils/twitch/twitchViews");
-      const { closeBrowser } = require("./utils/generators/imageGenerator");
+      const {
+        stopAllViewersIntervals,
+      } = require("../utils/twitch/twitchViews");
+      const { closeBrowser } = require("../utils/helpers/imageGenerator");
 
       stopAllViewersIntervals();
       sysLog("debug", "clientManager:shutdown viewers-stopped");

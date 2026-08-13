@@ -17,9 +17,7 @@ const {
   ButtonStyle,
   AttachmentBuilder,
 } = require("discord.js");
-const {
-  generateStreamBanner,
-} = require("../../utils/generators/imageGenerator");
+const { generateStreamBanner } = require("../../utils/helpers/imageGenerator");
 const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
 const { setState } = require("../../utils/youtube/youtubePoller");
 const { setStreamingStatus } = require("../../utils/discord/discordPresence");
@@ -31,8 +29,8 @@ const {
  * Announce a YouTube live stream on Discord and activate the scheduled event.
  *
  * @async
- * @param {import('../../clientManager')} clientManager - The client manager instance.
- * @param {import('../../utils/types').YouTubeState} streamState - Snapshot of poller state at live transition.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../utils/core/types').YouTubeState} streamState - Snapshot of poller state at live transition.
  * @returns {Promise<void>}
  */
 async function streamStart(clientManager, streamState) {

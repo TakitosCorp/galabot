@@ -12,7 +12,7 @@
  *    set to `deleteDays × 86 400`.
  *  - Replies publicly with a ban embed on success.
  *
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
@@ -26,7 +26,7 @@ const {
 } = require("discord.js");
 const { discordLog } = require("../../utils/core/loggers");
 const { getLanguage } = require("../../utils/core/language");
-const strings = require("../../lang/ban");
+const strings = require("../../lang/discord/ban");
 const {
   MAX_WARN_REASON_LENGTH,
   BAN_DELETE_DAYS_DEFAULT,
@@ -66,7 +66,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    * @param {import('discord.js').Client} client
-   * @param {import('../../clientManager')} clientManager
+   * @param {import('../../handlers/clientManager')} clientManager
    * @returns {Promise<void>}
    */
   async execute(interaction, client, clientManager) {

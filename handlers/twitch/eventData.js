@@ -6,7 +6,7 @@
  * exact Twurple shape. Adds a `self` flag that is true when the message comes
  * from the bot account itself.
  *
- * @typedef {import('../../utils/types').TwitchEventData} TwitchEventData
+ * @typedef {import('../../utils/core/types').TwitchEventData} TwitchEventData
  */
 
 "use strict";

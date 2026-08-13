@@ -1,5 +1,5 @@
 /**
- * @module lang/aidocs
+ * @module lang/discord/aidocs
  * @description
  * Localised string tables consumed by {@link module:commands/discord/aidocs}.
  * Provides bilingual embed contents explaining how to interact with the AI feature.

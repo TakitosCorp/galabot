@@ -1,5 +1,5 @@
 /**
- * @module lang/warn
+ * @module lang/discord/warn
  * @description
  * Localised string tables consumed by {@link module:commands/discord/warn}.
  * Provides embed copy (titles, fields, action labels) for both the timeout

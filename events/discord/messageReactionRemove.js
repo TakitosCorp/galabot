@@ -14,7 +14,7 @@ const {
   getRoleForEmoji,
 } = require("../../utils/discord/reactionRoleManager");
 
-/** @type {import('../../utils/types').DiscordEventHandler} */
+/** @type {import('../../utils/core/types').DiscordEventHandler} */
 module.exports = {
   name: "messageReactionRemove",
   async execute(reaction, user, client, clientManager) {

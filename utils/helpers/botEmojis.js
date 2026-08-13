@@ -1,5 +1,5 @@
 /**
- * @module utils/botEmojis
+ * @module utils/helpers/botEmojis
  * @description
  * Standalone CLI script (`npm run sync-emojis`) that mirrors every custom emoji
  * from the configured Discord guild into the bot application's emoji slots.

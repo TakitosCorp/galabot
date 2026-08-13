@@ -7,7 +7,7 @@
  * been observed to not always apply in-place command-schema updates reliably.
  *
  * Called automatically on every bot startup by {@link module:events/discord/clientReady},
- * and manually via `npm run generate-cmds` (`utils/generators/generateCmds.js`)
+ * and manually via `npm run generate-cmds` (`utils/helpers/generateCmds.js`)
  * to force a republish without restarting the bot.
  *
  * @typedef {import('../core/types').DiscordSlashCommand} DiscordSlashCommand

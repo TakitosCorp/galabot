@@ -4,7 +4,7 @@
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
-    "generate-cmds": "node utils/generators/generateCmds.js",
+    "generate-cmds": "node utils/helpers/generateCmds.js",
     "sync-emojis": "node utils/helpers/botEmojis.js",
     "format": "prettier --write \"**/*.js\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.js\" --ignore-path .gitignore"

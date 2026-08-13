@@ -18,7 +18,7 @@ const { getState, setState } = require("../../utils/youtube/youtubePoller");
 const {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/generators/imageGenerator");
+} = require("../../utils/helpers/imageGenerator");
 const {
   completeGuildStreamEvent,
 } = require("../../utils/discord/discordGuildEvents");
@@ -28,7 +28,7 @@ const axios = require("axios");
  * Wrap up the just-ended YouTube stream.
  *
  * @async
- * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @param {string|null} endTime - ISO-8601 actual end time reported by the API.
  * @returns {Promise<void>}
  */

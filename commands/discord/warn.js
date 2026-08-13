@@ -9,7 +9,7 @@
  *  - Otherwise applies a timeout proportional to the new warn count
  *    (`newCount * WARN_TIMEOUT_BASE_MS`).
  *
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
@@ -24,7 +24,7 @@ const {
 const { addWarn, getWarnCount } = require("../../db/warns");
 const { discordLog } = require("../../utils/core/loggers");
 const { getLanguage } = require("../../utils/core/language");
-const strings = require("../../lang/warn");
+const strings = require("../../lang/discord/warn");
 const {
   WARN_TIMEOUT_BASE_MS,
   MAX_WARN_BEFORE_BAN,
@@ -199,7 +199,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    * @param {import('discord.js').Client} client
-   * @param {import('../../clientManager')} clientManager
+   * @param {import('../../handlers/clientManager')} clientManager
    * @returns {Promise<void>}
    */
   async execute(interaction, client, clientManager) {

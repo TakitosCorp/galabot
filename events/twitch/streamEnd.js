@@ -21,7 +21,7 @@ const {
 const {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/generators/imageGenerator");
+} = require("../../utils/helpers/imageGenerator");
 const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
 const { stopViewersAverage } = require("../../utils/twitch/twitchViews");
 const { setIdleStatus } = require("../../utils/discord/discordPresence");
@@ -34,7 +34,7 @@ const {
  *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event - The Twurple stream offline event.
- * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamEnd(event, clientManager) {

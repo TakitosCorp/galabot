@@ -7,7 +7,7 @@
  *
  * Restricted to members with `Manage Messages` permission and to guild contexts.
  *
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
@@ -21,7 +21,7 @@ const {
 } = require("discord.js");
 const { discordLog } = require("../../utils/core/loggers");
 const { getLanguage } = require("../../utils/core/language");
-const strings = require("../../lang/rules");
+const strings = require("../../lang/discord/rules");
 const {
   parseReactionRoleEnv,
   addReactionsToMessage,
@@ -46,7 +46,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    * @param {import('discord.js').Client} client
-   * @param {import('../../clientManager')} clientManager
+   * @param {import('../../handlers/clientManager')} clientManager
    * @returns {Promise<void>}
    */
   async execute(interaction, client, clientManager) {

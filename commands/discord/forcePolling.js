@@ -17,7 +17,7 @@ const {
 const { runSlowPoll } = require("../../handlers/youtube/startup");
 const { discordLog } = require("../../utils/core/loggers");
 
-/** @type {import('../../utils/types').DiscordSlashCommand} */
+/** @type {import('../../utils/core/types').DiscordSlashCommand} */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("forcepolling")
@@ -29,7 +29,7 @@ module.exports = {
    * @async
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    * @param {import('discord.js').Client} client
-   * @param {import('../../clientManager')} clientManager
+   * @param {import('../../handlers/clientManager')} clientManager
    * @returns {Promise<void>}
    */
   async execute(interaction, client, clientManager) {

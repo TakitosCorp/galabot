@@ -1,9 +1,9 @@
 /**
- * @module utils/types
+ * @module utils/core/types
  * @description
  * Centralised JSDoc `@typedef` definitions for cross-module shapes used across the bot.
  * This file exports nothing at runtime; it exists purely so other modules can reference
- * shared types via `@typedef {import('./utils/types').TypeName} TypeName`.
+ * shared types via `@typedef {import('<relative-path-to>/utils/core/types').TypeName} TypeName`.
  *
  * Adding a new shared shape here keeps IDE intellisense consistent across files.
  */
@@ -13,7 +13,7 @@
 /* ──────────────────────────── Logger types ──────────────────────────── */
 
 /**
- * Winston log levels supported by the wrapper functions in {@link module:utils/loggers}.
+ * Winston log levels supported by the wrapper functions in {@link module:utils/core/loggers}.
  * @typedef {("error"|"warn"|"info"|"debug"|"verbose"|"silly")} LogLevel
  */
 
@@ -24,7 +24,7 @@
  */
 
 /**
- * Domain-scoped log function signature exposed by {@link module:utils/loggers}.
+ * Domain-scoped log function signature exposed by {@link module:utils/core/loggers}.
  * Backwards compatible: the third `context` argument is optional.
  * @callback DomainLogFn
  * @param {LogLevel} level - Severity level.
@@ -217,7 +217,7 @@
  * Discord slash command module shape, consumed by `discordClient.commands`.
  * @typedef {Object} DiscordSlashCommand
  * @property {import('discord.js').SlashCommandBuilder} data - Builder describing options/permissions.
- * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: import('discord.js').Client, clientManager: import('../clientManager')) => Promise<void>} execute
+ * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: import('discord.js').Client, clientManager: import('../../handlers/clientManager')) => Promise<void>} execute
  */
 
 // Intentionally empty runtime export — this module is types-only.

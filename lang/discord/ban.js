@@ -1,5 +1,5 @@
 /**
- * @module lang/ban
+ * @module lang/discord/ban
  * @description
  * Localised string tables consumed by {@link module:commands/discord/ban}.
  * Provides embed copy and error replies in English and Spanish.

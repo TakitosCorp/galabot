@@ -10,24 +10,55 @@ alone.
 ## 1. Project shape (orient yourself first)
 
 ```
-main.js                  → env validation + bootstrap
-clientManager.js         → owns every long-lived platform client
-db/                      → Kysely + better-sqlite3 helpers
-handlers/<platform>/     → wires events/commands at startup
-events/<platform>/       → per-event logic
-commands/discord/        → slash command modules
-messages/<platform>/     → response builders (reply text, embeds)
-utils/                   → cross-cutting utilities (loggers, constants, types,
-                           image gen, token mgmt, pollers, schedule)
-lang/                    → localised string tables (en/es)
-templates/               → Puppeteer HTML templates (out of scope for JSDoc)
-data/                    → runtime state (sqlite db, token cache, JSON caches)
-logs/                    → Winston output (auto-created)
+main.js                     → env validation + bootstrap
+handlers/clientManager.js   → owns every long-lived platform client
+handlers/<platform>/        → wires events/commands at startup
+db/                         → Kysely + better-sqlite3 helpers (flat — several
+                               tables are genuinely cross-platform, e.g.
+                               streams.js/upcomingStreams.js are read by both
+                               Twitch and YouTube code, so don't force a
+                               platform split here)
+events/<platform>/          → per-event logic
+commands/discord/           → slash command modules (create commands/twitch/
+                               or commands/youtube/ only once a real command
+                               exists for that platform — don't pre-scaffold
+                               empty dirs)
+messages/<platform>/        → response builders (reply text, embeds)
+utils/core/                 → zero-dependency cross-cutting code: loggers,
+                               constants, shared types, i18n. No Discord/
+                               Twitch/YouTube SDK imports, no db/ imports.
+utils/helpers/               → platform-agnostic but app-aware utilities
+                               (file utils, image generation + its
+                               templates/ subfolder, CLI scripts like
+                               generateCmds.js/botEmojis.js, stream-title
+                               cleaning). Knows GalaBot's domain, doesn't
+                               know which platform called it.
+utils/<platform>/           → code that touches that platform's SDK
+                               (discord.js, Twurple, YouTube API client).
+lang/<platform>/            → localised string tables (en/es), split by
+                               platform to match commands/events/messages.
+data/                        → static reference data (JSON, AIPrompt.md,
+                               aiprompt-drafts/) plus data/runtime/ for the
+                               sqlite db — keep generated/runtime state out
+                               of the static-data root.
+logs/                        → Winston output (auto-created)
 ```
 
 - Module system: **CommonJS** (`require` / `module.exports`).
 - Language: **plain JavaScript**, no TypeScript. Types live in JSDoc only.
 - Top of every source file starts with `"use strict";` after the module header.
+- **Folder-by-type, then folder-by-platform.** Every type folder that has
+  platform-specific content (`commands/`, `events/`, `handlers/`, `messages/`,
+  `lang/`, and the platform-touching parts of `utils/`) splits into
+  `discord/` / `twitch/` / `youtube/` subfolders — even if only one platform
+  currently has content, to avoid a breaking rename later. `db/` is the
+  deliberate exception (see above).
+- **CLI scripts have side effects — don't `require()` them to smoke-test an
+  import path.** `utils/helpers/generateCmds.js` and `utils/helpers/botEmojis.js`
+  run their side effects (re-publishing slash commands, syncing guild emojis)
+  at module-load time, not behind a function call. Check them with
+  `node --check <file>` or read the require paths instead of requiring them
+  directly from a REPL/script.
 
 ---
 
@@ -104,7 +135,7 @@ constructor.
 
 ### 2.4 Constants
 
-In `utils/constants.js` every export has its own block:
+In `utils/core/constants.js` every export has its own block:
 
 ```js
 /**
@@ -120,28 +151,29 @@ Same rule for any other module that exports tunables.
 ### 2.5 Shared types — single source of truth
 
 Cross-module shapes (DB rows, event payloads, state machines, log helpers) live
-in [utils/types.js](utils/types.js). Pull them in via `import()` typedefs:
+in [utils/core/types.js](utils/core/types.js). Pull them in via `import()` typedefs,
+with the relative path adjusted to wherever the importing file lives:
 
 ```js
 /**
- * @typedef {import('../utils/types').StreamRow} StreamRow
- * @typedef {import('../utils/types').WarnRow} WarnRow
+ * @typedef {import('../utils/core/types').StreamRow} StreamRow
+ * @typedef {import('../utils/core/types').WarnRow} WarnRow
  */
 ```
 
 When you introduce a new shape that two or more files care about, add it to
-`utils/types.js` rather than redeclaring it locally.
+`utils/core/types.js` rather than redeclaring it locally.
 
 ### 2.6 Event/command module shapes
 
 Discord event handlers and slash commands have stable shapes typed in
-`utils/types.js` — annotate the export:
+`utils/core/types.js` — annotate the export:
 
 ```js
-/** @type {import('../../utils/types').DiscordEventHandler} */
+/** @type {import('../../utils/core/types').DiscordEventHandler} */
 module.exports = { name, once, async execute(...) {} };
 
-/** @type {import('../../utils/types').DiscordSlashCommand} */
+/** @type {import('../../utils/core/types').DiscordSlashCommand} */
 module.exports = { data: new SlashCommandBuilder()…, async execute(...) {} };
 ```
 
@@ -158,7 +190,7 @@ module.exports = { data: new SlashCommandBuilder()…, async execute(...) {} };
 
 ### 3.1 Use the right channel
 
-Five Winston channels live in [utils/loggers.js](utils/loggers.js):
+Five Winston channels live in [utils/core/loggers.js](utils/core/loggers.js):
 
 | Channel      | When to use it                                                                  |
 | ------------ | ------------------------------------------------------------------------------- |
@@ -256,8 +288,8 @@ user-facing fallbacks). Event handlers (`events/**`) follow the first
 ### 3.5 No `console.*` in runtime code
 
 `console.log` / `console.error` are reserved for the standalone CLI scripts
-under `utils/` (`botEmojis.js`, `generateCmds.js`) that run outside the bot's
-lifecycle. Anywhere else, use the appropriate domain logger. The single
+under `utils/helpers/` (`botEmojis.js`, `generateCmds.js`) that run outside the
+bot's lifecycle. Anywhere else, use the appropriate domain logger. The single
 exception is the **pre-logger** fatal in `main.js#validateEnv` — the env check
 runs before Winston is meaningful, so `console.error + process.exit(1)` is
 correct there.
@@ -300,7 +332,7 @@ correct there.
    ```
 
 3. If you're introducing a shape used in another file, add a `@typedef` to
-   `utils/types.js` rather than redeclaring it locally.
+   `utils/core/types.js` rather than redeclaring it locally.
 4. Pick the right logger and add `debug` entry logs to every meaningful
    function, plus the `info`/`warn`/`error` lines that match the rules above.
 5. JSDoc every export and any non-trivial internal helper.
@@ -311,12 +343,12 @@ correct there.
 
 ## 6. Adding a new constant or env var
 
-- New constant → goes in [utils/constants.js](utils/constants.js) with a full
+- New constant → goes in [utils/core/constants.js](utils/core/constants.js) with a full
   `@type`/`@constant` JSDoc block.
 - New required env var → add it to `REQUIRED_ENV` in [main.js](main.js) so the
   bot fails fast on missing config. Optional env vars are documented in
   the JSDoc of whichever module reads them (e.g. `YOUTUBE_API_KEY_2` and
-  `YOUTUBE_BLACKLIST_IDS` are described in `utils/youtubePoller.js`).
+  `YOUTUBE_BLACKLIST_IDS` are described in `utils/youtube/youtubePoller.js`).
 
 ---
 
@@ -366,7 +398,7 @@ The system prompt for the AI is `data/AIPrompt.md`. Edit it to change the bot's 
 - No TypeScript migration without a separate, scoped task.
 - No `LOG_LEVEL` env var or per-call level toggles. Winston's level
   hierarchy is enough; if `debug` is too noisy in prod, fix it at the
-  Winston transport in `utils/loggers.js`.
+  Winston transport in `utils/core/loggers.js`.
 - No HTML doc site / `jsdoc` CLI dependency. JSDoc lives in source for IDE
   intellisense; that's the deliverable.
 - No `console.*` in runtime code (see §3.5).

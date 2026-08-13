@@ -24,9 +24,7 @@ const {
   ButtonStyle,
   AttachmentBuilder,
 } = require("discord.js");
-const {
-  generateStreamBanner,
-} = require("../../utils/generators/imageGenerator");
+const { generateStreamBanner } = require("../../utils/helpers/imageGenerator");
 const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
 const { startViewersAverage } = require("../../utils/twitch/twitchViews");
 const { setStreamingStatus } = require("../../utils/discord/discordPresence");
@@ -39,7 +37,7 @@ const {
  *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event - The Twurple stream online event.
- * @param {import('../../clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamStart(event, clientManager) {

@@ -12,7 +12,7 @@
 const { EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const { discordLog } = require("../../utils/core/loggers");
 const { addWarn, getWarnCount } = require("../../db/warns");
-const strings = require("../../lang/ping");
+const strings = require("../../lang/discord/ping");
 
 /**
  * Process a ping aimed at the streamer. Admins are silently ignored. Everyone

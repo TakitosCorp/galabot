@@ -1,5 +1,5 @@
 /**
- * @module lang/rules
+ * @module lang/discord/rules
  * @description
  * Localised string tables consumed by {@link module:commands/discord/rules}.
  * Provides the bilingual rules embed contents (`rulesTitle`, `rulesFields`,

@@ -10,9 +10,9 @@
  * variable (comma-separated list of video IDs). Blacklisted videos are
  * filtered out during polling and never announced.
  *
- * @typedef {import('./types').YouTubeState} YouTubeState
- * @typedef {import('./types').YouTubeStreamData} YouTubeStreamData
- * @typedef {import('./types').YouTubeCheckResult} YouTubeCheckResult
+ * @typedef {import('../core/types').YouTubeState} YouTubeState
+ * @typedef {import('../core/types').YouTubeStreamData} YouTubeStreamData
+ * @typedef {import('../core/types').YouTubeCheckResult} YouTubeCheckResult
  */
 
 "use strict";

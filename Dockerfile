@@ -1,9 +1,22 @@
+FROM node:22-slim AS build
+
+WORKDIR /usr/src/app
+
+RUN apt-get update && apt-get install -y \
+  python3 \
+  make \
+  g++ \
+  --no-install-recommends && \
+  rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
 FROM node:22-slim
 
 WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y \
-  wget \
   ca-certificates \
   fonts-liberation \
   fonts-noto \
@@ -34,10 +47,7 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-COPY package*.json ./
-
-RUN npm ci
-
+COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY . .
 
 CMD [ "node", "main.js" ]

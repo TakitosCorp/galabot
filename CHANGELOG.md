@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.1] - 2026-08-13
+
+### Fixed
+
+- Docker build failed on `npm ci` after the `better-sqlite3` 12→13 bump: no prebuilt binary is published for `linux/arm64` on this Node ABI, so it falls back to compiling via `node-gyp`, which needs Python — and `node:22-slim` ships without it.
+
+### Changed
+
+- Dockerfile is now a multi-stage build: a `build` stage installs `python3`/`make`/`g++` (needed only to compile native modules like `better-sqlite3`/`sharp` when no prebuilt binary matches) and runs `npm ci --omit=dev`; only the resulting `node_modules` is copied into the final runtime image, which never carries the build toolchain or dev dependencies. Also dropped the vestigial `wget` apt package (unused at runtime).
+- `init.sh` now stops the container, removes the old locally-built image (`docker compose down --rmi local`), pulls the latest code (`git pull`), then rebuilds and restarts — previously it only rebuilt/restarted without updating the code or clearing the old image first.
+
 ## [1.1.0] - 2026-08-13
 
 ### Added

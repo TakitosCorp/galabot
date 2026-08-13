@@ -129,7 +129,7 @@ docker compose logs -f bot
 
 The container ships with Chromium pre-installed and `PUPPETEER_EXECUTABLE_PATH` already set, so image generation works out of the box. Persistent state lives in `./data/` and logs in `./logs/` on the host.
 
-To rebuild and restart in one shot, the repo includes `init.sh`:
+To pull the latest code, clean out the old image, and rebuild/restart in one shot, the repo includes `init.sh`:
 
 ```bash
 bash init.sh
@@ -343,7 +343,7 @@ If you tighten `YOUTUBE_SLOW_POLL_MS` to faster than ~25 minutes you'll start to
 | Local development       | `npm start`                    | Logs to console + `logs/`.                               |
 | Docker (foreground)     | `docker compose up --build`    | Useful for first run / debugging.                        |
 | Docker (background)     | `docker compose up --build -d` | Restart policy is `always` (auto-restart on crash).      |
-| Rebuild and restart     | `bash init.sh`                 | Convenience wrapper.                                     |
+| Pull, rebuild, restart  | `bash init.sh`                 | Stops the container, removes the old image, `git pull`s, then rebuilds and restarts. |
 | Tail logs               | `docker compose logs -f bot`   | All Winston output.                                      |
 | Force-republish slash commands | `npm run generate-cmds` | Automatic on every startup; this is only for a republish without restarting. |
 | Format source files     | `npm run format`               | Runs Prettier over all `*.js` files.                     |
@@ -360,9 +360,9 @@ GalaBot/
 ├── main.js                    Entry point. Validates env, instantiates clientManager.
 ├── clientManager.js           Owns Discord/Twitch/YouTube clients and shutdown logic.
 ├── package.json               Dependencies and npm scripts.
-├── Dockerfile                 Node 22-slim + Chromium for Puppeteer.
+├── Dockerfile                 Multi-stage Node 22-slim build + Chromium for Puppeteer.
 ├── docker-compose.yml         Mounts ./data, ./logs, ./.env into the container.
-├── init.sh                    Rebuild-and-restart helper.
+├── init.sh                    Pull + clean-rebuild + restart helper.
 ├── .env.example               Template — copy to .env and fill in.
 │
 ├── .prettierrc                Prettier config (double quotes, semicolons, 2-space indent, 80-char width).

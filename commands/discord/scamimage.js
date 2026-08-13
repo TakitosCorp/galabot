@@ -1,7 +1,7 @@
 /**
- * @module commands/discord/scam-image
+ * @module commands/discord/scamimage
  * @description
- * `/scam-image` slash command — administrator tool for managing the perceptual-hash
+ * `/scamimage` slash command — administrator tool for managing the perceptual-hash
  * database used by the automated scam-image ban system.
  *
  * Subcommands:
@@ -10,7 +10,7 @@
  *  - `remove` — delete a hash by its database ID.
  *  - `check`  — test whether an image would trigger the ban without posting it publicly.
  *
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
@@ -292,7 +292,7 @@ module.exports = {
   buildListPage,
 
   data: new SlashCommandBuilder()
-    .setName("scam-image")
+    .setName("scamimage")
     .setDescription("Manage the scam image hash database.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setContexts(InteractionContextType.Guild)

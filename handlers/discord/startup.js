@@ -5,13 +5,15 @@
  * wires the events to the gateway client, and indexes commands on `discordClient.commands`
  * so `interactionCreate.js` can dispatch to them.
  *
- * @typedef {import('../../utils/types').DiscordEventHandler} DiscordEventHandler
- * @typedef {import('../../utils/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
 "use strict";
 
 const { discordLog: log } = require("../../utils/core/loggers");
+const { loadCommandFiles } = require("../../utils/discord/loadCommands");
+const { validateEmojis } = require("../../utils/discord/validateEmojis");
 const { Collection } = require("discord.js");
 const fs = require("fs").promises;
 const path = require("path");
@@ -29,6 +31,7 @@ async function bootstrap(discordClient, clientManager) {
   discordClient.commands = new Collection();
   await registerEvents(discordClient, clientManager);
   await registerCommands(discordClient);
+  validateEmojis();
   log("info", "discord:bootstrap complete", {
     commands: discordClient.commands.size,
   });
@@ -72,24 +75,20 @@ async function registerEvents(discordClient, clientManager) {
 }
 
 /**
- * Read every `*.js` file in `commands/discord/` and store it on
- * `discordClient.commands` keyed by its slash-command name.
+ * Read every `*.js` file in `commands/discord/` (via {@link loadCommandFiles})
+ * and store each one on `discordClient.commands` keyed by its slash-command
+ * name. This is the same file list {@link module:events/discord/clientReady}
+ * later publishes to Discord's REST API, so the two can never drift apart.
  *
  * @async
  * @param {import('discord.js').Client} discordClient
  * @returns {Promise<void>}
  */
 async function registerCommands(discordClient) {
-  const commandDir = path.join(process.cwd(), "commands", "discord");
-  const commandFiles = (await fs.readdir(commandDir)).filter((f) =>
-    f.endsWith(".js"),
-  );
-  log("debug", "discord:registerCommands scanning", {
-    count: commandFiles.length,
-  });
+  const loaded = await loadCommandFiles();
+  log("debug", "discord:registerCommands scanning", { count: loaded.length });
 
-  for (const file of commandFiles) {
-    const command = require(path.join(commandDir, file));
+  for (const { file, command } of loaded) {
     discordClient.commands.set(command.data.name, command);
     log("info", "discord:command registered", {
       file,

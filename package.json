@@ -1,11 +1,11 @@
 {
   "name": "galabot",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
     "generate-cmds": "node utils/generators/generateCmds.js",
-    "sync-emojis": "node utils/generators/botEmojis.js",
+    "sync-emojis": "node utils/helpers/botEmojis.js",
     "format": "prettier --write \"**/*.js\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.js\" --ignore-path .gitignore"
   },

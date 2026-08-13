@@ -59,7 +59,7 @@ client.once(Events.ClientReady, async () => {
     const emojis = await guild.emojis.fetch();
 
     const tempFolder = path.join(__dirname, "temp-emojis");
-    const dataFolder = path.join(__dirname, "../data");
+    const dataFolder = path.join(__dirname, "../../data");
     const emojisFile = path.join(dataFolder, "emojis.json");
 
     if (!fs.existsSync(tempFolder)) {

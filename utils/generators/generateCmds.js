@@ -1,11 +1,11 @@
 /**
- * @module utils/generateCmds
+ * @module utils/generators/generateCmds
  * @description
- * Standalone CLI script (`npm run generate-cmds`) that wipes every existing
- * application-level Discord slash command for the bot and re-publishes the
- * commands defined in `commands/discord/*.js`. Run this whenever the slash
- * command schema changes — the live bot will pick up the new shapes on the
- * next interaction.
+ * Standalone CLI script (`npm run generate-cmds`) for forcing an immediate
+ * slash-command republish without restarting the bot process. The bot itself
+ * already does this automatically on every startup (see
+ * `events/discord/clientReady.js`) — this script is a manual escape hatch
+ * that shares the same loader and publish logic, so the two can never drift.
  *
  * This file is a script, not a module — it logs to the console (rather than
  * Winston) because it runs outside the bot's normal lifecycle.
@@ -13,59 +13,35 @@
 
 "use strict";
 
-const fs = require("fs");
-const { REST } = require("@discordjs/rest");
-const { Routes } = require("discord-api-types/v9");
-const dotenv = require("dotenv");
 const path = require("path");
+const dotenv = require("dotenv");
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-dotenv.config({ path: require("path").resolve(process.cwd(), ".env") });
-
-/**
- * Authenticated REST client used to delete and republish global commands.
- * @type {REST}
- */
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+const { loadCommandFiles } = require("../discord/loadCommands");
+const { publishCommands } = require("../discord/publishCommands");
 
 /**
- * Delete every previously-published global slash command, then upload every
- * command module under `commands/discord/`. A failure of any individual
- * command is fatal — the script aborts and prints the error.
+ * Load every command file and publish them to Discord.
  *
  * @async
  * @returns {Promise<void>}
  */
-async function resetGlobalCommands() {
-  try {
-    const commands = await rest.get(
-      Routes.applicationCommands(process.env.DISCORD_ID),
-    );
-    const deletePromises = commands.map((command) => {
-      const deleteUrl = `${Routes.applicationCommands(process.env.DISCORD_ID)}/${command.id}`;
-      console.log(`[❎] Deleting command: ${command.name} (ID: ${command.id})`);
-      return rest.delete(deleteUrl);
-    });
-    await Promise.all(deletePromises);
-    console.log(`[✅] All commands have been deleted successfully.`);
+async function main() {
+  const loaded = await loadCommandFiles();
+  console.log(`[i] Loaded ${loaded.length} command file(s).`);
 
-    const globalCommands = [];
-    const commandsDir = path.join(__dirname, "../../commands/discord");
-    const commandFiles = fs
-      .readdirSync(commandsDir)
-      .filter((archivo) => archivo.endsWith(".js"));
-    for (const archivo of commandFiles) {
-      const commandPath = path.join(commandsDir, archivo);
-      const command = require(commandPath);
-      globalCommands.push(command.data.toJSON());
-    }
-
-    await rest.put(Routes.applicationCommands(process.env.DISCORD_ID), {
-      body: globalCommands,
-    });
-    console.log("[✅] Global commands have been published.");
-  } catch (e) {
-    console.error(`[❌] Error in process: ${e.message}`);
-  }
+  await publishCommands({
+    token: process.env.DISCORD_TOKEN,
+    applicationId: process.env.DISCORD_ID,
+    commands: loaded.map(({ command }) => command),
+    log: (level, message, context) => {
+      const icon = level === "error" ? "❌" : "✅";
+      console.log(`[${icon}] ${message}`, context ?? "");
+    },
+  });
 }
 
-resetGlobalCommands();
+main().catch((error) => {
+  console.error(`[❌] Error in process: ${error.message}`);
+  process.exitCode = 1;
+});

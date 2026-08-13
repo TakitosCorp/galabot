@@ -33,11 +33,11 @@ If you want to extend the bot: skip to [How things work (developer guide)](#how-
 
 **Discord**
 
-- Slash commands: `/rules` (post or DM the server rules), `/warn` (warn → timeout → ban escalation), and `/scam-image` (manage the scam image hash database).
+- Slash commands: `/rules` (post or DM the server rules), `/warn` (warn → timeout → ban escalation), and `/scamimage` (manage the scam image hash database).
 - Reaction roles: When `/rules` is posted, configured emoji reactions grant roles automatically. Reactions persist across bot restarts.
 - Greeting responses with a per-user cooldown (greetings on Discord and Twitch share the same cooldown).
 - Auto-moderation: pinging the streamer's personal account (`GALA_USER_ID`) issues a warning automatically (warn → timeout → ban escalation).
-- Scam image detection: every incoming message with an image attachment is compared against a database of known scam image perceptual hashes. On a match the message is deleted and the author is permanently banned. Hashes are registered by administrators via `/scam-image add` and are resilient to minor resizing and cropping (blockhash 256-bit, Hamming distance threshold).
+- Scam image detection: every incoming message with an image attachment is compared against a database of known scam image perceptual hashes. On a match the message is deleted and the author is permanently banned. Hashes are registered by administrators via `/scamimage add` and are resilient to minor resizing and cropping (blockhash 256-bit, Hamming distance threshold).
 - AI replies via Google Gemini: triggered by @mentioning the bot, replying to one of its messages, or typing its name in a message. Each query automatically injects the sender's server profile (username, tenure, roles, booster status), up to 4 messages of reply-chain history, and upcoming stream data so the bot can answer contextually. A 5 s per-user cooldown rejects spam; a global FIFO queue and 30 RPM cap protect the free-tier quota (configurable via `GEMINI_NO_LIMITS_IDS`). Transient 5xx errors are retried up to twice before surfacing. The bot character name, personality, and all example dialogue live in `data/AIPrompt.md` — edit it without touching code. Requires `GEMINI_API_KEY`.
 - Stream announcements posted as rich embeds with a custom-rendered banner attachment and an optional role mention; the same message is updated when the stream ends with the final stats.
 
@@ -135,10 +135,10 @@ To rebuild and restart in one shot, the repo includes `init.sh`:
 bash init.sh
 ```
 
-To register Discord slash commands the first time (or any time you change them):
+Slash commands are registered with Discord automatically on every bot startup — no manual step needed. To force an immediate republish without restarting the container (e.g. right after adding a command file):
 
 ```bash
-docker compose exec bot node utils/generateCmds.js
+docker compose exec bot npm run generate-cmds
 ```
 
 ---
@@ -153,8 +153,7 @@ cd GalaBot
 cp .env.example .env
 # edit .env (see "Configuration" below)
 npm install
-npm run generate-cmds   # one-time: register slash commands with Discord
-npm start
+npm start   # slash commands are registered with Discord automatically on startup
 ```
 
 Notes:
@@ -175,7 +174,7 @@ Notes:
 | Variable                       | Required | Description                                                                                                                                                                                             |
 | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DISCORD_TOKEN`                | yes      | Bot token from the Discord Developer Portal.                                                                                                                                                            |
-| `DISCORD_ID`                   | yes      | Application (client) ID — used by `generate-cmds` to register slash commands.                                                                                                                           |
+| `DISCORD_ID`                   | yes      | Application (client) ID — used to register slash commands with Discord (automatically on startup, or via `npm run generate-cmds`).                                                                     |
 | `GALA_DISCORD_ID`              | yes      | Discord guild/server ID. Used by the emoji-sync script (`npm run sync-emojis`) to fetch guild emojis. **Not** a user ID.                                                                                |
 | `GALA_USER_ID`                 | yes      | Gala's personal Discord user ID. Bot @-mentions of this account trigger the warn/ban escalation instead of an AI reply.                                                                                 |
 | `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                                                                                                                                    |
@@ -274,11 +273,10 @@ If you want to change cooldowns, ban thresholds, or polling cadence, edit `utils
    - The notification channel ID → `DISCORD_NOTIFICATION_CHANNEL` (used for both Twitch and YouTube announcements)
    - The role to ping for live streams → `DISCORD_NOTIFICATION_ROLE_ID` (optional, used for both Twitch and YouTube)
    - The Spanish channel ID, if you have one → `SPANISH_CHANNEL_ID`
-6. **Register slash commands** once you've set `DISCORD_TOKEN` and `DISCORD_ID`:
+6. Once `DISCORD_TOKEN` and `DISCORD_ID` are set, slash commands **register themselves automatically** the first time the bot starts — no manual step needed. If you want to force a republish without restarting (e.g. right after adding a command file), run:
    ```bash
    npm run generate-cmds
    ```
-   This pushes the contents of `commands/discord/` to Discord's API. Re-run it any time you add, remove, or change a command's `SlashCommandBuilder`.
 7. (Optional) **Sync custom emojis** if you maintain `data/emojis.json`:
    ```bash
    npm run sync-emojis
@@ -347,7 +345,7 @@ If you tighten `YOUTUBE_SLOW_POLL_MS` to faster than ~25 minutes you'll start to
 | Docker (background)     | `docker compose up --build -d` | Restart policy is `always` (auto-restart on crash).      |
 | Rebuild and restart     | `bash init.sh`                 | Convenience wrapper.                                     |
 | Tail logs               | `docker compose logs -f bot`   | All Winston output.                                      |
-| Register slash commands | `npm run generate-cmds`        | Or `docker compose exec bot node utils/generateCmds.js`. |
+| Force-republish slash commands | `npm run generate-cmds` | Automatic on every startup; this is only for a republish without restarting. |
 | Format source files     | `npm run format`               | Runs Prettier over all `*.js` files.                     |
 | Check formatting (CI)   | `npm run format:check`         | Exits non-zero if any file is not formatted.             |
 
@@ -446,7 +444,7 @@ module.exports = {
 };
 ```
 
-After adding a new file, run `npm run generate-cmds` to push it to Discord — the auto-loader makes the bot _aware_ of the command, but Discord still needs the schema registered.
+After adding a new file, just restart the bot — `events/discord/clientReady.js` publishes the current `commands/discord/` list to Discord automatically on every startup. Run `npm run generate-cmds` instead if you want the republish immediately, without restarting.
 
 **Current commands**
 
@@ -454,11 +452,12 @@ After adding a new file, run `npm run generate-cmds` to push it to Discord — t
 | --- | --- | --- |
 | `/rules` | Manage Messages | Posts or DMs the server rules embed with reaction roles. |
 | `/warn` | Manage Messages | Issues a warning. Escalates: warn → timeout → ban at threshold. |
-| `/scam-image add` | Administrator | Downloads up to 3 image attachments, computes their perceptual hash, and stores them in `scam_image_hashes`. |
-| `/scam-image list` | Administrator | Lists all registered hashes with their IDs and optional descriptions. |
-| `/scam-image remove` | Administrator | Deletes a registered hash by its database ID. |
-| `/ai-docs` | — | Posts AI usage documentation. |
-| `/force-polling` | Administrator | Forces an immediate YouTube poll cycle. |
+| `/ban` | Ban Members | Permanently bans a user and deletes up to 7 days of their messages (configurable). |
+| `/scamimage add` | Administrator | Downloads up to 3 image attachments, computes their perceptual hash, and stores them in `scam_image_hashes`. |
+| `/scamimage list` | Administrator | Lists all registered hashes with their IDs and optional descriptions. |
+| `/scamimage remove` | Administrator | Deletes a registered hash by its database ID. |
+| `/aidocs` | Manage Messages | Posts AI usage documentation. |
+| `/forcepolling` | Administrator | Forces an immediate YouTube poll cycle. |
 
 ### Discord event auto-loading
 
@@ -535,7 +534,7 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 
 | I want to…                                                | Edit                                                                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Add a Discord slash command                               | Add a new file under `commands/discord/` exporting `{ data, execute }`, then run `npm run generate-cmds`.     |
+| Add a Discord slash command                               | Add a new file under `commands/discord/` exporting `{ data, execute }`, then restart the bot (or run `npm run generate-cmds` for an immediate republish). |
 | Add a Discord chat behavior                               | Edit `events/discord/messageCreate.js` (or add a new handler — Discord auto-loads new files).                 |
 | Add a Twitch chat command                                 | Add a branch to `events/twitch/interactionCreate.js`.                                                         |
 | Configure reaction roles on `/rules`                      | Add `REACTION_ROLE_RULES_EMOJI1=emoji:roleId` to `.env`. Use `REACTION_ROLE_{GROUP}_EMOJI*` for other embeds. |
@@ -547,9 +546,9 @@ All templates dynamically apply a distinct color scheme and standard URLs based 
 | Disable a platform                                        | Set `ENABLE_DISCORD=false` / `ENABLE_TWITCH=false` / `ENABLE_YOUTUBE=false` in `.env`.                        |
 | Change the AI bot personality / rules / examples          | Edit `data/AIPrompt.md`. Use `{{BOT_NAME}}` and `{{GALA_USER_ID}}` as placeholders — injected at startup.     |
 | Debug why the AI is replying unexpectedly                 | Set `GEMINI_DEBUG_LOG=true` in `.env`, restart, and inspect `logs/ai.log` for the full injected context.      |
-| Register a known scam image                               | Run `/scam-image add image1:<attachment>` as an Administrator. Up to 3 images per call; optional `description:` note. |
-| Review registered scam hashes                             | Run `/scam-image list` to see all IDs, hash previews, and dates.                                              |
-| Remove a false-positive scam hash                         | Run `/scam-image remove id:<id>` with the ID shown by `/scam-image list`.                                     |
+| Register a known scam image                               | Run `/scamimage add image1:<attachment>` as an Administrator. Up to 3 images per call; optional `description:` note. |
+| Review registered scam hashes                             | Run `/scamimage list` to see all IDs, hash previews, and dates.                                              |
+| Remove a false-positive scam hash                         | Run `/scamimage remove id:<id>` with the ID shown by `/scamimage list`.                                     |
 | Tune scam image similarity threshold                      | Edit `HASH_THRESHOLD` in `utils/discord/imageHash.js` (default `10` out of 256 bits, ~4%).                   |
 | Format all source files                                   | Run `npm run format`. Run `npm run format:check` in CI to verify without writing.                             |
 
@@ -628,9 +627,9 @@ Stores perceptual hashes of known scam images. On every incoming message with an
 
 | Column        | Type               | Purpose                                                  |
 | ------------- | ------------------ | -------------------------------------------------------- |
-| `id`          | integer (PK, auto) | Row ID. Used by `/scam-image remove`.                    |
+| `id`          | integer (PK, auto) | Row ID. Used by `/scamimage remove`.                    |
 | `hash`        | text               | 64-char hex blockhash (256-bit, computed with `image-hash` + `sharp`). |
-| `description` | text (nullable)    | Optional admin note set via `/scam-image add description:`. |
+| `description` | text (nullable)    | Optional admin note set via `/scamimage add description:`. |
 | `added_by`    | text               | Discord user ID of the admin who registered the hash.    |
 | `added_at`    | integer            | Unix timestamp (ms) when the hash was added.             |
 
@@ -681,7 +680,7 @@ Check `data/twitch.json` exists and has a valid `REFRESH_TOKEN`. If the refresh-
 You'll see 403s in `logs/youtube.log`. The bot pauses `search.list` for 24 h automatically. Set `YOUTUBE_API_KEY_2` to a key from a different Google Cloud project to fall back transparently.
 
 **Slash commands aren't appearing in Discord**
-Run `npm run generate-cmds`. Global slash commands can take a few minutes to propagate. Confirm the bot was invited with the `applications.commands` scope.
+They're republished automatically on every bot startup — restart the bot, or run `npm run generate-cmds` to force it without restarting. Global slash commands can take a few minutes to propagate. Confirm the bot was invited with the `applications.commands` scope.
 
 **The bot isn't replying to @mentions with AI / is warning people instead**
 `GALA_USER_ID` must be set to Gala's _personal_ Discord user ID (not the bot's). The bot detects its own @mention via `client.user.id` at runtime — no env var needed for that. `GALA_DISCORD_ID` is the guild/server ID and is unrelated to mention detection.

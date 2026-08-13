@@ -1,6 +1,6 @@
 {
   "name": "galabot",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
@@ -10,28 +10,28 @@
     "format:check": "prettier --check \"**/*.js\" --ignore-path .gitignore"
   },
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
-    "@discordjs/rest": "^2.5.1",
-    "@google/genai": "^1.0.0",
-    "@twurple/api": "^7.4.0",
-    "@twurple/auth": "^7.4.0",
-    "@twurple/chat": "^7.4.0",
-    "@twurple/eventsub-ws": "^7.4.0",
-    "axios": "^1.11.0",
-    "better-sqlite3": "^12.2.0",
-    "discord-api-types": "^0.38.18",
-    "discord.js": "^14.21.0",
+    "@discordjs/rest": "^2.6.3",
+    "@google/genai": "^2.17.0",
+    "@twurple/api": "^8.1.4",
+    "@twurple/auth": "^8.1.4",
+    "@twurple/chat": "^8.1.4",
+    "@twurple/eventsub-ws": "^8.1.4",
+    "axios": "^1.19.0",
+    "better-sqlite3": "^13.0.3",
+    "discord-api-types": "^0.38.53",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.2.1",
     "image-hash": "^7.0.1",
-    "kysely": "^0.28.4",
-    "puppeteer": "^24.16.1",
-    "sharp": "^0.35.1",
+    "kysely": "^0.29.5",
+    "puppeteer": "^25.6.0",
+    "sharp": "^0.35.3",
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "prettier": "^3.8.4"
-  },
-  "overrides": {
-    "undici": "6.27.0"
+    "prettier": "^3.9.6"
   }
 }

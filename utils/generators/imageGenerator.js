@@ -73,7 +73,7 @@ async function getBrowser() {
       process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
     sysLog("info", "imageGenerator:launching browser", { executablePath });
     browser = await puppeteer.launch({
-      headless: "new",
+      headless: true,
       executablePath,
       devtools: false,
       args: [

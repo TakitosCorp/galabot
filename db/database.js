@@ -224,7 +224,10 @@ async function initialize() {
     }
 
     const scamInfo = sqliteDb.pragma("table_info(scam_image_hashes)");
-    if (scamInfo.length > 0 && !scamInfo.map((c) => c.name).includes("filename")) {
+    if (
+      scamInfo.length > 0 &&
+      !scamInfo.map((c) => c.name).includes("filename")
+    ) {
       sqliteDb.exec("ALTER TABLE scam_image_hashes ADD COLUMN filename text");
       dbLog("info", "db:migration added filename to scam_image_hashes");
     }

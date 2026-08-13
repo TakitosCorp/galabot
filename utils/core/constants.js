@@ -41,6 +41,15 @@ module.exports = {
   MAX_WARN_REASON_LENGTH: 512,
 
   /**
+   * Default number of days of messages to delete when the `/ban` command is used
+   * without an explicit `delete_days` option. Maps to Discord's
+   * `deleteMessageSeconds` (value × 86 400). Maximum allowed by Discord is 7.
+   * @type {number}
+   * @constant
+   */
+  BAN_DELETE_DAYS_DEFAULT: 7,
+
+  /**
    * Lifetime of a freshly-minted Twitch access token before we proactively refresh it.
    * Set just under Twitch's 60-day refresh-token rotation window.
    * @type {number}

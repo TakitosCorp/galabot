@@ -127,14 +127,25 @@ async function handleAdd(interaction) {
 
   for (const att of attachments) {
     try {
-      const response = await axios.get(att.url, { responseType: "arraybuffer" });
+      const response = await axios.get(att.url, {
+        responseType: "arraybuffer",
+      });
       const buffer = Buffer.from(response.data);
       const hash = await computeHash(buffer);
-      const insertedId = await addScamHash(hash, description, interaction.user.id);
+      const insertedId = await addScamHash(
+        hash,
+        description,
+        interaction.user.id,
+      );
 
       const filename = `${insertedId}.webp`;
       await sharp(buffer)
-        .resize({ width: 300, height: 300, fit: "inside", withoutEnlargement: true })
+        .resize({
+          width: 300,
+          height: 300,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
         .webp({ quality: 60 })
         .toFile(path.join(scamImagesDir, filename));
       await updateScamHashFilename(insertedId, filename);
@@ -216,7 +227,9 @@ async function handleCheck(interaction) {
   const att = interaction.options.getAttachment("image1");
 
   if (!att.contentType?.startsWith("image/")) {
-    return interaction.editReply({ content: "Please provide a valid image attachment." });
+    return interaction.editReply({
+      content: "Please provide a valid image attachment.",
+    });
   }
 
   let buffer;
@@ -241,7 +254,9 @@ async function handleCheck(interaction) {
   const knownHashes = await getAllScamHashes();
 
   if (knownHashes.length === 0) {
-    return interaction.editReply({ content: "ℹ️ No scam hashes registered yet." });
+    return interaction.editReply({
+      content: "ℹ️ No scam hashes registered yet.",
+    });
   }
 
   let minDist = Infinity;
@@ -307,9 +322,7 @@ module.exports = {
         ),
     )
     .addSubcommand((sub) =>
-      sub
-        .setName("list")
-        .setDescription("List all registered scam hashes."),
+      sub.setName("list").setDescription("List all registered scam hashes."),
     )
     .addSubcommand((sub) =>
       sub

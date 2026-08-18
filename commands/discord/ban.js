@@ -154,6 +154,10 @@ module.exports = {
       });
     }
 
+    // Acknowledge the interaction before performing long-running operations
+    // (DM + API ban call can take 1–3+ seconds; Discord requires acknowledgment within 3 seconds)
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const banEmbed = new EmbedBuilder()
       .setColor(0xff0000)
       .setTitle(t.banTitle(user.username))
@@ -177,7 +181,7 @@ module.exports = {
         deleteMessageSeconds: deleteDays * 86_400,
         reason,
       });
-      await interaction.reply({ embeds: [banEmbed] });
+      await interaction.editReply({ embeds: [banEmbed] });
       discordLog("info", "ban:banned", {
         target: user.username,
         targetId: user.id,
@@ -191,7 +195,7 @@ module.exports = {
         err: error.message,
         stack: error.stack,
       });
-      await interaction.reply({
+      await interaction.editReply({
         content: t.errBanFailed(user.username),
         flags: MessageFlags.Ephemeral,
       });

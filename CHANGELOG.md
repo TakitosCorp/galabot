@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.2] - 2026-08-18
+
+### Fixed
+
+- Discord interaction timeout error (10062 "Unknown Interaction") in `/ban` and `/warn` commands when performing long-running operations (DM + API ban/timeout calls). Discord interactions must be acknowledged within 3 seconds; the fix adds `deferReply()` before long operations and uses `editReply()` to update the deferred response instead of attempting a new `reply()` that would fail after the timeout window.
+
 ## [1.1.1] - 2026-08-13
 
 ### Fixed

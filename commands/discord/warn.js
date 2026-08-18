@@ -60,6 +60,10 @@ async function handleBan(interaction, user, guildMember, t, tEn) {
   if (
     interaction.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)
   ) {
+    // Acknowledge the interaction before performing long-running operations
+    // (DM + API ban call can take 1–3+ seconds; Discord requires acknowledgment within 3 seconds)
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     try {
       await user.send({ embeds: [banEmbed] });
     } catch (error) {
@@ -71,7 +75,7 @@ async function handleBan(interaction, user, guildMember, t, tEn) {
 
     try {
       await guildMember.ban({ reason: t.banReason });
-      await interaction.reply({ embeds: [banEmbed] });
+      await interaction.editReply({ embeds: [banEmbed] });
       discordLog("info", "warn:banned", {
         target: user.username,
         targetId: user.id,
@@ -83,7 +87,7 @@ async function handleBan(interaction, user, guildMember, t, tEn) {
         err: error.message,
         stack: error.stack,
       });
-      await interaction.reply({
+      await interaction.editReply({
         content: t.errBanFailed(user.username),
         flags: MessageFlags.Ephemeral,
       });
@@ -136,6 +140,10 @@ async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
       PermissionFlagsBits.ModerateMembers,
     )
   ) {
+    // Acknowledge the interaction before performing long-running operations
+    // (DM + API timeout call can take 1–3+ seconds; Discord requires acknowledgment within 3 seconds)
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     try {
       await user.send({ embeds: [warnEmbed] });
     } catch (error) {
@@ -147,7 +155,7 @@ async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
 
     try {
       await guildMember.timeout(timeoutDuration, reason);
-      await interaction.reply({ embeds: [warnEmbed] });
+      await interaction.editReply({ embeds: [warnEmbed] });
       discordLog("info", "warn:timeout-applied", {
         target: user.username,
         targetId: user.id,
@@ -161,7 +169,7 @@ async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
         err: error.message,
         stack: error.stack,
       });
-      await interaction.reply({
+      await interaction.editReply({
         content: t.errTimeoutFailed(user.username),
         flags: MessageFlags.Ephemeral,
       });

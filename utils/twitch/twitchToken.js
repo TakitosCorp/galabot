@@ -7,7 +7,7 @@
  * refreshing transparently against `twitchtokengenerator.com` whenever the
  * stored token is missing, expired, or rejected by `oauth2/validate`.
  *
- * @typedef {import('./types').TwitchConfig} TwitchConfig
+ * @typedef {import('./types.js').TwitchConfig} TwitchConfig
  */
 
 import * as fileUtils from "../helpers/fileUtils.js";

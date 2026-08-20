@@ -6,7 +6,7 @@
  * image or a generic "stream ended" image, and by the Discord event sync to
  * create Guild Scheduled Events for all upcoming segments.
  *
- * @typedef {import('./types').ScheduleSegment} ScheduleSegment
+ * @typedef {import('./types.js').ScheduleSegment} ScheduleSegment
  */
 
 import axios from "axios";

@@ -10,8 +10,8 @@
  * A single Puppeteer browser instance is reused across calls and torn down via
  * {@link closeBrowser} during graceful shutdown.
  *
- * @typedef {import('./types').BannerData} BannerData
- * @typedef {import('./types').ScheduleSegment} ScheduleSegment
+ * @typedef {import('./types.js').BannerData} BannerData
+ * @typedef {import('./types.js').ScheduleSegment} ScheduleSegment
  */
 
 import puppeteer from "puppeteer";

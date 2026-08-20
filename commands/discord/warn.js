@@ -9,7 +9,7 @@
  *  - Otherwise applies a timeout proportional to the new warn count
  *    (`newCount * WARN_TIMEOUT_BASE_MS`).
  *
- * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import {

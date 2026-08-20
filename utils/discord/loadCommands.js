@@ -7,7 +7,7 @@
  * `utils/helpers/generateCmds.js`) so the two can never read a different
  * list of command files from one another.
  *
- * @typedef {import('../core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import fs from "node:fs/promises";

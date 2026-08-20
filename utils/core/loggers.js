@@ -14,9 +14,9 @@
  * appended to the message so log lines stay grep-friendly while still carrying
  * structured data for debugging.
  *
- * @typedef {import('./types').LogLevel} LogLevel
- * @typedef {import('./types').LogContext} LogContext
- * @typedef {import('./types').DomainLogFn} DomainLogFn
+ * @typedef {import('./types.js').LogLevel} LogLevel
+ * @typedef {import('./types.js').LogContext} LogContext
+ * @typedef {import('./types.js').DomainLogFn} DomainLogFn
  */
 
 import winston from "winston";

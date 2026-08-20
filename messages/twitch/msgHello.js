@@ -15,8 +15,8 @@ import { GREETING_COOLDOWN_MS } from "../../utils/core/constants.js";
  * Send a greeting reply in Twitch chat if the user is past the cooldown window.
  *
  * @async
- * @param {import('../../utils/core/types').TwitchEventData} eventData
- * @param {import('../../handlers/clientManager')} clientManager
+ * @param {import('../../utils/core/types.js').TwitchEventData} eventData
+ * @param {import('../../handlers/clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function handleHello(eventData, clientManager) {

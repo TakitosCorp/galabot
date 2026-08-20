@@ -4,7 +4,7 @@
  * Read/write helpers for the `warns` table. Each call to {@link addWarn} appends
  * a new row — the moderation flow never deletes warnings, it only counts them.
  *
- * @typedef {import('../utils/core/types').WarnRow} WarnRow
+ * @typedef {import('../utils/core/types.js').WarnRow} WarnRow
  */
 
 import { db } from "./database.js";

@@ -7,7 +7,7 @@
  *
  * Restricted to members with `Manage Messages` permission and to guild contexts.
  *
- * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import {

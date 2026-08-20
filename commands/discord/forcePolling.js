@@ -15,7 +15,7 @@ import {
 import { runSlowPoll } from "../../handlers/youtube/startup.js";
 import { discordLog } from "../../utils/core/loggers.js";
 
-/** @type {import('../../utils/core/types').DiscordSlashCommand} */
+/** @type {import('../../utils/core/types.js').DiscordSlashCommand} */
 export const data = new SlashCommandBuilder()
   .setName("forcepolling")
   .setDescription("Manually trigger YouTube stream polling (admin only)")
@@ -26,7 +26,7 @@ export const data = new SlashCommandBuilder()
  * @async
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {import('discord.js').Client} client
- * @param {import('../../handlers/clientManager')} clientManager
+ * @param {import('../../handlers/clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function execute(interaction, client, clientManager) {

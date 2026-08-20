@@ -12,7 +12,7 @@
  *    set to `deleteDays × 86 400`.
  *  - Replies publicly with a ban embed on success.
  *
- * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import {

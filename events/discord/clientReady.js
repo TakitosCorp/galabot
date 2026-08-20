@@ -15,7 +15,7 @@ import { setIdleStatus } from "../../utils/discord/discordPresence.js";
 import { publishCommands } from "../../utils/discord/publishCommands.js";
 import { discordLog as log } from "../../utils/core/loggers.js";
 
-/** @type {import('../../utils/core/types').DiscordEventHandler} */
+/** @type {import('../../utils/core/types.js').DiscordEventHandler} */
 export const name = Events.ClientReady;
 export const once = true;
 

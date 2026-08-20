@@ -7,8 +7,8 @@
  * `upcoming_streams` DB table for AI context injection — this sync runs
  * independently of `DISCORD_EVENTS_ENABLED`.
  *
- * @typedef {import('./types').DiscordScheduledEventRow} DiscordScheduledEventRow
- * @typedef {import('./types').ScheduleSegment} ScheduleSegment
+ * @typedef {import('./types.js').DiscordScheduledEventRow} DiscordScheduledEventRow
+ * @typedef {import('./types.js').ScheduleSegment} ScheduleSegment
  */
 
 import {
@@ -379,7 +379,7 @@ export async function cleanupRemovedEvents(
  * Fetch all upcoming Twitch schedule segments and sync them to Discord Guild Scheduled Events.
  *
  * @async
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 export async function syncTwitchScheduleEvents(clientManager) {
@@ -442,7 +442,7 @@ export async function syncTwitchScheduleEvents(clientManager) {
  * current as long as Twitch is enabled.
  *
  * @async
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 export async function syncTwitchUpcomingStreams(clientManager) {

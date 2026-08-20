@@ -6,8 +6,8 @@
  * `debug` level and routes errors through `dbLog('error', …)` while still
  * rethrowing so callers can decide on user-facing fallbacks.
  *
- * @typedef {import('../utils/core/types').StreamRow} StreamRow
- * @typedef {import('../utils/core/types').StreamInsert} StreamInsert
+ * @typedef {import('../utils/core/types.js').StreamRow} StreamRow
+ * @typedef {import('../utils/core/types.js').StreamInsert} StreamInsert
  */
 
 import { db } from "./database.js";

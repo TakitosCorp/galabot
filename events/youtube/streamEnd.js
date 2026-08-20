@@ -24,7 +24,7 @@ import axios from "axios";
  * Wrap up the just-ended YouTube stream.
  *
  * @async
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
  * @param {string|null} endTime - ISO-8601 actual end time reported by the API.
  * @returns {Promise<void>}
  */

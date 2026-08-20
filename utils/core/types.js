@@ -215,7 +215,7 @@
  * Discord slash command module shape, consumed by `discordClient.commands`.
  * @typedef {Object} DiscordSlashCommand
  * @property {import('discord.js').SlashCommandBuilder} data - Builder describing options/permissions.
- * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: import('discord.js').Client, clientManager: import('../../handlers/clientManager')) => Promise<void>} execute
+ * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: import('discord.js').Client, clientManager: import('../../handlers/clientManager.js')) => Promise<void>} execute
  */
 
 // Intentionally empty runtime export — this module is types-only.

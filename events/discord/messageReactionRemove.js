@@ -12,7 +12,7 @@ import {
   getRoleForEmoji,
 } from "../../utils/discord/reactionRoleManager.js";
 
-/** @type {import('../../utils/core/types').DiscordEventHandler} */
+/** @type {import('../../utils/core/types.js').DiscordEventHandler} */
 export const name = "messageReactionRemove";
 
 export async function execute(reaction, user) {

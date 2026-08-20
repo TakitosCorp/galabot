@@ -26,8 +26,8 @@ import resources from "../../data/resources.json" with { type: "json" };
  * Announce a YouTube live stream on Discord and activate the scheduled event.
  *
  * @async
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
- * @param {import('../../utils/core/types').YouTubeState} streamState - Snapshot of poller state at live transition.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
+ * @param {import('../../utils/core/types.js').YouTubeState} streamState - Snapshot of poller state at live transition.
  * @returns {Promise<void>}
  */
 async function streamStart(clientManager, streamState) {

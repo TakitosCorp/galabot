@@ -10,8 +10,8 @@
  * and manually via `npm run generate-cmds` (`utils/helpers/generateCmds.js`)
  * to force a republish without restarting the bot.
  *
- * @typedef {import('../core/types').DiscordSlashCommand} DiscordSlashCommand
- * @typedef {import('../core/types').DomainLogFn} DomainLogFn
+ * @typedef {import('../core/types.js').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../core/types.js').DomainLogFn} DomainLogFn
  */
 
 import { REST } from "@discordjs/rest";

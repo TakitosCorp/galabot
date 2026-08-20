@@ -140,7 +140,7 @@ export async function syncYouTubeUpcomingStreamsToDb() {
  * for new upcoming/live entries on the channel.
  *
  * @async
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function runSlowPoll(clientManager) {
@@ -177,7 +177,7 @@ export async function runSlowPoll(clientManager) {
  * `idle → upcoming → starting → live → ended` state machine.
  *
  * @async
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 async function runFastPoll(clientManager) {
@@ -248,7 +248,7 @@ async function runFastPoll(clientManager) {
  * recurring intervals on `clientManager.youtubeIntervals`.
  *
  * @async
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function bootstrap(clientManager) {

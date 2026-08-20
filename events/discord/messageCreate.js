@@ -12,7 +12,7 @@
  *
  * Bot-authored messages and DMs are ignored.
  *
- * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types.js').DiscordEventHandler} DiscordEventHandler
  */
 
 import { PermissionFlagsBits } from "discord.js";

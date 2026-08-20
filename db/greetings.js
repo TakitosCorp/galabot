@@ -5,7 +5,7 @@
  * greeting timestamp for each user — older rows are overwritten in place rather
  * than accumulating a full history.
  *
- * @typedef {import('../utils/core/types').GreetingRow} GreetingRow
+ * @typedef {import('../utils/core/types.js').GreetingRow} GreetingRow
  */
 
 import { db } from "./database.js";

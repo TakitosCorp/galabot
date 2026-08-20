@@ -12,8 +12,8 @@ import { handleHello } from "../../messages/twitch/msgHello.js";
 
 /**
  * @async
- * @param {import('../../utils/core/types').TwitchEventData} eventData
- * @param {import('../../handlers/clientManager')} clientManager
+ * @param {import('../../utils/core/types.js').TwitchEventData} eventData
+ * @param {import('../../handlers/clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export default async function (eventData, clientManager) {

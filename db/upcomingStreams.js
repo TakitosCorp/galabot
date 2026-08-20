@@ -11,7 +11,7 @@
  * in date order, so plain string comparisons work correctly in Kysely without any
  * SQLite `datetime()` function.
  *
- * @typedef {import('../utils/core/types').UpcomingStreamRow} UpcomingStreamRow
+ * @typedef {import('../utils/core/types.js').UpcomingStreamRow} UpcomingStreamRow
  */
 
 import { db } from "./database.js";

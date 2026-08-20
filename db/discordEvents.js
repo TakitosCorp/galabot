@@ -7,7 +7,7 @@
  * helper logs at `debug` level on entry and rethrows on error so callers can
  * apply their own fallbacks.
  *
- * @typedef {import('../utils/core/types').DiscordScheduledEventRow} DiscordScheduledEventRow
+ * @typedef {import('../utils/core/types.js').DiscordScheduledEventRow} DiscordScheduledEventRow
  */
 
 import { db } from "./database.js";

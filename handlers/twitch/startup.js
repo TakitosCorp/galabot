@@ -29,7 +29,7 @@ const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;
  * Attach all chat + EventSub callbacks to the clients owned by `clientManager`.
  *
  * @async
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function bootstrap(clientManager) {

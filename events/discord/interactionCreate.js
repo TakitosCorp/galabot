@@ -6,7 +6,7 @@
  * logged with the full stack and surfaced to the user as an ephemeral message
  * in their resolved language.
  *
- * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types.js').DiscordEventHandler} DiscordEventHandler
  */
 
 import { InteractionType, MessageFlags } from "discord.js";
@@ -22,7 +22,7 @@ import { buildListPage } from "../../commands/discord/scamimage.js";
  * @async
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {import('discord.js').Client} client
- * @param {import('../../handlers/clientManager')} clientManager
+ * @param {import('../../handlers/clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 async function executeCommand(interaction, client, clientManager) {
@@ -82,7 +82,7 @@ export const name = "interactionCreate";
  * @async
  * @param {import('discord.js').Interaction} interaction
  * @param {import('discord.js').Client} client
- * @param {import('../../handlers/clientManager')} clientManager
+ * @param {import('../../handlers/clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 export async function execute(interaction, client, clientManager) {

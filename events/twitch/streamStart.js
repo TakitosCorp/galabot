@@ -34,7 +34,7 @@ import resources from "../../data/resources.json" with { type: "json" };
  *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOnlineEvent} event - The Twurple stream online event.
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamStart(event, clientManager) {

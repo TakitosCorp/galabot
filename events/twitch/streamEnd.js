@@ -29,7 +29,7 @@ import { EmbedBuilder, AttachmentBuilder } from "discord.js";
  *
  * @async
  * @param {import('@twurple/eventsub-base').EventSubStreamOfflineEvent} event - The Twurple stream offline event.
- * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
+ * @param {import('../../handlers/clientManager.js')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
 async function streamEnd(event, clientManager) {

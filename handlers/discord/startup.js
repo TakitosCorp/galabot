@@ -5,8 +5,8 @@
  * wires the events to the gateway client, and indexes commands on `discordClient.commands`
  * so `interactionCreate.js` can dispatch to them.
  *
- * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
- * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types.js').DiscordEventHandler} DiscordEventHandler
+ * @typedef {import('../../utils/core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import { discordLog as log } from "../../utils/core/loggers.js";
@@ -22,7 +22,7 @@ import { pathToFileURL } from "node:url";
  *
  * @async
  * @param {import('discord.js').Client} discordClient - The discord.js client.
- * @param {import('../clientManager')} clientManager - Lifecycle owner forwarded to handlers.
+ * @param {import('../clientManager.js')} clientManager - Lifecycle owner forwarded to handlers.
  * @returns {Promise<void>}
  */
 export async function bootstrap(discordClient, clientManager) {
@@ -42,7 +42,7 @@ export async function bootstrap(discordClient, clientManager) {
  *
  * @async
  * @param {import('discord.js').Client} discordClient
- * @param {import('../clientManager')} clientManager
+ * @param {import('../clientManager.js')} clientManager
  * @returns {Promise<void>}
  */
 async function registerEvents(discordClient, clientManager) {

@@ -10,9 +10,9 @@
  * variable (comma-separated list of video IDs). Blacklisted videos are
  * filtered out during polling and never announced.
  *
- * @typedef {import('../core/types').YouTubeState} YouTubeState
- * @typedef {import('../core/types').YouTubeStreamData} YouTubeStreamData
- * @typedef {import('../core/types').YouTubeCheckResult} YouTubeCheckResult
+ * @typedef {import('../core/types.js').YouTubeState} YouTubeState
+ * @typedef {import('../core/types.js').YouTubeStreamData} YouTubeStreamData
+ * @typedef {import('../core/types.js').YouTubeCheckResult} YouTubeCheckResult
  */
 
 import axios from "axios";

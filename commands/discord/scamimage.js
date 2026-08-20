@@ -10,7 +10,7 @@
  *  - `remove` — delete a hash by its database ID.
  *  - `check`  — test whether an image would trigger the ban without posting it publicly.
  *
- * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
+ * @typedef {import('../../utils/core/types.js').DiscordSlashCommand} DiscordSlashCommand
  */
 
 import path from "node:path";

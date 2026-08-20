@@ -29,14 +29,15 @@
  * defaults to `gemma-4-26b-a4b-it`.
  */
 
-"use strict";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { GoogleGenAI } from "@google/genai";
+import { aiLog } from "../core/loggers.js";
+import { GEMINI_QUOTA_COOLDOWN_MS } from "../core/constants.js";
 
-const fs = require("fs");
-const path = require("path");
-const crypto = require("crypto");
-const { GoogleGenAI } = require("@google/genai");
-const { aiLog } = require("../core/loggers");
-const { GEMINI_QUOTA_COOLDOWN_MS } = require("../core/constants");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Max retries for transient (5xx) Gemini errors before surfacing to caller. */
 const TRANSIENT_RETRY_LIMIT = 2;
@@ -182,7 +183,7 @@ function isTransientError(err) {
  *   `"GEMINI quota exhausted"` while the cooldown is active, or the underlying
  *   SDK error for any other failure.
  */
-async function queryGemini(userContent, additionalContext = null) {
+export async function queryGemini(userContent, additionalContext = null) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY not configured");
   }
@@ -315,5 +316,3 @@ async function queryGemini(userContent, additionalContext = null) {
 
   throw lastErr ?? new Error("GEMINI quota exhausted");
 }
-
-module.exports = { queryGemini };

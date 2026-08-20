@@ -14,10 +14,8 @@
  * @typedef {import('../core/types').DomainLogFn} DomainLogFn
  */
 
-"use strict";
-
-const { REST } = require("@discordjs/rest");
-const { Routes } = require("discord-api-types/v10");
+import { REST } from "@discordjs/rest";
+import { Routes } from "discord-api-types/v10";
 
 /**
  * @param {DomainLogFn} [log]
@@ -44,7 +42,7 @@ function resolveLogger(log) {
  * @returns {Promise<void>}
  * @throws {Error} When listing, deleting, or publishing any command fails.
  */
-async function publishCommands({ token, applicationId, commands, log }) {
+export async function publishCommands({ token, applicationId, commands, log }) {
   const logFn = resolveLogger(log);
   const rest = new REST({ version: "10" }).setToken(token);
 
@@ -69,5 +67,3 @@ async function publishCommands({ token, applicationId, commands, log }) {
     names: body.map((c) => c.name),
   });
 }
-
-module.exports = { publishCommands };

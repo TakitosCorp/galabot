@@ -11,24 +11,22 @@
  * `SIGTERM` and `SIGINT`.
  */
 
-"use strict";
-
-const {
-  Client: DiscordClient,
+import {
+  Client as DiscordClient,
   GatewayIntentBits,
   Partials,
   Events,
-} = require("discord.js");
+} from "discord.js";
 
-const { initialize: dbInitialize, db } = require("../db/database");
-const { bootstrap: bootstrapDiscord } = require("./discord/startup");
-const { discordLog, twitchLog, sysLog } = require("../utils/core/loggers");
+import { initialize as dbInitialize, db } from "../db/database.js";
+import { bootstrap as bootstrapDiscord } from "./discord/startup.js";
+import { discordLog, twitchLog, sysLog } from "../utils/core/loggers.js";
 
 /**
  * Owns and orchestrates every long-lived platform client.
  * @class
  */
-class clientManager {
+export default class clientManager {
   /**
    * Initialize an empty manager. No platform connections are opened until
    * {@link clientManager#initialize} is called.
@@ -154,12 +152,13 @@ class clientManager {
    */
   async initializeTwitch() {
     sysLog("debug", "clientManager:initializeTwitch start");
-    const { ChatClient: TwitchChatClient } = require("@twurple/chat");
-    const { StaticAuthProvider } = require("@twurple/auth");
-    const { ApiClient } = require("@twurple/api");
-    const { EventSubWsListener } = require("@twurple/eventsub-ws");
-    const { bootstrap: bootstrapTwitch } = require("./twitch/startup");
-    const { getValidTwitchConfig } = require("../utils/twitch/twitchToken");
+    const { ChatClient: TwitchChatClient } = await import("@twurple/chat");
+    const { StaticAuthProvider } = await import("@twurple/auth");
+    const { ApiClient } = await import("@twurple/api");
+    const { EventSubWsListener } = await import("@twurple/eventsub-ws");
+    const { bootstrap: bootstrapTwitch } = await import("./twitch/startup.js");
+    const { getValidTwitchConfig } =
+      await import("../utils/twitch/twitchToken.js");
 
     try {
       const twitchConfig = await getValidTwitchConfig();
@@ -217,8 +216,9 @@ class clientManager {
    */
   async initializeYoutube() {
     sysLog("debug", "clientManager:initializeYoutube start");
-    const { bootstrap: bootstrapYoutube } = require("./youtube/startup");
-    const { youtubeLog } = require("../utils/core/loggers");
+    const { bootstrap: bootstrapYoutube } =
+      await import("./youtube/startup.js");
+    const { youtubeLog } = await import("../utils/core/loggers.js");
     try {
       await bootstrapYoutube(this);
       youtubeLog("info", "youtube:initialized");
@@ -243,10 +243,10 @@ class clientManager {
   async shutdown(signal) {
     sysLog("info", "clientManager:shutdown start", { signal });
     try {
-      const {
-        stopAllViewersIntervals,
-      } = require("../utils/twitch/twitchViews");
-      const { closeBrowser } = require("../utils/helpers/imageGenerator");
+      const { stopAllViewersIntervals } =
+        await import("../utils/twitch/twitchViews.js");
+      const { closeBrowser } =
+        await import("../utils/helpers/imageGenerator.js");
 
       stopAllViewersIntervals();
       sysLog("debug", "clientManager:shutdown viewers-stopped");
@@ -285,5 +285,3 @@ class clientManager {
     }
   }
 }
-
-module.exports = clientManager;

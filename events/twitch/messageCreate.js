@@ -6,11 +6,9 @@
  * ignored (we never want the bot to greet itself).
  */
 
-"use strict";
-
-const { twitchLog } = require("../../utils/core/loggers");
-const resources = require("../../data/resources.json");
-const { handleHello } = require("../../messages/twitch/msgHello");
+import { twitchLog } from "../../utils/core/loggers.js";
+import resources from "../../data/resources.json" with { type: "json" };
+import { handleHello } from "../../messages/twitch/msgHello.js";
 
 /**
  * @async
@@ -18,7 +16,7 @@ const { handleHello } = require("../../messages/twitch/msgHello");
  * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
-module.exports = async function (eventData, clientManager) {
+export default async function (eventData, clientManager) {
   if (eventData.self) return;
 
   const content = eventData.message.content.toLowerCase().trim();
@@ -36,4 +34,4 @@ module.exports = async function (eventData, clientManager) {
     });
     await handleHello(eventData, clientManager);
   }
-};
+}

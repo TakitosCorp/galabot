@@ -11,13 +11,11 @@
  * module is provider-agnostic and unaware of Discord users.
  */
 
-"use strict";
-
-const { discordLog } = require("../core/loggers");
-const {
+import { discordLog } from "../core/loggers.js";
+import {
   AI_GLOBAL_RPM_LIMIT,
   AI_GLOBAL_RPM_WINDOW_MS,
-} = require("../core/constants");
+} from "../core/constants.js";
 
 /**
  * Sliding window of dispatch timestamps (ms epoch) used to enforce the
@@ -46,7 +44,6 @@ function purgeOldTimestamps(now) {
 
 async function waitForGlobalSlot() {
   // Loop until a slot is available — typically just one iteration.
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const now = Date.now();
     purgeOldTimestamps(now);
@@ -97,7 +94,7 @@ async function runWorker() {
  * @param {() => Promise<T>} run - Async function performing the AI call.
  * @returns {Promise<T>}
  */
-function enqueue(run) {
+export function enqueue(run) {
   return new Promise((resolve, reject) => {
     queue.push({ run, resolve, reject });
     discordLog("debug", "aiQueue:enqueued", {
@@ -113,8 +110,6 @@ function enqueue(run) {
  * Snapshot of the current backlog size (for logging / metrics).
  * @returns {number}
  */
-function getQueueLength() {
+export function getQueueLength() {
   return queue.length;
 }
-
-module.exports = { enqueue, getQueueLength };

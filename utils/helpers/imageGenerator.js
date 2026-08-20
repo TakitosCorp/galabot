@@ -14,21 +14,22 @@
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
  */
 
-"use strict";
-
-const puppeteer = require("puppeteer");
-const fs = require("fs").promises;
-const path = require("path");
-const { sysLog } = require("../core/loggers");
-const { cleanStreamTitle } = require("./streamTitleCleaner");
-const {
+import puppeteer from "puppeteer";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { sysLog } from "../core/loggers.js";
+import { cleanStreamTitle } from "./streamTitleCleaner.js";
+import {
   PUPPETEER_PAGE_TIMEOUT_MS,
   PUPPETEER_GOTO_TIMEOUT_MS,
   PUPPETEER_SCREENSHOT_TIMEOUT_MS,
   PUPPETEER_SELECTOR_TIMEOUT_MS,
   NEXT_STREAMS_SETTLE_MS,
   BANNER_SETTLE_MS,
-} = require("../core/constants");
+} from "../core/constants.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Reusable Puppeteer browser instance. Lazily created by {@link getBrowser},
@@ -201,7 +202,7 @@ async function generateImageFromTemplate(
  * @param {BannerData} streamData
  * @returns {Promise<Buffer>} PNG buffer.
  */
-async function generateStreamBanner(streamData) {
+export async function generateStreamBanner(streamData) {
   const vars = getCommonTemplateVars(streamData.provider);
   let filteredTitle = cleanStreamTitle(streamData.title).replace(/!\w+\b/g, "");
 
@@ -228,7 +229,7 @@ async function generateStreamBanner(streamData) {
  * @param {ScheduleSegment[]} streamsJson - Upcoming segments to display.
  * @returns {Promise<Buffer>} PNG buffer.
  */
-async function generateFollowupImage(streamData, streamsJson) {
+export async function generateFollowupImage(streamData, streamsJson) {
   const vars = getCommonTemplateVars(streamData.provider);
   vars["{{STREAMS_JSON}}"] = JSON.stringify(streamsJson || []);
 
@@ -248,7 +249,7 @@ async function generateFollowupImage(streamData, streamsJson) {
  * @param {{ provider: ("twitch"|"youtube") }} streamData
  * @returns {Promise<Buffer>} PNG buffer.
  */
-async function generateEndedImage(streamData) {
+export async function generateEndedImage(streamData) {
   const vars = getCommonTemplateVars(streamData.provider);
   return generateImageFromTemplate(
     "streamEnded.html",
@@ -265,17 +266,10 @@ async function generateEndedImage(streamData) {
  * @async
  * @returns {Promise<void>}
  */
-async function closeBrowser() {
+export async function closeBrowser() {
   if (browser) {
     sysLog("info", "imageGenerator:closing browser");
     await browser.close();
     browser = null;
   }
 }
-
-module.exports = {
-  generateStreamBanner,
-  generateFollowupImage,
-  generateEndedImage,
-  closeBrowser,
-};

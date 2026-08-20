@@ -9,13 +9,11 @@
  * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
  */
 
-"use strict";
-
-const { InteractionType, MessageFlags } = require("discord.js");
-const { discordLog } = require("../../utils/core/loggers");
-const { getLanguage } = require("../../utils/core/language");
-const { listScamHashes } = require("../../db/scamHashes");
-const { buildListPage } = require("../../commands/discord/scamimage");
+import { InteractionType, MessageFlags } from "discord.js";
+import { discordLog } from "../../utils/core/loggers.js";
+import { getLanguage } from "../../utils/core/language.js";
+import { listScamHashes } from "../../db/scamHashes.js";
+import { buildListPage } from "../../commands/discord/scamimage.js";
 
 /**
  * Look up and execute the slash command associated with `interaction`. On error,
@@ -78,42 +76,41 @@ async function executeCommand(interaction, client, clientManager) {
 }
 
 /** @type {DiscordEventHandler} */
-module.exports = {
-  name: "interactionCreate",
-  /**
-   * @async
-   * @param {import('discord.js').Interaction} interaction
-   * @param {import('discord.js').Client} client
-   * @param {import('../../handlers/clientManager')} clientManager
-   * @returns {Promise<void>}
-   */
-  async execute(interaction, client, clientManager) {
-    if (interaction.type === InteractionType.ApplicationCommand) {
-      await executeCommand(interaction, client, clientManager);
-    } else if (interaction.isButton()) {
-      const parts = interaction.customId.split(":");
-      if (parts[0] !== "scam-list") return;
+export const name = "interactionCreate";
 
-      const page = parseInt(parts[2], 10);
-      const hashes = await listScamHashes();
+/**
+ * @async
+ * @param {import('discord.js').Interaction} interaction
+ * @param {import('discord.js').Client} client
+ * @param {import('../../handlers/clientManager')} clientManager
+ * @returns {Promise<void>}
+ */
+export async function execute(interaction, client, clientManager) {
+  if (interaction.type === InteractionType.ApplicationCommand) {
+    await executeCommand(interaction, client, clientManager);
+  } else if (interaction.isButton()) {
+    const parts = interaction.customId.split(":");
+    if (parts[0] !== "scam-list") return;
 
-      if (!hashes.length) {
-        return interaction.update({
-          content: "No hashes registered.",
-          embeds: [],
-          files: [],
-          components: [],
-        });
-      }
+    const page = parseInt(parts[2], 10);
+    const hashes = await listScamHashes();
 
-      const safePage = Math.max(0, Math.min(page, hashes.length - 1));
-      const { embed, attachment, row } = buildListPage(hashes, safePage);
-
-      await interaction.update({
-        embeds: [embed],
-        files: attachment ? [attachment] : [],
-        components: row ? [row] : [],
+    if (!hashes.length) {
+      return interaction.update({
+        content: "No hashes registered.",
+        embeds: [],
+        files: [],
+        components: [],
       });
     }
-  },
-};
+
+    const safePage = Math.max(0, Math.min(page, hashes.length - 1));
+    const { embed, attachment, row } = buildListPage(hashes, safePage);
+
+    await interaction.update({
+      embeds: [embed],
+      files: attachment ? [attachment] : [],
+      components: row ? [row] : [],
+    });
+  }
+}

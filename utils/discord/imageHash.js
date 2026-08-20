@@ -1,7 +1,5 @@
-"use strict";
-
-const sharp = require("sharp");
-const { imageHash } = require("image-hash");
+import sharp from "sharp";
+import { imageHash } from "image-hash";
 
 const HASH_BITS = 16;
 const HASH_THRESHOLD = 10;
@@ -16,7 +14,7 @@ const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
  * @param {Buffer} buffer - Raw image bytes (any format sharp supports).
  * @returns {Promise<string>} 64-char hex hash string.
  */
-async function computeHash(buffer) {
+export async function computeHash(buffer) {
   const pngBuffer = await sharp(buffer).png().toBuffer();
   return new Promise((resolve, reject) => {
     imageHash(
@@ -39,7 +37,7 @@ async function computeHash(buffer) {
  * @param {string} hex2
  * @returns {number}
  */
-function hammingDistance(hex1, hex2) {
+export function hammingDistance(hex1, hex2) {
   if (hex1.length !== hex2.length) return Infinity;
   let dist = 0;
   for (let i = 0; i < hex1.length; i++) {
@@ -56,8 +54,8 @@ function hammingDistance(hex1, hex2) {
  * @param {number} [threshold=HASH_THRESHOLD]
  * @returns {boolean}
  */
-function isSimilar(hex1, hex2, threshold = HASH_THRESHOLD) {
+export function isSimilar(hex1, hex2, threshold = HASH_THRESHOLD) {
   return hammingDistance(hex1, hex2) <= threshold;
 }
 
-module.exports = { computeHash, hammingDistance, isSimilar, HASH_THRESHOLD };
+export { HASH_THRESHOLD };

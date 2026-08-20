@@ -7,11 +7,11 @@
  * a fatal error and terminates the process with a non-zero exit code.
  */
 
-"use strict";
+import dotenv from "dotenv";
+import ClientManager from "./handlers/clientManager.js";
+import { sysLog } from "./utils/core/loggers.js";
 
-require("dotenv").config({ quiet: true });
-const ClientManager = require("./handlers/clientManager");
-const { sysLog } = require("./utils/core/loggers");
+dotenv.config({ quiet: true });
 
 /**
  * Environment variables that must be set for the bot to start. Optional settings

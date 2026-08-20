@@ -5,9 +5,7 @@
  * Provides bilingual embed contents explaining how to interact with the AI feature.
  */
 
-"use strict";
-
-module.exports = {
+export default {
   en: {
     embedTitle: "HOW TO CHAT WITH ME",
     embedFields: [

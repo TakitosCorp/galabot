@@ -9,8 +9,6 @@
  * @typedef {import('../../utils/core/types').TwitchEventData} TwitchEventData
  */
 
-"use strict";
-
 /**
  * Build a normalised event payload from Twurple's `onMessage` arguments.
  *
@@ -20,7 +18,7 @@
  * @param {import('@twurple/chat').ChatMessage} msg - Underlying Twurple message object.
  * @returns {TwitchEventData}
  */
-function createEventData(channel, user, message, msg) {
+export function createEventData(channel, user, message, msg) {
   return {
     channel: channel,
     user: {
@@ -50,5 +48,3 @@ function createEventData(channel, user, message, msg) {
     rawData: msg,
   };
 }
-
-module.exports = { createEventData };

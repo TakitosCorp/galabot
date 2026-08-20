@@ -10,20 +10,19 @@
  * @typedef {import('../core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
-"use strict";
-
-const fs = require("fs").promises;
-const path = require("path");
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 /**
- * Read every `*.js` file in `commands/discord/` and `require()` it.
+ * Read every `*.js` file in `commands/discord/` and dynamically `import()` it.
  *
  * @async
  * @returns {Promise<{file: string, command: DiscordSlashCommand}[]>}
  * @throws {Error} If two command files export the same `data.name` — Discord
  *   would silently only keep one of them, so this fails fast instead.
  */
-async function loadCommandFiles() {
+export async function loadCommandFiles() {
   const commandDir = path.join(process.cwd(), "commands", "discord");
   const commandFiles = (await fs.readdir(commandDir)).filter((f) =>
     f.endsWith(".js"),
@@ -33,7 +32,9 @@ async function loadCommandFiles() {
   const loaded = [];
 
   for (const file of commandFiles) {
-    const command = require(path.join(commandDir, file));
+    const command = await import(
+      pathToFileURL(path.join(commandDir, file)).href
+    );
     const name = command.data.name;
 
     if (fileByName.has(name)) {
@@ -47,5 +48,3 @@ async function loadCommandFiles() {
 
   return loaded;
 }
-
-module.exports = { loadCommandFiles };

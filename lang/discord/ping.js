@@ -6,9 +6,7 @@
  * holds the same shape — a mix of static strings and small formatter functions.
  */
 
-"use strict";
-
-module.exports = {
+export default {
   en: {
     banTitle: (username) => `Ban issued for ${username}`,
     banReason: "Accumulated 3 or more warnings for pinging Gala.",

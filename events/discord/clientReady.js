@@ -10,40 +10,37 @@
  * separate manual `npm run generate-cmds` step.
  */
 
-"use strict";
-
-const { Events } = require("discord.js");
-const { setIdleStatus } = require("../../utils/discord/discordPresence");
-const { publishCommands } = require("../../utils/discord/publishCommands");
-const { discordLog: log } = require("../../utils/core/loggers");
+import { Events } from "discord.js";
+import { setIdleStatus } from "../../utils/discord/discordPresence.js";
+import { publishCommands } from "../../utils/discord/publishCommands.js";
+import { discordLog as log } from "../../utils/core/loggers.js";
 
 /** @type {import('../../utils/core/types').DiscordEventHandler} */
-module.exports = {
-  name: Events.ClientReady,
-  once: true,
-  /**
-   * @async
-   * @param {import('discord.js').Client} client - The ready client (same reference as discordClient).
-   * @returns {Promise<void>}
-   */
-  async execute(client) {
-    if (!process.env.BOT_NAME) {
-      process.env.BOT_NAME = client.user.username;
-    }
-    setIdleStatus(client);
+export const name = Events.ClientReady;
+export const once = true;
 
-    try {
-      await publishCommands({
-        token: process.env.DISCORD_TOKEN,
-        applicationId: process.env.DISCORD_ID,
-        commands: [...client.commands.values()],
-        log,
-      });
-    } catch (error) {
-      log("error", "clientReady:publishCommands failed", {
-        err: error.message,
-        stack: error.stack,
-      });
-    }
-  },
-};
+/**
+ * @async
+ * @param {import('discord.js').Client} client - The ready client (same reference as discordClient).
+ * @returns {Promise<void>}
+ */
+export async function execute(client) {
+  if (!process.env.BOT_NAME) {
+    process.env.BOT_NAME = client.user.username;
+  }
+  setIdleStatus(client);
+
+  try {
+    await publishCommands({
+      token: process.env.DISCORD_TOKEN,
+      applicationId: process.env.DISCORD_ID,
+      commands: [...client.commands.values()],
+      log,
+    });
+  } catch (error) {
+    log("error", "clientReady:publishCommands failed", {
+      err: error.message,
+      stack: error.stack,
+    });
+  }
+}

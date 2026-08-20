@@ -7,12 +7,10 @@
  * as `/warn`, but triggered automatically rather than by a moderator.
  */
 
-"use strict";
-
-const { EmbedBuilder, PermissionFlagsBits } = require("discord.js");
-const { discordLog } = require("../../utils/core/loggers");
-const { addWarn, getWarnCount } = require("../../db/warns");
-const strings = require("../../lang/discord/ping");
+import { EmbedBuilder, PermissionFlagsBits } from "discord.js";
+import { discordLog } from "../../utils/core/loggers.js";
+import { addWarn, getWarnCount } from "../../db/warns.js";
+import strings from "../../lang/discord/ping.js";
 
 /**
  * Process a ping aimed at the streamer. Admins are silently ignored. Everyone
@@ -23,9 +21,8 @@ const strings = require("../../lang/discord/ping");
  * @param {("en"|"es")} lang - Language resolved from the channel.
  * @returns {Promise<void>}
  */
-async function handlePing(message, lang) {
+export async function handlePing(message, lang) {
   const t = strings[lang];
-  const tEn = strings.en;
   const user = message.author;
   const guildMember = await message.guild.members.fetch(user.id);
 
@@ -136,5 +133,3 @@ async function handlePing(message, lang) {
     }
   }
 }
-
-module.exports = { handlePing };

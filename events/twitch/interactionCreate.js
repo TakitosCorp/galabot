@@ -6,9 +6,7 @@
  * back to the requesting user.
  */
 
-"use strict";
-
-const twitchLog = require("../../utils/core/loggers").twitchLog;
+import { twitchLog } from "../../utils/core/loggers.js";
 
 /**
  * @async
@@ -16,7 +14,7 @@ const twitchLog = require("../../utils/core/loggers").twitchLog;
  * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
-module.exports = async function (eventData, clientManager) {
+export default async function (eventData, clientManager) {
   if (eventData.self) return;
 
   const { message, channel, user } = eventData;
@@ -49,4 +47,4 @@ module.exports = async function (eventData, clientManager) {
       });
     }
   }
-};
+}

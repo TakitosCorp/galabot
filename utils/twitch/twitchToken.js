@@ -10,11 +10,10 @@
  * @typedef {import('./types').TwitchConfig} TwitchConfig
  */
 
-"use strict";
-
-const fileUtils = require("../helpers/fileUtils");
-const axios = require("axios");
-const { twitchLog } = require("../core/loggers");
+import * as fileUtils from "../helpers/fileUtils.js";
+import axios from "axios";
+import { twitchLog } from "../core/loggers.js";
+import { TOKEN_VALIDITY_MS } from "../core/constants.js";
 
 /**
  * Absolute path to the token cache file inside `data/`.
@@ -79,7 +78,7 @@ async function validateToken(accessToken) {
  * @throws {Error} When the refresh endpoint reports failure (the refresh token
  *   itself is invalid and a human needs to re-authorize the bot).
  */
-async function getValidTwitchConfig() {
+export async function getValidTwitchConfig() {
   twitchLog("debug", "twitchToken:getValidTwitchConfig start");
   let twitchConfig = fileUtils.readJSON(twitchConfigPath, {
     ACCESS_TOKEN: "",
@@ -118,7 +117,6 @@ async function getValidTwitchConfig() {
       twitchConfig.ACCESS_TOKEN = response.token;
       twitchConfig.REFRESH_TOKEN = response.refresh;
       twitchConfig.CLIENT_ID = response.client_id;
-      const { TOKEN_VALIDITY_MS } = require("../core/constants");
       twitchConfig.VALID_UNTIL = new Date(
         now + TOKEN_VALIDITY_MS,
       ).toISOString();
@@ -141,7 +139,3 @@ async function getValidTwitchConfig() {
   }
   return twitchConfig;
 }
-
-module.exports = {
-  getValidTwitchConfig,
-};

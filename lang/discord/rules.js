@@ -7,9 +7,7 @@
  * specific user.
  */
 
-"use strict";
-
-module.exports = {
+export default {
   en: {
     reminderTitle: (username) => `Reminder for ${username}`,
     reminderDesc: `I've been asked to remind you to read the rules. Head over to <#1080660073858220147> to read them.`,

@@ -15,18 +15,16 @@
  * @typedef {import('../../utils/core/types').DiscordEventHandler} DiscordEventHandler
  */
 
-"use strict";
-
-const { PermissionFlagsBits } = require("discord.js");
-const axios = require("axios");
-const resources = require("../../data/resources.json");
-const { handleHello } = require("../../messages/discord/msgHello");
-const { handlePing } = require("../../messages/discord/msgPing");
-const { handleAI } = require("../../messages/discord/msgAI");
-const { getLanguage } = require("../../utils/core/language");
-const { discordLog } = require("../../utils/core/loggers");
-const { getAllScamHashes } = require("../../db/scamHashes");
-const { computeHash, isSimilar } = require("../../utils/discord/imageHash");
+import { PermissionFlagsBits } from "discord.js";
+import axios from "axios";
+import resources from "../../data/resources.json" with { type: "json" };
+import { handleHello } from "../../messages/discord/msgHello.js";
+import { handlePing } from "../../messages/discord/msgPing.js";
+import { handleAI } from "../../messages/discord/msgAI.js";
+import { getLanguage } from "../../utils/core/language.js";
+import { discordLog } from "../../utils/core/loggers.js";
+import { getAllScamHashes } from "../../db/scamHashes.js";
+import { computeHash, isSimilar } from "../../utils/discord/imageHash.js";
 
 /**
  * Download, hash, and compare every image attachment against registered scam hashes.
@@ -134,119 +132,117 @@ async function handleScamImageCheck(message) {
 }
 
 /** @type {DiscordEventHandler} */
-module.exports = {
-  name: "messageCreate",
-  /**
-   * @async
-   * @param {import('discord.js').Message} message - Incoming Discord message.
-   * @param {import('discord.js').Client} client - Gateway client (used to resolve the bot's own user id).
-   * @param {import('../../handlers/clientManager')} clientManager - Lifecycle owner (unused here).
-   * @returns {Promise<void>}
-   */
-  async execute(message, client, clientManager) {
-    if (message.author.bot || !message.guild) return;
+export const name = "messageCreate";
+export const once = false;
 
-    if (message.attachments.size > 0) {
-      const scamDetected = await handleScamImageCheck(message);
-      if (scamDetected) return;
-    }
+/**
+ * @async
+ * @param {import('discord.js').Message} message - Incoming Discord message.
+ * @param {import('discord.js').Client} client - Gateway client (used to resolve the bot's own user id).
+ * @returns {Promise<void>}
+ */
+export async function execute(message, client) {
+  if (message.author.bot || !message.guild) return;
 
-    const lang = getLanguage(message.channelId);
+  if (message.attachments.size > 0) {
+    const scamDetected = await handleScamImageCheck(message);
+    if (scamDetected) return;
+  }
 
-    const content = message.content.toLowerCase().trim();
-    const isGreeting = resources[lang].greetings.some(
-      (greet) =>
-        new RegExp(`^${greet}$`, "i").test(content) ||
-        new RegExp(`\\b${greet}\\b`, "i").test(content),
-    );
+  const lang = getLanguage(message.channelId);
 
-    // Warn/ban when Gala's personal Discord account is @-mentioned.
-    if (
-      process.env.GALA_USER_ID &&
-      message.content.includes(`<@${process.env.GALA_USER_ID}>`)
-    ) {
-      discordLog("debug", "messageCreate:gala-user-ping", {
-        userId: message.author.id,
-        channelId: message.channelId,
-        guildId: message.guildId,
-      });
-      await handlePing(message, lang);
-      return;
-    }
+  const content = message.content.toLowerCase().trim();
+  const isGreeting = resources[lang].greetings.some(
+    (greet) =>
+      new RegExp(`^${greet}$`, "i").test(content) ||
+      new RegExp(`\\b${greet}\\b`, "i").test(content),
+  );
 
-    // Check if replying to the bot or mentioning bot's name (case-insensitive).
-    const isBotReply = message.reference
-      ? (
-          await message.channel.messages
-            .fetch(message.reference.messageId)
-            .catch(() => null)
-        )?.author?.id === client.user.id
-      : false;
+  // Warn/ban when Gala's personal Discord account is @-mentioned.
+  if (
+    process.env.GALA_USER_ID &&
+    message.content.includes(`<@${process.env.GALA_USER_ID}>`)
+  ) {
+    discordLog("debug", "messageCreate:gala-user-ping", {
+      userId: message.author.id,
+      channelId: message.channelId,
+      guildId: message.guildId,
+    });
+    await handlePing(message, lang);
+    return;
+  }
 
-    const botNameLower = client.user.username.toLowerCase();
-    const isBotNameMentioned = content.includes(botNameLower);
+  // Check if replying to the bot or mentioning bot's name (case-insensitive).
+  const isBotReply = message.reference
+    ? (
+        await message.channel.messages
+          .fetch(message.reference.messageId)
+          .catch(() => null)
+      )?.author?.id === client.user.id
+    : false;
 
-    // Bot @mention → greeting or AI reply.
-    if (message.content.includes(`<@${client.user.id}>`)) {
-      if (isGreeting) {
-        discordLog("debug", "messageCreate:bot-mention+greeting", {
-          userId: message.author.id,
-          channelId: message.channelId,
-          lang,
-        });
-        const greeted = await handleHello(message, lang);
-        if (greeted === false && process.env.GEMINI_ENABLE !== "false") {
-          await handleAI(message);
-        }
-      } else if (process.env.GEMINI_ENABLE !== "false") {
-        discordLog("debug", "messageCreate:bot-mention+ai", {
-          userId: message.author.id,
-          channelId: message.channelId,
-        });
-        await handleAI(message);
-      }
-      return;
-    }
+  const botNameLower = client.user.username.toLowerCase();
+  const isBotNameMentioned = content.includes(botNameLower);
 
-    // Reply to bot or bot name mentioned → AI reply (unless greeting, or greeting is on cooldown).
-    if (
-      (isBotReply || isBotNameMentioned) &&
-      process.env.GEMINI_ENABLE !== "false"
-    ) {
-      if (isGreeting) {
-        const greeted = await handleHello(message, lang);
-        if (greeted === false) {
-          discordLog(
-            "debug",
-            "messageCreate:bot-reply-or-name+greeting-cooldown+ai",
-            {
-              userId: message.author.id,
-              channelId: message.channelId,
-            },
-          );
-          await handleAI(message);
-        }
-      } else {
-        discordLog("debug", "messageCreate:bot-reply-or-name+ai", {
-          userId: message.author.id,
-          channelId: message.channelId,
-          isBotReply,
-          isBotNameMentioned,
-        });
-        await handleAI(message);
-      }
-      return;
-    }
-
-    // No mention — standalone greeting.
+  // Bot @mention → greeting or AI reply.
+  if (message.content.includes(`<@${client.user.id}>`)) {
     if (isGreeting) {
-      discordLog("debug", "messageCreate:greeting matched", {
+      discordLog("debug", "messageCreate:bot-mention+greeting", {
         userId: message.author.id,
         channelId: message.channelId,
         lang,
       });
-      await handleHello(message, lang);
+      const greeted = await handleHello(message, lang);
+      if (greeted === false && process.env.GEMINI_ENABLE !== "false") {
+        await handleAI(message);
+      }
+    } else if (process.env.GEMINI_ENABLE !== "false") {
+      discordLog("debug", "messageCreate:bot-mention+ai", {
+        userId: message.author.id,
+        channelId: message.channelId,
+      });
+      await handleAI(message);
     }
-  },
-  once: false,
-};
+    return;
+  }
+
+  // Reply to bot or bot name mentioned → AI reply (unless greeting, or greeting is on cooldown).
+  if (
+    (isBotReply || isBotNameMentioned) &&
+    process.env.GEMINI_ENABLE !== "false"
+  ) {
+    if (isGreeting) {
+      const greeted = await handleHello(message, lang);
+      if (greeted === false) {
+        discordLog(
+          "debug",
+          "messageCreate:bot-reply-or-name+greeting-cooldown+ai",
+          {
+            userId: message.author.id,
+            channelId: message.channelId,
+          },
+        );
+        await handleAI(message);
+      }
+    } else {
+      discordLog("debug", "messageCreate:bot-reply-or-name+ai", {
+        userId: message.author.id,
+        channelId: message.channelId,
+        isBotReply,
+        isBotNameMentioned,
+      });
+      await handleAI(message);
+    }
+    return;
+  }
+
+  // No mention — standalone greeting.
+  if (isGreeting) {
+    discordLog("debug", "messageCreate:greeting matched", {
+      userId: message.author.id,
+      channelId: message.channelId,
+      lang,
+    });
+    await handleHello(message, lang);
+  }
+}

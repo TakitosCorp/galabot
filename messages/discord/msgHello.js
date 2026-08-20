@@ -8,13 +8,11 @@
  * {@link GREETING_COOLDOWN_MS} of the previous one are skipped.
  */
 
-"use strict";
-
-const resources = require("../../data/resources.json");
-const emojis = require("../../data/emojis.json");
-const { discordLog } = require("../../utils/core/loggers");
-const { getLastGreeting, updateGreeting } = require("../../db/greetings");
-const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
+import resources from "../../data/resources.json" with { type: "json" };
+import emojis from "../../data/emojis.json" with { type: "json" };
+import { discordLog } from "../../utils/core/loggers.js";
+import { getLastGreeting, updateGreeting } from "../../db/greetings.js";
+import { GREETING_COOLDOWN_MS } from "../../utils/core/constants.js";
 
 /**
  * Reply to a greeting message if the user is past the cooldown window.
@@ -24,7 +22,7 @@ const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
  * @param {("en"|"es")} lang - Language resolved from the channel (see {@link module:utils/language}).
  * @returns {Promise<void>}
  */
-async function handleHello(message, lang) {
+export async function handleHello(message, lang) {
   discordLog("debug", "msgHello:handleHello", {
     userId: message.author.id,
     channelId: message.channelId,
@@ -79,5 +77,3 @@ async function handleHello(message, lang) {
     });
   }
 }
-
-module.exports = { handleHello };

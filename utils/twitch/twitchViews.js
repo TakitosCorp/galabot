@@ -10,11 +10,9 @@
  * the shutdown path stop everything in one call.
  */
 
-"use strict";
-
-const { updateStreamViewers } = require("../../db/streams");
-const { twitchLog } = require("../core/loggers");
-const { VIEWER_POLL_INTERVAL_MS } = require("../core/constants");
+import { updateStreamViewers } from "../../db/streams.js";
+import { twitchLog } from "../core/loggers.js";
+import { VIEWER_POLL_INTERVAL_MS } from "../core/constants.js";
 
 /**
  * Active polling timers keyed by stream id.
@@ -31,7 +29,7 @@ const viewersIntervals = new Map();
  * @param {string} twitchChannel - Twitch channel name (with or without `#`).
  * @returns {void}
  */
-function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
+export function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
   if (viewersIntervals.has(streamId)) {
     twitchLog("debug", "twitchViews:start already-running", { streamId });
     return;
@@ -82,7 +80,7 @@ function startViewersAverage(streamId, twitchApiClient, twitchChannel) {
  * @param {string} streamId
  * @returns {void}
  */
-function stopViewersAverage(streamId) {
+export function stopViewersAverage(streamId) {
   const interval = viewersIntervals.get(streamId);
   if (interval) {
     clearInterval(interval);
@@ -95,15 +93,9 @@ function stopViewersAverage(streamId) {
  * Stop every active poller. Used by the graceful-shutdown path.
  * @returns {void}
  */
-function stopAllViewersIntervals() {
+export function stopAllViewersIntervals() {
   const count = viewersIntervals.size;
   for (const interval of viewersIntervals.values()) clearInterval(interval);
   viewersIntervals.clear();
   twitchLog("info", "twitchViews:stop-all", { count });
 }
-
-module.exports = {
-  startViewersAverage,
-  stopViewersAverage,
-  stopAllViewersIntervals,
-};

@@ -6,28 +6,23 @@
  * matching Discord scheduled event.
  */
 
-"use strict";
-
-const { twitchLog } = require("../../utils/core/loggers");
-const {
+import { twitchLog } from "../../utils/core/loggers.js";
+import {
   getActiveStream,
   getStreamById,
   updateStreamEnd,
-} = require("../../db/streams");
-const axios = require("axios");
-const {
-  getStreamerScheduleThisWeek,
-} = require("../../utils/twitch/twitchSchedule");
-const {
+} from "../../db/streams.js";
+import axios from "axios";
+import { getStreamerScheduleThisWeek } from "../../utils/twitch/twitchSchedule.js";
+import {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/helpers/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
-const { stopViewersAverage } = require("../../utils/twitch/twitchViews");
-const { setIdleStatus } = require("../../utils/discord/discordPresence");
-const {
-  completeGuildStreamEvent,
-} = require("../../utils/discord/discordGuildEvents");
+} from "../../utils/helpers/imageGenerator.js";
+import { cleanStreamTitle } from "../../utils/helpers/streamTitleCleaner.js";
+import { stopViewersAverage } from "../../utils/twitch/twitchViews.js";
+import { setIdleStatus } from "../../utils/discord/discordPresence.js";
+import { completeGuildStreamEvent } from "../../utils/discord/discordGuildEvents.js";
+import { EmbedBuilder, AttachmentBuilder } from "discord.js";
 
 /**
  * Process a `streamOffline` EventSub event.
@@ -122,8 +117,6 @@ async function streamEnd(event, clientManager) {
         if (channel && channel.isTextBased()) {
           const message = await channel.messages.fetch(discMsgId);
           if (message) {
-            const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
-
             let user = null;
             let twitchUrl = null;
             try {
@@ -247,4 +240,4 @@ async function streamEnd(event, clientManager) {
   }
 }
 
-module.exports = streamEnd;
+export default streamEnd;

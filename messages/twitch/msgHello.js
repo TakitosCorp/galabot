@@ -6,12 +6,10 @@
  * cross-platform greeting cooldown stored in the `greetings` table.
  */
 
-"use strict";
-
-const { twitchLog } = require("../../utils/core/loggers");
-const resources = require("../../data/resources.json");
-const { getLastGreeting, updateGreeting } = require("../../db/greetings");
-const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
+import { twitchLog } from "../../utils/core/loggers.js";
+import resources from "../../data/resources.json" with { type: "json" };
+import { getLastGreeting, updateGreeting } from "../../db/greetings.js";
+import { GREETING_COOLDOWN_MS } from "../../utils/core/constants.js";
 
 /**
  * Send a greeting reply in Twitch chat if the user is past the cooldown window.
@@ -21,7 +19,7 @@ const { GREETING_COOLDOWN_MS } = require("../../utils/core/constants");
  * @param {import('../../handlers/clientManager')} clientManager
  * @returns {Promise<void>}
  */
-async function handleHello(eventData, clientManager) {
+export async function handleHello(eventData, clientManager) {
   const { user, channel } = eventData;
   const { twitchChatClient } = clientManager;
 
@@ -79,5 +77,3 @@ async function handleHello(eventData, clientManager) {
     });
   }
 }
-
-module.exports = { handleHello };

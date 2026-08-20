@@ -11,29 +11,27 @@
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
  */
 
-"use strict";
-
-const {
+import {
   GuildScheduledEventEntityType,
   GuildScheduledEventPrivacyLevel,
   GuildScheduledEventStatus,
-} = require("discord.js");
-const { discordLog } = require("../core/loggers");
-const { cleanStreamTitle } = require("../helpers/streamTitleCleaner");
-const {
+} from "discord.js";
+import { discordLog } from "../core/loggers.js";
+import { cleanStreamTitle } from "../helpers/streamTitleCleaner.js";
+import {
   insertDiscordEvent,
   getDiscordEventBySourceId,
   updateDiscordEvent,
   getDiscordEventsByProvider,
   deleteDiscordEvent,
-} = require("../../db/discordEvents");
-const { getStreamerScheduleThisWeek } = require("../twitch/twitchSchedule");
-const {
+} from "../../db/discordEvents.js";
+import { getStreamerScheduleThisWeek } from "../twitch/twitchSchedule.js";
+import {
   upsertUpcomingStream,
   deleteExpiredStreams,
   deleteUpcomingStream,
   getUpcomingStreamsByProvider,
-} = require("../../db/upcomingStreams");
+} from "../../db/upcomingStreams.js";
 
 /**
  * Create or update a Discord Guild Scheduled Event for an upcoming stream.
@@ -51,7 +49,7 @@ const {
  * @param {string|null} [opts.scheduledEnd] - ISO-8601 end time (defaults to start + 3h).
  * @returns {Promise<void>}
  */
-async function createGuildStreamEvent(discordClient, opts) {
+export async function createGuildStreamEvent(discordClient, opts) {
   if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
   if (!discordClient || !discordClient.isReady()) return;
 
@@ -110,9 +108,6 @@ async function createGuildStreamEvent(discordClient, opts) {
         .fetch(existing.discordEventId)
         .catch(() => null);
 
-      const startChanged =
-        !existing.scheduledStart ||
-        new Date(existing.scheduledStart).getTime() !== startDate.getTime();
       const isFinished =
         fetchedEvent &&
         (fetchedEvent.status === GuildScheduledEventStatus.Completed ||
@@ -244,7 +239,7 @@ async function createGuildStreamEvent(discordClient, opts) {
  * @param {string} sourceId - The provider's unique stream or video ID.
  * @returns {Promise<void>}
  */
-async function activateGuildStreamEvent(discordClient, sourceId) {
+export async function activateGuildStreamEvent(discordClient, sourceId) {
   if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
   if (!discordClient || !discordClient.isReady()) return;
 
@@ -283,7 +278,7 @@ async function activateGuildStreamEvent(discordClient, sourceId) {
  * @param {string} sourceId - The provider's unique stream or video ID.
  * @returns {Promise<void>}
  */
-async function completeGuildStreamEvent(discordClient, sourceId) {
+export async function completeGuildStreamEvent(discordClient, sourceId) {
   if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
   if (!discordClient || !discordClient.isReady()) return;
 
@@ -323,7 +318,11 @@ async function completeGuildStreamEvent(discordClient, sourceId) {
  * @param {string[]} currentSourceIds - Source ids still present in the live schedule.
  * @returns {Promise<void>}
  */
-async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
+export async function cleanupRemovedEvents(
+  discordClient,
+  provider,
+  currentSourceIds,
+) {
   if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
   if (!discordClient || !discordClient.isReady()) return;
 
@@ -383,7 +382,7 @@ async function cleanupRemovedEvents(discordClient, provider, currentSourceIds) {
  * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
-async function syncTwitchScheduleEvents(clientManager) {
+export async function syncTwitchScheduleEvents(clientManager) {
   if (process.env.DISCORD_EVENTS_ENABLED !== "true") return;
 
   const { discordClient, twitchApiClient } = clientManager;
@@ -446,7 +445,7 @@ async function syncTwitchScheduleEvents(clientManager) {
  * @param {import('../../handlers/clientManager')} clientManager - The client manager instance.
  * @returns {Promise<void>}
  */
-async function syncTwitchUpcomingStreams(clientManager) {
+export async function syncTwitchUpcomingStreams(clientManager) {
   const { twitchApiClient } = clientManager;
   if (!twitchApiClient) return;
 
@@ -510,12 +509,3 @@ async function syncTwitchUpcomingStreams(clientManager) {
     });
   }
 }
-
-module.exports = {
-  createGuildStreamEvent,
-  activateGuildStreamEvent,
-  completeGuildStreamEvent,
-  cleanupRemovedEvents,
-  syncTwitchScheduleEvents,
-  syncTwitchUpcomingStreams,
-};

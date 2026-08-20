@@ -6,24 +6,21 @@
  * updates state, and activates the matching Discord scheduled event.
  */
 
-"use strict";
-
-const { youtubeLog } = require("../../utils/core/loggers");
-const { insertStream, streamExists } = require("../../db/streams");
-const {
+import { youtubeLog } from "../../utils/core/loggers.js";
+import { insertStream, streamExists } from "../../db/streams.js";
+import {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   AttachmentBuilder,
-} = require("discord.js");
-const { generateStreamBanner } = require("../../utils/helpers/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
-const { setState } = require("../../utils/youtube/youtubePoller");
-const { setStreamingStatus } = require("../../utils/discord/discordPresence");
-const {
-  activateGuildStreamEvent,
-} = require("../../utils/discord/discordGuildEvents");
+} from "discord.js";
+import { generateStreamBanner } from "../../utils/helpers/imageGenerator.js";
+import { cleanStreamTitle } from "../../utils/helpers/streamTitleCleaner.js";
+import { setState } from "../../utils/youtube/youtubePoller.js";
+import { setStreamingStatus } from "../../utils/discord/discordPresence.js";
+import { activateGuildStreamEvent } from "../../utils/discord/discordGuildEvents.js";
+import resources from "../../data/resources.json" with { type: "json" };
 
 /**
  * Announce a YouTube live stream on Discord and activate the scheduled event.
@@ -54,7 +51,6 @@ async function streamStart(clientManager, streamState) {
       return;
     }
 
-    const resources = require("../../data/resources.json");
     const streamTitles = resources.en.streamTitles;
     const randomTitle =
       streamTitles[Math.floor(Math.random() * streamTitles.length)];
@@ -153,4 +149,4 @@ async function streamStart(clientManager, streamState) {
   }
 }
 
-module.exports = streamStart;
+export default streamStart;

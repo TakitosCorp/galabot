@@ -9,11 +9,12 @@
  * (the supplied `defaultValue`, an empty array, etc.) instead of throwing.
  */
 
-"use strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { sysLog } from "../core/loggers.js";
 
-const fs = require("fs");
-const path = require("path");
-const { sysLog } = require("../core/loggers");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Read a JSON file from disk and parse it. If the file does not exist it is created
@@ -25,7 +26,7 @@ const { sysLog } = require("../core/loggers");
  * @param {T} [defaultValue=null] - Value to return on failure and to seed the file with on first run.
  * @returns {T} Parsed JSON contents, or `defaultValue` on any failure.
  */
-function readJSON(filePath, defaultValue = null) {
+export function readJSON(filePath, defaultValue = null) {
   ensureFileExists(filePath, defaultValue);
   try {
     sysLog("debug", "fileUtils:readJSON", { filePath });
@@ -48,7 +49,7 @@ function readJSON(filePath, defaultValue = null) {
  * @param {unknown} data - Anything `JSON.stringify` accepts.
  * @returns {void}
  */
-function writeJSON(filePath, data) {
+export function writeJSON(filePath, data) {
   try {
     sysLog("debug", "fileUtils:writeJSON", { filePath });
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
@@ -69,7 +70,7 @@ function writeJSON(filePath, data) {
  * @param {unknown} [defaultValue={}] - Initial JSON payload to seed the file with.
  * @returns {void}
  */
-function ensureFileExists(filePath, defaultValue = {}) {
+export function ensureFileExists(filePath, defaultValue = {}) {
   if (!fs.existsSync(filePath)) {
     try {
       sysLog("info", "fileUtils:ensureFileExists creating", { filePath });
@@ -89,7 +90,7 @@ function ensureFileExists(filePath, defaultValue = {}) {
  * @param {string} relativePath - File name (e.g. `"twitch.json"`) or sub-path inside `data/`.
  * @returns {string} Absolute filesystem path.
  */
-function getFilePath(relativePath) {
+export function getFilePath(relativePath) {
   return path.join(__dirname, "../../data", relativePath);
 }
 
@@ -98,7 +99,7 @@ function getFilePath(relativePath) {
  * @param {string} filePath - Absolute path of the file to remove.
  * @returns {void}
  */
-function deleteFile(filePath) {
+export function deleteFile(filePath) {
   if (fs.existsSync(filePath)) {
     try {
       sysLog("debug", "fileUtils:deleteFile", { filePath });
@@ -118,7 +119,7 @@ function deleteFile(filePath) {
  * @param {string} dirPath - Absolute directory path to enumerate.
  * @returns {string[]} Names of the directory entries.
  */
-function listFiles(dirPath) {
+export function listFiles(dirPath) {
   try {
     return fs.readdirSync(dirPath);
   } catch (err) {
@@ -130,12 +131,3 @@ function listFiles(dirPath) {
     return [];
   }
 }
-
-module.exports = {
-  readJSON,
-  writeJSON,
-  getFilePath,
-  ensureFileExists,
-  deleteFile,
-  listFiles,
-};

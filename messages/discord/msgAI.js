@@ -28,15 +28,13 @@
  * A fetch failure is logged as a warning and the query proceeds without context.
  */
 
-"use strict";
-
-const { discordLog, aiLog } = require("../../utils/core/loggers");
-const { queryGemini } = require("../../utils/discord/geminiClient");
-const { enqueue, getQueueLength } = require("../../utils/discord/aiQueue");
-const { getAllUpcomingStreams } = require("../../db/upcomingStreams");
-const { getWarnCount, getRecentWarnCount } = require("../../db/warns");
-const { getActiveStream } = require("../../db/streams");
-const { AI_USER_COOLDOWN_MS } = require("../../utils/core/constants");
+import { discordLog, aiLog } from "../../utils/core/loggers.js";
+import { queryGemini } from "../../utils/discord/geminiClient.js";
+import { enqueue, getQueueLength } from "../../utils/discord/aiQueue.js";
+import { getAllUpcomingStreams } from "../../db/upcomingStreams.js";
+import { getWarnCount, getRecentWarnCount } from "../../db/warns.js";
+import { getActiveStream } from "../../db/streams.js";
+import { AI_USER_COOLDOWN_MS } from "../../utils/core/constants.js";
 
 /**
  * Last-accepted-request timestamp per user (epoch ms). Drives the per-user
@@ -227,7 +225,7 @@ async function buildThreadParticipantsContext(message) {
 
         current = repliedTo;
         depth++;
-      } catch (err) {
+      } catch {
         break;
       }
     }
@@ -252,7 +250,7 @@ async function buildThreadParticipantsContext(message) {
 
   // Build context string
   const participantLines = Array.from(participants.entries()).map(
-    ([userId, info]) => {
+    ([, info]) => {
       const userLines = buildUserContextLines(info.message, info.warnCount);
       const primaryMarker = info.isPrimary ? " (PRIMARY - triggered bot)" : "";
       return `--- Participant: ${info.message.author.username}${primaryMarker} ---\n${userLines.join(
@@ -294,7 +292,7 @@ const whitelistOnly = process.env.GEMINI_WHITELIST_ONLY === "true";
  * @param {import('discord.js').Message} message - The incoming guild message.
  * @returns {Promise<void>}
  */
-async function handleAI(message) {
+export async function handleAI(message) {
   const userId = message.author.id;
   const channelId = message.channelId;
   const guildId = message.guildId;
@@ -548,5 +546,3 @@ async function handleAI(message) {
     // No reply on error — fail silently to the user.
   }
 }
-
-module.exports = { handleAI };

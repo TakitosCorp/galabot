@@ -11,14 +11,12 @@
  * Winston) because it runs outside the bot's normal lifecycle.
  */
 
-"use strict";
+import path from "node:path";
+import dotenv from "dotenv";
+import { loadCommandFiles } from "../discord/loadCommands.js";
+import { publishCommands } from "../discord/publishCommands.js";
 
-const path = require("path");
-const dotenv = require("dotenv");
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-
-const { loadCommandFiles } = require("../discord/loadCommands");
-const { publishCommands } = require("../discord/publishCommands");
 
 /**
  * Load every command file and publish them to Discord.

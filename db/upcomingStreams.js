@@ -14,10 +14,8 @@
  * @typedef {import('../utils/core/types').UpcomingStreamRow} UpcomingStreamRow
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Insert or replace an upcoming stream row. Uses SQLite's INSERT OR REPLACE
@@ -41,7 +39,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function upsertUpcomingStream(data) {
+export async function upsertUpcomingStream(data) {
   const {
     id,
     provider,
@@ -96,7 +94,7 @@ async function upsertUpcomingStream(data) {
  * @returns {Promise<UpcomingStreamRow[]>} Future stream rows, oldest first.
  * @throws {Error} When the SQLite read fails.
  */
-async function getAllUpcomingStreams() {
+export async function getAllUpcomingStreams() {
   dbLog("debug", "upcomingStreams:getAllUpcomingStreams");
   try {
     const now = new Date().toISOString();
@@ -124,7 +122,7 @@ async function getAllUpcomingStreams() {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function deleteUpcomingStream(id) {
+export async function deleteUpcomingStream(id) {
   dbLog("debug", "upcomingStreams:deleteUpcomingStream", { id });
   try {
     await db.deleteFrom("upcoming_streams").where("id", "=", id).execute();
@@ -147,7 +145,7 @@ async function deleteUpcomingStream(id) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function deleteExpiredStreams() {
+export async function deleteExpiredStreams() {
   dbLog("debug", "upcomingStreams:deleteExpiredStreams");
   try {
     const now = new Date().toISOString();
@@ -174,7 +172,7 @@ async function deleteExpiredStreams() {
  * @returns {Promise<UpcomingStreamRow[]>} All rows for the given provider.
  * @throws {Error} When the SQLite read fails.
  */
-async function getUpcomingStreamsByProvider(provider) {
+export async function getUpcomingStreamsByProvider(provider) {
   dbLog("debug", "upcomingStreams:getUpcomingStreamsByProvider", { provider });
   try {
     return await db
@@ -191,11 +189,3 @@ async function getUpcomingStreamsByProvider(provider) {
     throw err;
   }
 }
-
-module.exports = {
-  upsertUpcomingStream,
-  getAllUpcomingStreams,
-  deleteUpcomingStream,
-  deleteExpiredStreams,
-  getUpcomingStreamsByProvider,
-};

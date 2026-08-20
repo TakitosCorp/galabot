@@ -5,10 +5,8 @@
  * Stores perceptual hashes of known scam images used for automated ban detection.
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Persist a new scam image hash and return its inserted row id.
@@ -21,7 +19,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @returns {Promise<number>} The inserted row id.
  * @throws {Error} When the SQLite write fails.
  */
-async function addScamHash(hash, description, addedBy, filename = null) {
+export async function addScamHash(hash, description, addedBy, filename = null) {
   const addedAt = Date.now();
   dbLog("debug", "scamHashes:addScamHash", { hash: hash.slice(0, 8), addedBy });
   try {
@@ -59,7 +57,7 @@ async function addScamHash(hash, description, addedBy, filename = null) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function updateScamHashFilename(id, filename) {
+export async function updateScamHashFilename(id, filename) {
   dbLog("debug", "scamHashes:updateScamHashFilename", { id, filename });
   try {
     await db
@@ -85,7 +83,7 @@ async function updateScamHashFilename(id, filename) {
  * @returns {Promise<Array<{id: number, hash: string, description: string|null, added_by: string, added_at: number, filename: string|null}>>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getAllScamHashes() {
+export async function getAllScamHashes() {
   dbLog("debug", "scamHashes:getAllScamHashes");
   try {
     return await db.selectFrom("scam_image_hashes").selectAll().execute();
@@ -105,7 +103,7 @@ async function getAllScamHashes() {
  * @returns {Promise<Array>}
  * @throws {Error} When the SQLite read fails.
  */
-async function listScamHashes() {
+export async function listScamHashes() {
   dbLog("debug", "scamHashes:listScamHashes");
   try {
     return await db
@@ -130,7 +128,7 @@ async function listScamHashes() {
  * @returns {Promise<object|undefined>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getScamHashById(id) {
+export async function getScamHashById(id) {
   dbLog("debug", "scamHashes:getScamHashById", { id });
   try {
     return await db
@@ -156,7 +154,7 @@ async function getScamHashById(id) {
  * @returns {Promise<number>} Number of rows deleted (0 or 1).
  * @throws {Error} When the SQLite write fails.
  */
-async function removeScamHash(id) {
+export async function removeScamHash(id) {
   dbLog("debug", "scamHashes:removeScamHash", { id });
   try {
     const result = await db.transaction().execute(async (trx) => {
@@ -177,12 +175,3 @@ async function removeScamHash(id) {
     throw err;
   }
 }
-
-module.exports = {
-  addScamHash,
-  updateScamHashFilename,
-  getAllScamHashes,
-  listScamHashes,
-  getScamHashById,
-  removeScamHash,
-};

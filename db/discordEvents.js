@@ -10,10 +10,8 @@
  * @typedef {import('../utils/core/types').DiscordScheduledEventRow} DiscordScheduledEventRow
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Check whether a Discord Guild Scheduled Event has already been created for
@@ -24,7 +22,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @returns {Promise<boolean>} True when a row already exists.
  * @throws {Error} When the SQLite read fails.
  */
-async function discordEventExists(sourceId) {
+export async function discordEventExists(sourceId) {
   dbLog("debug", "discordEvents:exists", { sourceId });
   try {
     const row = await db
@@ -52,7 +50,7 @@ async function discordEventExists(sourceId) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function insertDiscordEvent(row) {
+export async function insertDiscordEvent(row) {
   dbLog("debug", "discordEvents:insertDiscordEvent", {
     sourceId: row.sourceId,
     provider: row.provider,
@@ -92,7 +90,7 @@ async function insertDiscordEvent(row) {
  * @returns {Promise<DiscordScheduledEventRow|undefined>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getDiscordEventBySourceId(sourceId) {
+export async function getDiscordEventBySourceId(sourceId) {
   dbLog("debug", "discordEvents:getDiscordEventBySourceId", { sourceId });
   try {
     const row = await db
@@ -130,7 +128,7 @@ async function getDiscordEventBySourceId(sourceId) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function updateDiscordEvent(sourceId, patch) {
+export async function updateDiscordEvent(sourceId, patch) {
   dbLog("debug", "discordEvents:updateDiscordEvent", { sourceId });
   try {
     await db
@@ -161,7 +159,7 @@ async function updateDiscordEvent(sourceId, patch) {
  * @returns {Promise<DiscordScheduledEventRow[]>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getDiscordEventsByProvider(provider) {
+export async function getDiscordEventsByProvider(provider) {
   dbLog("debug", "discordEvents:getDiscordEventsByProvider", { provider });
   try {
     const rows = await db
@@ -194,7 +192,7 @@ async function getDiscordEventsByProvider(provider) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function deleteDiscordEvent(sourceId) {
+export async function deleteDiscordEvent(sourceId) {
   dbLog("debug", "discordEvents:deleteDiscordEvent", { sourceId });
   try {
     await db
@@ -210,12 +208,3 @@ async function deleteDiscordEvent(sourceId) {
     throw err;
   }
 }
-
-module.exports = {
-  discordEventExists,
-  insertDiscordEvent,
-  getDiscordEventBySourceId,
-  updateDiscordEvent,
-  getDiscordEventsByProvider,
-  deleteDiscordEvent,
-};

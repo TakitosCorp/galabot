@@ -12,24 +12,22 @@
  * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
-"use strict";
-
-const {
+import {
   SlashCommandBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
   InteractionContextType,
   MessageFlags,
-} = require("discord.js");
-const { addWarn, getWarnCount } = require("../../db/warns");
-const { discordLog } = require("../../utils/core/loggers");
-const { getLanguage } = require("../../utils/core/language");
-const strings = require("../../lang/discord/warn");
-const {
+} from "discord.js";
+import { addWarn, getWarnCount } from "../../db/warns.js";
+import { discordLog } from "../../utils/core/loggers.js";
+import { getLanguage } from "../../utils/core/language.js";
+import strings from "../../lang/discord/warn.js";
+import {
   WARN_TIMEOUT_BASE_MS,
   MAX_WARN_BEFORE_BAN,
   MAX_WARN_REASON_LENGTH,
-} = require("../../utils/core/constants");
+} from "../../utils/core/constants.js";
 
 /**
  * Permanently ban `user` from the guild and DM them the ban embed if possible.
@@ -41,10 +39,9 @@ const {
  * @param {import('discord.js').User} user - The user being banned.
  * @param {import('discord.js').GuildMember} guildMember - The same user, resolved as a guild member.
  * @param {object} t - Localised strings for the resolved language.
- * @param {object} tEn - English strings (used for log messages so logs stay grep-able).
  * @returns {Promise<void>}
  */
-async function handleBan(interaction, user, guildMember, t, tEn) {
+async function handleBan(interaction, user, guildMember, t) {
   discordLog("debug", "warn:handleBan", {
     target: user.id,
     issuer: interaction.user.id,
@@ -111,10 +108,9 @@ async function handleBan(interaction, user, guildMember, t, tEn) {
  * @param {import('discord.js').GuildMember} guildMember
  * @param {string} reason - Moderator-supplied reason (already length-validated).
  * @param {object} t - Localised strings for the resolved language.
- * @param {object} tEn - English strings used for log lines.
  * @returns {Promise<void>}
  */
-async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
+async function handleWarn(interaction, user, guildMember, reason, t) {
   discordLog("debug", "warn:handleWarn", {
     target: user.id,
     issuer: interaction.user.id,
@@ -184,95 +180,90 @@ async function handleWarn(interaction, user, guildMember, reason, t, tEn) {
 }
 
 /** @type {DiscordSlashCommand} */
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("warn")
-    .setDescription("Adds a warning to a user and applies a timeout.")
-    .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("The user to warn.")
-        .setRequired(true),
-    )
-    .addStringOption((option) =>
-      option
-        .setName("reason")
-        .setDescription("The reason for the warning.")
-        .setRequired(true),
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-    .setContexts(InteractionContextType.Guild),
+export const data = new SlashCommandBuilder()
+  .setName("warn")
+  .setDescription("Adds a warning to a user and applies a timeout.")
+  .addUserOption((option) =>
+    option
+      .setName("user")
+      .setDescription("The user to warn.")
+      .setRequired(true),
+  )
+  .addStringOption((option) =>
+    option
+      .setName("reason")
+      .setDescription("The reason for the warning.")
+      .setRequired(true),
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+  .setContexts(InteractionContextType.Guild);
 
-  /**
-   * @async
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction
-   * @param {import('discord.js').Client} client
-   * @param {import('../../handlers/clientManager')} clientManager
-   * @returns {Promise<void>}
-   */
-  async execute(interaction, client, clientManager) {
-    const lang = getLanguage(interaction.channelId);
-    const t = strings[lang];
-    const tEn = strings.en;
-    const user = interaction.options.getUser("user");
-    const reason = interaction.options.getString("reason");
-    const guildMember = await interaction.guild.members
-      .fetch(user.id)
-      .catch(() => null);
+/**
+ * @async
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+export async function execute(interaction) {
+  const lang = getLanguage(interaction.channelId);
+  const t = strings[lang];
+  const user = interaction.options.getUser("user");
+  const reason = interaction.options.getString("reason");
+  const guildMember = await interaction.guild.members
+    .fetch(user.id)
+    .catch(() => null);
 
-    discordLog("debug", "warn:execute", {
-      issuer: interaction.user.id,
+  discordLog("debug", "warn:execute", {
+    issuer: interaction.user.id,
+    target: user.id,
+    reasonLength: reason.length,
+  });
+
+  if (reason.length > MAX_WARN_REASON_LENGTH) {
+    discordLog("warn", "warn:reason-too-long", {
       target: user.id,
-      reasonLength: reason.length,
+      length: reason.length,
+      max: MAX_WARN_REASON_LENGTH,
     });
+    return interaction.reply({
+      content: `Reason too long (${reason.length} chars). Maximum is ${MAX_WARN_REASON_LENGTH}.`,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
 
-    if (reason.length > MAX_WARN_REASON_LENGTH) {
-      discordLog("warn", "warn:reason-too-long", {
-        target: user.id,
-        length: reason.length,
-        max: MAX_WARN_REASON_LENGTH,
-      });
-      return interaction.reply({
-        content: `Reason too long (${reason.length} chars). Maximum is ${MAX_WARN_REASON_LENGTH}.`,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+  if (!guildMember) {
+    discordLog("debug", "warn:target-not-in-server", { target: user.id });
+    return interaction.reply({
+      content: t.errNotInServer,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+  if (user.bot) {
+    discordLog("debug", "warn:target-is-bot", { target: user.id });
+    return interaction.reply({
+      content: t.errBot,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+  if (guildMember.permissions.has(PermissionFlagsBits.Administrator)) {
+    discordLog("debug", "warn:target-is-admin", { target: user.id });
+    return interaction.reply({
+      content: t.errAdmin,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+  if (user.id === interaction.user.id) {
+    discordLog("debug", "warn:self-warn rejected", { target: user.id });
+    return interaction.reply({
+      content: t.errSelf,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
 
-    if (!guildMember) {
-      discordLog("debug", "warn:target-not-in-server", { target: user.id });
-      return interaction.reply({
-        content: t.errNotInServer,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-    if (user.bot) {
-      discordLog("debug", "warn:target-is-bot", { target: user.id });
-      return interaction.reply({
-        content: t.errBot,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-    if (guildMember.permissions.has(PermissionFlagsBits.Administrator)) {
-      discordLog("debug", "warn:target-is-admin", { target: user.id });
-      return interaction.reply({
-        content: t.errAdmin,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-    if (user.id === interaction.user.id) {
-      discordLog("debug", "warn:self-warn rejected", { target: user.id });
-      return interaction.reply({
-        content: t.errSelf,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+  const currentWarns = await getWarnCount(user.id);
 
-    const currentWarns = await getWarnCount(user.id);
-
-    if (currentWarns >= MAX_WARN_BEFORE_BAN) {
-      await handleBan(interaction, user, guildMember, t, tEn);
-    } else {
-      await handleWarn(interaction, user, guildMember, reason, t, tEn);
-    }
-  },
-};
+  if (currentWarns >= MAX_WARN_BEFORE_BAN) {
+    await handleBan(interaction, user, guildMember, t);
+  } else {
+    await handleWarn(interaction, user, guildMember, reason, t);
+  }
+}

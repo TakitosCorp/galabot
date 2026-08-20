@@ -13,11 +13,10 @@
  * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
-"use strict";
-
-const path = require("path");
-const fs = require("fs");
-const {
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import {
   SlashCommandBuilder,
   EmbedBuilder,
   AttachmentBuilder,
@@ -27,22 +26,24 @@ const {
   PermissionFlagsBits,
   InteractionContextType,
   MessageFlags,
-} = require("discord.js");
-const axios = require("axios");
-const sharp = require("sharp");
-const {
+} from "discord.js";
+import axios from "axios";
+import sharp from "sharp";
+import {
   addScamHash,
   updateScamHashFilename,
   listScamHashes,
   getAllScamHashes,
   removeScamHash,
-} = require("../../db/scamHashes");
-const {
+} from "../../db/scamHashes.js";
+import {
   computeHash,
   hammingDistance,
   isSimilar,
-} = require("../../utils/discord/imageHash");
-const { discordLog } = require("../../utils/core/loggers");
+} from "../../utils/discord/imageHash.js";
+import { discordLog } from "../../utils/core/loggers.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const dataDir = path.join(__dirname, "../../data");
 const scamImagesDir = path.join(dataDir, "scam-images");
@@ -55,7 +56,7 @@ const scamImagesDir = path.join(dataDir, "scam-images");
  * @param {number} page - Zero-based page index.
  * @returns {{ embed: EmbedBuilder, attachment: AttachmentBuilder|null, row: ActionRowBuilder|null }}
  */
-function buildListPage(hashes, page) {
+export function buildListPage(hashes, page) {
   const total = hashes.length;
   const entry = hashes[page];
   const date = new Date(entry.added_at).toLocaleDateString("en-US");
@@ -288,78 +289,74 @@ async function handleCheck(interaction) {
 }
 
 /** @type {DiscordSlashCommand} */
-module.exports = {
-  buildListPage,
+export const data = new SlashCommandBuilder()
+  .setName("scamimage")
+  .setDescription("Manage the scam image hash database.")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+  .setContexts(InteractionContextType.Guild)
+  .addSubcommand((sub) =>
+    sub
+      .setName("add")
+      .setDescription("Register one or more scam images.")
+      .addAttachmentOption((opt) =>
+        opt
+          .setName("image1")
+          .setDescription("First scam image.")
+          .setRequired(true),
+      )
+      .addAttachmentOption((opt) =>
+        opt.setName("image2").setDescription("Second scam image (optional)."),
+      )
+      .addAttachmentOption((opt) =>
+        opt.setName("image3").setDescription("Third scam image (optional)."),
+      )
+      .addAttachmentOption((opt) =>
+        opt.setName("image4").setDescription("Fourth scam image (optional)."),
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("description")
+          .setDescription("Optional note or description."),
+      ),
+  )
+  .addSubcommand((sub) =>
+    sub.setName("list").setDescription("List all registered scam hashes."),
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("remove")
+      .setDescription("Remove a scam hash by its ID.")
+      .addIntegerOption((opt) =>
+        opt
+          .setName("id")
+          .setDescription("ID of the hash to remove.")
+          .setRequired(true)
+          .setMinValue(1),
+      ),
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("check")
+      .setDescription("Test if an image would trigger the scam ban.")
+      .addAttachmentOption((opt) =>
+        opt
+          .setName("image1")
+          .setDescription("Image to test.")
+          .setRequired(true),
+      ),
+  );
 
-  data: new SlashCommandBuilder()
-    .setName("scamimage")
-    .setDescription("Manage the scam image hash database.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .setContexts(InteractionContextType.Guild)
-    .addSubcommand((sub) =>
-      sub
-        .setName("add")
-        .setDescription("Register one or more scam images.")
-        .addAttachmentOption((opt) =>
-          opt
-            .setName("image1")
-            .setDescription("First scam image.")
-            .setRequired(true),
-        )
-        .addAttachmentOption((opt) =>
-          opt.setName("image2").setDescription("Second scam image (optional)."),
-        )
-        .addAttachmentOption((opt) =>
-          opt.setName("image3").setDescription("Third scam image (optional)."),
-        )
-        .addAttachmentOption((opt) =>
-          opt.setName("image4").setDescription("Fourth scam image (optional)."),
-        )
-        .addStringOption((opt) =>
-          opt
-            .setName("description")
-            .setDescription("Optional note or description."),
-        ),
-    )
-    .addSubcommand((sub) =>
-      sub.setName("list").setDescription("List all registered scam hashes."),
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("remove")
-        .setDescription("Remove a scam hash by its ID.")
-        .addIntegerOption((opt) =>
-          opt
-            .setName("id")
-            .setDescription("ID of the hash to remove.")
-            .setRequired(true)
-            .setMinValue(1),
-        ),
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("check")
-        .setDescription("Test if an image would trigger the scam ban.")
-        .addAttachmentOption((opt) =>
-          opt
-            .setName("image1")
-            .setDescription("Image to test.")
-            .setRequired(true),
-        ),
-    ),
+/**
+ * @async
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+export async function execute(interaction) {
+  const sub = interaction.options.getSubcommand();
+  discordLog("debug", "scamimage:execute", { sub, by: interaction.user.id });
 
-  /**
-   * @async
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction
-   * @returns {Promise<void>}
-   */
-  async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-    discordLog("debug", "scamimage:execute", { sub, by: interaction.user.id });
-
-    if (sub === "add") return handleAdd(interaction);
-    if (sub === "list") return handleList(interaction);
-    if (sub === "remove") return handleRemove(interaction);
-    if (sub === "check") return handleCheck(interaction);
-  },
-};
+  if (sub === "add") return handleAdd(interaction);
+  if (sub === "list") return handleList(interaction);
+  if (sub === "remove") return handleRemove(interaction);
+  if (sub === "check") return handleCheck(interaction);
+}

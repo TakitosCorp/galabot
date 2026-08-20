@@ -8,10 +8,8 @@
  * @typedef {import('../utils/core/types').GreetingRow} GreetingRow
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Fetch the most recent greeting row for a given user, if any.
@@ -21,7 +19,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @param {import('kysely').Kysely<any>|import('kysely').Transaction<any>} [trx=db] - Optional transaction binder when called from inside another transaction.
  * @returns {Promise<GreetingRow|undefined>} The latest row, or `undefined` if the user has never been greeted.
  */
-async function getLastGreeting(userId, trx = db) {
+export async function getLastGreeting(userId, trx = db) {
   dbLog("debug", "greetings:getLastGreeting", { userId });
   try {
     return await trx
@@ -53,7 +51,7 @@ async function getLastGreeting(userId, trx = db) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function updateGreeting(userId, timestamp) {
+export async function updateGreeting(userId, timestamp) {
   dbLog("debug", "greetings:updateGreeting", { userId, timestamp });
   try {
     await db.transaction().execute(async (trx) => {
@@ -81,5 +79,3 @@ async function updateGreeting(userId, timestamp) {
     throw err;
   }
 }
-
-module.exports = { getLastGreeting, updateGreeting };

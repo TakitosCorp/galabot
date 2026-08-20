@@ -9,20 +9,18 @@
  *    broadcaster and forwards events to the platform-specific stream handlers.
  */
 
-"use strict";
-
-const twitchLog = require("../../utils/core/loggers").twitchLog;
-const streamStartHandler = require("../../events/twitch/streamStart");
-const streamEndHandler = require("../../events/twitch/streamEnd");
-const messageHandler = require("../../events/twitch/messageCreate");
-const interactionHandler = require("../../events/twitch/interactionCreate");
-const { createEventData } = require("./eventData");
-const {
+import { twitchLog } from "../../utils/core/loggers.js";
+import streamStartHandler from "../../events/twitch/streamStart.js";
+import streamEndHandler from "../../events/twitch/streamEnd.js";
+import messageHandler from "../../events/twitch/messageCreate.js";
+import interactionHandler from "../../events/twitch/interactionCreate.js";
+import { createEventData } from "./eventData.js";
+import {
   syncTwitchScheduleEvents,
   syncTwitchUpcomingStreams,
-} = require("../../utils/discord/discordGuildEvents");
-const { setStreamingStatus } = require("../../utils/discord/discordPresence");
-const { getActiveStream } = require("../../db/streams");
+} from "../../utils/discord/discordGuildEvents.js";
+import { setStreamingStatus } from "../../utils/discord/discordPresence.js";
+import { getActiveStream } from "../../db/streams.js";
 
 /** Interval reference for the hourly Twitch schedule → Discord events sync. */
 const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;
@@ -34,7 +32,7 @@ const TWITCH_SCHEDULE_SYNC_MS = 60 * 60 * 1000;
  * @param {import('../clientManager')} clientManager
  * @returns {Promise<void>}
  */
-async function bootstrap(clientManager) {
+export async function bootstrap(clientManager) {
   twitchLog("debug", "twitch:bootstrap start");
   const { twitchChatClient, twitchApiClient, twitchEventSubListener } =
     clientManager;
@@ -156,5 +154,3 @@ async function bootstrap(clientManager) {
 
   twitchLog("info", "twitch:bootstrap complete");
 }
-
-module.exports = { bootstrap };

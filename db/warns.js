@@ -7,10 +7,8 @@
  * @typedef {import('../utils/core/types').WarnRow} WarnRow
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Return every warning row issued to a given user, newest first.
@@ -20,7 +18,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @returns {Promise<WarnRow[]>} All persisted warnings for the user.
  * @throws {Error} When the SQLite read fails.
  */
-async function getUserWarns(userId) {
+export async function getUserWarns(userId) {
   dbLog("debug", "warns:getUserWarns", { userId });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -50,7 +48,7 @@ async function getUserWarns(userId) {
  * @returns {Promise<number>} The total warning count (0 when the user has none).
  * @throws {Error} When the SQLite read fails.
  */
-async function getWarnCount(userId) {
+export async function getWarnCount(userId) {
   dbLog("debug", "warns:getWarnCount", { userId });
   try {
     const result = await db
@@ -77,7 +75,7 @@ async function getWarnCount(userId) {
  * @returns {Promise<number>} Total warnings issued in that window.
  * @throws {Error} When the SQLite read fails.
  */
-async function getRecentWarnCount(minutes) {
+export async function getRecentWarnCount(minutes) {
   dbLog("debug", "warns:getRecentWarnCount", { minutes });
   try {
     const since = new Date(Date.now() - minutes * 60000).toISOString();
@@ -107,7 +105,7 @@ async function getRecentWarnCount(minutes) {
  * @returns {Promise<void>}
  * @throws {Error} When the SQLite write fails.
  */
-async function addWarn(userId, reason) {
+export async function addWarn(userId, reason) {
   const timestamp = new Date().toISOString();
   dbLog("debug", "warns:addWarn", { userId, reasonLength: reason.length });
   try {
@@ -127,10 +125,3 @@ async function addWarn(userId, reason) {
     throw err;
   }
 }
-
-module.exports = {
-  getUserWarns,
-  getWarnCount,
-  getRecentWarnCount,
-  addWarn,
-};

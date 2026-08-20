@@ -15,15 +15,17 @@
  * Winston) because it runs outside the bot's normal lifecycle.
  */
 
-"use strict";
+import { Client, GatewayIntentBits, Events } from "discord.js";
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import axios from "axios";
+import dotenv from "dotenv";
 
-const { Client, GatewayIntentBits, Events } = require("discord.js");
-const fs = require("fs");
-const fsp = require("fs").promises;
-const path = require("path");
-const axios = require("axios");
-const dotenv = require("dotenv");
-dotenv.config({ path: require("path").resolve(process.cwd(), ".env") });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 /**
  * Discord client used only for the duration of the sync. Destroyed once the

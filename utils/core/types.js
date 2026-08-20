@@ -8,8 +8,6 @@
  * Adding a new shared shape here keeps IDE intellisense consistent across files.
  */
 
-"use strict";
-
 /* ──────────────────────────── Logger types ──────────────────────────── */
 
 /**
@@ -221,4 +219,4 @@
  */
 
 // Intentionally empty runtime export — this module is types-only.
-module.exports = {};
+export {};

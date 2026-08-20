@@ -9,14 +9,13 @@
  * @typedef {import('../../utils/core/types').DiscordSlashCommand} DiscordSlashCommand
  */
 
-"use strict";
-
-const { discordLog: log } = require("../../utils/core/loggers");
-const { loadCommandFiles } = require("../../utils/discord/loadCommands");
-const { validateEmojis } = require("../../utils/discord/validateEmojis");
-const { Collection } = require("discord.js");
-const fs = require("fs").promises;
-const path = require("path");
+import { discordLog as log } from "../../utils/core/loggers.js";
+import { loadCommandFiles } from "../../utils/discord/loadCommands.js";
+import { validateEmojis } from "../../utils/discord/validateEmojis.js";
+import { Collection } from "discord.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 /**
  * Initialize the in-memory command index and register every event + command file.
@@ -26,7 +25,7 @@ const path = require("path");
  * @param {import('../clientManager')} clientManager - Lifecycle owner forwarded to handlers.
  * @returns {Promise<void>}
  */
-async function bootstrap(discordClient, clientManager) {
+export async function bootstrap(discordClient, clientManager) {
   log("debug", "discord:bootstrap start");
   discordClient.commands = new Collection();
   await registerEvents(discordClient, clientManager);
@@ -54,7 +53,7 @@ async function registerEvents(discordClient, clientManager) {
   log("debug", "discord:registerEvents scanning", { count: eventFiles.length });
 
   for (const file of eventFiles) {
-    const event = require(path.join(eventDir, file));
+    const event = await import(pathToFileURL(path.join(eventDir, file)).href);
     const eventName = event.name;
 
     if (event.once) {
@@ -96,7 +95,3 @@ async function registerCommands(discordClient) {
     });
   }
 }
-
-module.exports = {
-  bootstrap,
-};

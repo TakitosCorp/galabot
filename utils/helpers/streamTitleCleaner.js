@@ -5,7 +5,7 @@
  * @param {string} title - The raw stream title from the provider
  * @returns {string} Cleaned title or "No title" if empty
  */
-function cleanStreamTitle(title) {
+export function cleanStreamTitle(title) {
   if (!title || typeof title !== "string") {
     return "No title";
   }
@@ -16,5 +16,3 @@ function cleanStreamTitle(title) {
     .replace(/\s{2,}/g, " ") // Collapse multiple spaces to single space
     .trim(); // Trim leading/trailing whitespace
 }
-
-module.exports = { cleanStreamTitle };

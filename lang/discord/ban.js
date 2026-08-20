@@ -5,9 +5,7 @@
  * Provides embed copy and error replies in English and Spanish.
  */
 
-"use strict";
-
-module.exports = {
+export default {
   en: {
     reasonField: "Reason:",
     actionField: "Actions taken:",

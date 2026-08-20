@@ -9,11 +9,9 @@
  * @typedef {import('./types').ScheduleSegment} ScheduleSegment
  */
 
-"use strict";
-
-const axios = require("axios");
-const { getValidTwitchConfig } = require("./twitchToken");
-const { twitchLog } = require("../core/loggers");
+import axios from "axios";
+import { getValidTwitchConfig } from "./twitchToken.js";
+import { twitchLog } from "../core/loggers.js";
 
 /**
  * Resolve a Twitch login name to its broadcaster id via Helix `/users`.
@@ -52,6 +50,7 @@ async function getBroadcasterId(username, clientId, accessToken) {
       });
       throw new Error(
         `Error obtaining broadcasterId for "${username}": ${JSON.stringify(twitchError)}`,
+        { cause: err },
       );
     }
     throw err;
@@ -93,7 +92,7 @@ async function getGameBoxArtUrlByCategoryName(twitchApiClient, categoryName) {
  * @returns {Promise<ScheduleSegment[]>} Array of scheduled segments.
  * @throws {Error} On invalid input or non-recoverable Helix errors.
  */
-async function getStreamerScheduleThisWeek(username, twitchApiClient) {
+export async function getStreamerScheduleThisWeek(username, twitchApiClient) {
   if (typeof username !== "string") {
     throw new Error(
       `Username must be a string. Value received: ${JSON.stringify(username)}`,
@@ -151,5 +150,3 @@ async function getStreamerScheduleThisWeek(username, twitchApiClient) {
 
   return result;
 }
-
-module.exports = { getStreamerScheduleThisWeek };

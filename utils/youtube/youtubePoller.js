@@ -15,16 +15,14 @@
  * @typedef {import('../core/types').YouTubeCheckResult} YouTubeCheckResult
  */
 
-"use strict";
-
-const axios = require("axios");
-const { youtubeLog } = require("../core/loggers");
-const fileUtils = require("../helpers/fileUtils");
-const { updateStreamViewers } = require("../../db/streams");
-const {
+import axios from "axios";
+import { youtubeLog } from "../core/loggers.js";
+import * as fileUtils from "../helpers/fileUtils.js";
+import { updateStreamViewers } from "../../db/streams.js";
+import {
   YOUTUBE_QUOTA_COOLDOWN_MS,
   YOUTUBE_RETRY_MAX,
-} = require("../core/constants");
+} from "../core/constants.js";
 
 /**
  * Mutable singleton state for the poller.
@@ -50,7 +48,7 @@ const state = {
  *
  * @returns {YouTubeState & { upcomingStreams: YouTubeStreamData[] }}
  */
-function getState() {
+export function getState() {
   return { ...state };
 }
 
@@ -60,7 +58,7 @@ function getState() {
  * @param {Partial<YouTubeState & { upcomingStreams: YouTubeStreamData[] }>} partial
  * @returns {void}
  */
-function setState(partial) {
+export function setState(partial) {
   Object.assign(state, partial);
 }
 
@@ -166,7 +164,7 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
  * @async
  * @returns {Promise<void>}
  */
-async function fetchAndCacheCategories() {
+export async function fetchAndCacheCategories() {
   youtubeLog("info", "youtubePoller:fetchAndCacheCategories start");
   const data = await withRetry(() =>
     axios
@@ -199,7 +197,7 @@ async function fetchAndCacheCategories() {
  * @async
  * @returns {Promise<any|null>} Raw API response.
  */
-async function getUpcomingStreams() {
+export async function getUpcomingStreams() {
   const channelId = process.env.YOUTUBE_CHANNEL_ID;
   youtubeLog("debug", "youtubePoller:getUpcomingStreams", { channelId });
   return withRetry(() =>
@@ -248,7 +246,7 @@ async function getOngoingStream() {
  * @param {string} videoId - The YouTube video ID.
  * @returns {Promise<any|null>} Raw API response.
  */
-async function getVideoStats(videoId) {
+export async function getVideoStats(videoId) {
   youtubeLog("debug", "youtubePoller:getVideoStats", { videoId });
   return withRetry(() =>
     axios
@@ -283,7 +281,7 @@ function getSkipTitles() {
  *
  * @returns {string[]}
  */
-function getBlacklistedVideoIds() {
+export function getBlacklistedVideoIds() {
   const fromEnv = process.env.YOUTUBE_BLACKLIST_IDS
     ? process.env.YOUTUBE_BLACKLIST_IDS.split(",")
         .map((id) => id.trim())
@@ -298,7 +296,7 @@ function getBlacklistedVideoIds() {
  * @param {string} videoId - The video ID.
  * @returns {boolean} True if the video should be ignored.
  */
-function isBlacklisted(videoId) {
+export function isBlacklisted(videoId) {
   return getBlacklistedVideoIds().includes(videoId);
 }
 
@@ -319,7 +317,7 @@ function shouldSkip(title) {
  * @param {any} statsData - Raw API response.
  * @returns {YouTubeStreamData|null} Parsed data or null.
  */
-function extractStreamData(videoId, statsData) {
+export function extractStreamData(videoId, statsData) {
   if (!statsData?.items?.length) return null;
 
   const item = statsData.items[0];
@@ -357,7 +355,7 @@ function extractStreamData(videoId, statsData) {
  * @async
  * @returns {Promise<void>}
  */
-async function updateWorkflow() {
+export async function updateWorkflow() {
   if (state.isPolling) {
     youtubeLog("debug", "youtubePoller:updateWorkflow already-running");
     return;
@@ -578,7 +576,7 @@ async function updateWorkflow() {
  * @async
  * @returns {Promise<YouTubeCheckResult|null>} Data object or null.
  */
-async function checkWorkflow() {
+export async function checkWorkflow() {
   if (state.isPolling || !state.videoId) return null;
 
   if (state.quotaExhaustedUntil > Date.now()) {
@@ -629,16 +627,3 @@ async function checkWorkflow() {
 
   return { isLive: false, viewers: 0, endTime: null };
 }
-
-module.exports = {
-  updateWorkflow,
-  checkWorkflow,
-  getState,
-  setState,
-  getUpcomingStreams,
-  getVideoStats,
-  extractStreamData,
-  fetchAndCacheCategories,
-  getBlacklistedVideoIds,
-  isBlacklisted,
-};

@@ -7,22 +7,18 @@
  * cached upcoming streams to save quota.
  */
 
-"use strict";
-
-const { youtubeLog } = require("../../utils/core/loggers");
-const { getActiveStream, updateStreamEnd } = require("../../db/streams");
-const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
-const { setIdleStatus } = require("../../utils/discord/discordPresence");
-const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
-const { getState, setState } = require("../../utils/youtube/youtubePoller");
-const {
+import { youtubeLog } from "../../utils/core/loggers.js";
+import { getActiveStream, updateStreamEnd } from "../../db/streams.js";
+import { EmbedBuilder, AttachmentBuilder } from "discord.js";
+import { setIdleStatus } from "../../utils/discord/discordPresence.js";
+import { cleanStreamTitle } from "../../utils/helpers/streamTitleCleaner.js";
+import { getState, setState } from "../../utils/youtube/youtubePoller.js";
+import {
   generateFollowupImage,
   generateEndedImage,
-} = require("../../utils/helpers/imageGenerator");
-const {
-  completeGuildStreamEvent,
-} = require("../../utils/discord/discordGuildEvents");
-const axios = require("axios");
+} from "../../utils/helpers/imageGenerator.js";
+import { completeGuildStreamEvent } from "../../utils/discord/discordGuildEvents.js";
+import axios from "axios";
 
 /**
  * Wrap up the just-ended YouTube stream.
@@ -224,4 +220,4 @@ async function streamEnd(clientManager, endTime) {
   }
 }
 
-module.exports = streamEnd;
+export default streamEnd;

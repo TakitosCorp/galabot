@@ -9,11 +9,9 @@
  * unresolved text like `{emojis.galabot_foo}`.
  */
 
-"use strict";
-
-const resources = require("../../data/resources.json");
-const emojis = require("../../data/emojis.json");
-const { discordLog } = require("../core/loggers");
+import resources from "../../data/resources.json" with { type: "json" };
+import emojis from "../../data/emojis.json" with { type: "json" };
+import { discordLog } from "../core/loggers.js";
 
 const PLACEHOLDER_PATTERN = /\{emojis\.([a-zA-Z0-9_]+)\}/g;
 
@@ -24,7 +22,7 @@ const PLACEHOLDER_PATTERN = /\{emojis\.([a-zA-Z0-9_]+)\}/g;
  *
  * @returns {string[]} Sorted list of orphaned placeholder names (empty when clean).
  */
-function validateEmojis() {
+export function validateEmojis() {
   const orphaned = new Set();
 
   for (const lang of Object.keys(resources)) {
@@ -50,5 +48,3 @@ function validateEmojis() {
   }
   return result;
 }
-
-module.exports = { validateEmojis };

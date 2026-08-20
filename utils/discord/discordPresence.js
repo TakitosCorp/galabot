@@ -7,10 +7,9 @@
  * connection. Both are no-ops when the client is unavailable.
  */
 
-"use strict";
-
-const { ActivityType } = require("discord.js");
-const { discordLog } = require("../core/loggers");
+import { ActivityType } from "discord.js";
+import { discordLog } from "../core/loggers.js";
+import resources from "../../data/resources.json" with { type: "json" };
 
 /**
  * Set the bot's presence to "Streaming" with the given title and URL.
@@ -22,7 +21,7 @@ const { discordLog } = require("../core/loggers");
  *   requires a real streaming URL for `ActivityType.Streaming`.
  * @returns {void}
  */
-function setStreamingStatus(discordClient, streamTitle, streamUrl) {
+export function setStreamingStatus(discordClient, streamTitle, streamUrl) {
   if (!discordClient || !discordClient.isReady()) return;
   try {
     discordClient.user.setPresence({
@@ -51,10 +50,9 @@ function setStreamingStatus(discordClient, streamTitle, streamUrl) {
  * @param {import('discord.js').Client|null} discordClient
  * @returns {void}
  */
-function setIdleStatus(discordClient) {
+export function setIdleStatus(discordClient) {
   if (!discordClient || !discordClient.isReady()) return;
   try {
-    const resources = require("../../data/resources.json");
     const activities = resources.en.activities;
     const pick = activities[Math.floor(Math.random() * activities.length)];
     discordClient.user.setPresence({
@@ -72,5 +70,3 @@ function setIdleStatus(discordClient) {
     });
   }
 }
-
-module.exports = { setStreamingStatus, setIdleStatus };

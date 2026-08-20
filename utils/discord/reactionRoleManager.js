@@ -11,10 +11,8 @@
  *   REACTION_ROLE_RULES_EMOJI2=<:sauropod:1234567890>:1500087724953047070
  */
 
-"use strict";
-
-const { db } = require("../../db/database");
-const { discordLog } = require("../core/loggers");
+import { db } from "../../db/database.js";
+import { discordLog } from "../core/loggers.js";
 
 /**
  * Parse REACTION_ROLE_{GROUP}_EMOJI* env vars for a given group.
@@ -23,7 +21,7 @@ const { discordLog } = require("../core/loggers");
  * @param {string} group - Group name in UPPER_CASE (e.g. "RULES", "WELCOME")
  * @returns {Map<string, string>} Map of emoji → roleId
  */
-function parseReactionRoleEnv(group) {
+export function parseReactionRoleEnv(group) {
   const emojiMap = new Map();
   const prefix = `REACTION_ROLE_${group}_EMOJI`;
   let count = 1;
@@ -64,7 +62,7 @@ function parseReactionRoleEnv(group) {
  * @param {import('discord.js').Emoji | string} emoji
  * @returns {string}
  */
-function getEmojiIdentifier(emoji) {
+export function getEmojiIdentifier(emoji) {
   if (typeof emoji === "string") {
     return emoji;
   }
@@ -84,7 +82,7 @@ function getEmojiIdentifier(emoji) {
  * @param {Map<string, string>} emojiMap
  * @returns {string|null}
  */
-function getRoleForEmoji(emoji, emojiMap) {
+export function getRoleForEmoji(emoji, emojiMap) {
   const identifier = getEmojiIdentifier(emoji);
 
   if (emojiMap.has(identifier)) {
@@ -106,7 +104,7 @@ function getRoleForEmoji(emoji, emojiMap) {
  * @param {Map<string, string>} emojiMap
  * @returns {Promise<void>}
  */
-async function addReactionsToMessage(message, emojiMap) {
+export async function addReactionsToMessage(message, emojiMap) {
   for (const emoji of emojiMap.keys()) {
     try {
       await message.react(emoji);
@@ -130,7 +128,7 @@ async function addReactionsToMessage(message, emojiMap) {
  * @param {string} groupName - Uppercase group key (e.g. "RULES")
  * @returns {Promise<void>}
  */
-async function trackMessage(messageId, channelId, guildId, groupName) {
+export async function trackMessage(messageId, channelId, guildId, groupName) {
   try {
     await db
       .insertInto("reaction_role_messages")
@@ -165,7 +163,7 @@ async function trackMessage(messageId, channelId, guildId, groupName) {
  * @param {string} messageId
  * @returns {Promise<{message_id: string, group_name: string}|undefined>}
  */
-async function getTrackedMessage(messageId) {
+export async function getTrackedMessage(messageId) {
   try {
     return await db
       .selectFrom("reaction_role_messages")
@@ -180,12 +178,3 @@ async function getTrackedMessage(messageId) {
     return undefined;
   }
 }
-
-module.exports = {
-  parseReactionRoleEnv,
-  getEmojiIdentifier,
-  getRoleForEmoji,
-  addReactionsToMessage,
-  trackMessage,
-  getTrackedMessage,
-};

@@ -5,13 +5,14 @@
  * configures Kysely, and handles schema creation and migrations.
  */
 
-"use strict";
+import Database from "better-sqlite3";
+import { Kysely, SqliteDialect } from "kysely";
+import { dbLog } from "../utils/core/loggers.js";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const Database = require("better-sqlite3");
-const { Kysely, SqliteDialect } = require("kysely");
-const { dbLog } = require("../utils/core/loggers");
-const path = require("path");
-const fs = require("fs");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const dataDir = path.join(__dirname, "..", "data");
 if (!fs.existsSync(dataDir)) {
@@ -58,7 +59,7 @@ const db = new Kysely({
  * @returns {Promise<void>}
  * @throws {Error} When the underlying SQLite engine rejects.
  */
-async function initialize() {
+export async function initialize() {
   dbLog("info", "db:initialize start");
   try {
     await db.transaction().execute(async (trx) => {
@@ -261,8 +262,4 @@ async function initialize() {
   }
 }
 
-module.exports = {
-  db,
-  sqliteDb,
-  initialize,
-};
+export { db, sqliteDb };

@@ -7,9 +7,7 @@
  * various validation failures.
  */
 
-"use strict";
-
-module.exports = {
+export default {
   en: {
     reasonField: "Reason:",
     actionField: "Actions taken:",

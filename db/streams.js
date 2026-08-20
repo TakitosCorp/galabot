@@ -10,10 +10,8 @@
  * @typedef {import('../utils/core/types').StreamInsert} StreamInsert
  */
 
-"use strict";
-
-const { db } = require("./database");
-const { dbLog } = require("../utils/core/loggers");
+import { db } from "./database.js";
+import { dbLog } from "../utils/core/loggers.js";
 
 /**
  * Insert a freshly-detected stream row. Caller is responsible for de-duplication
@@ -24,7 +22,7 @@ const { dbLog } = require("../utils/core/loggers");
  * @returns {Promise<unknown>} The Kysely insert result.
  * @throws {Error} When the SQLite write fails.
  */
-async function insertStream(streamData) {
+export async function insertStream(streamData) {
   dbLog("debug", "streams:insertStream", {
     id: streamData.id,
     provider: streamData.provider,
@@ -66,7 +64,7 @@ async function insertStream(streamData) {
  * @returns {Promise<StreamRow|null>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getActiveStream(provider) {
+export async function getActiveStream(provider) {
   dbLog("debug", "streams:getActiveStream", { provider });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -99,7 +97,7 @@ async function getActiveStream(provider) {
  * @returns {Promise<StreamRow|null>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getMostRecentStream(provider) {
+export async function getMostRecentStream(provider) {
   dbLog("debug", "streams:getMostRecentStream", { provider });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -130,7 +128,7 @@ async function getMostRecentStream(provider) {
  * @returns {Promise<StreamRow|null>}
  * @throws {Error} When the SQLite read fails.
  */
-async function getStreamById(streamId) {
+export async function getStreamById(streamId) {
   dbLog("debug", "streams:getStreamById", { streamId });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -160,7 +158,7 @@ async function getStreamById(streamId) {
  * @returns {Promise<boolean>} `true` when a row with that id is already stored.
  * @throws {Error} When the SQLite read fails.
  */
-async function streamExists(streamId) {
+export async function streamExists(streamId) {
   dbLog("debug", "streams:streamExists", { streamId });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -193,7 +191,7 @@ async function streamExists(streamId) {
  * @returns {Promise<boolean>} `true` when the row was found and updated.
  * @throws {Error} When the SQLite read or write fails.
  */
-async function updateStreamViewers(streamId, currentViewers) {
+export async function updateStreamViewers(streamId, currentViewers) {
   dbLog("debug", "streams:updateStreamViewers", { streamId, currentViewers });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -250,7 +248,7 @@ async function updateStreamViewers(streamId, currentViewers) {
  * @returns {Promise<boolean>} `true` when at least one row was updated.
  * @throws {Error} When the SQLite write fails.
  */
-async function updateStreamEnd(streamId, endTime) {
+export async function updateStreamEnd(streamId, endTime) {
   dbLog("debug", "streams:updateStreamEnd", { streamId, endTime });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -290,7 +288,7 @@ async function updateStreamEnd(streamId, endTime) {
  * @returns {Promise<boolean>} `true` when at least one row was updated.
  * @throws {Error} When the SQLite write fails.
  */
-async function updateStreamDiscordMessage(streamId, discMsgId) {
+export async function updateStreamDiscordMessage(streamId, discMsgId) {
   dbLog("debug", "streams:updateStreamDiscordMessage", { streamId, discMsgId });
   try {
     return await db.transaction().execute(async (trx) => {
@@ -318,14 +316,3 @@ async function updateStreamDiscordMessage(streamId, discMsgId) {
     throw err;
   }
 }
-
-module.exports = {
-  insertStream,
-  getActiveStream,
-  getMostRecentStream,
-  getStreamById,
-  streamExists,
-  updateStreamViewers,
-  updateStreamEnd,
-  updateStreamDiscordMessage,
-};

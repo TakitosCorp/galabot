@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.0] - 2026-08-20
+
+### Changed
+
+- **BREAKING:** Converted the entire codebase from CommonJS to native ESM (`package.json` `"type": "module"`). Every `require()`/`module.exports` in all 61 first-party files was converted to `import`/`export`; relative imports now carry explicit `.js` extensions, JSON imports use `with { type: "json" }` import attributes, and `__dirname`/`__filename` usages were replaced with `path.dirname(fileURLToPath(import.meta.url))`. The two directory-scanning loaders (`utils/discord/loadCommands.js`, `handlers/discord/startup.js`) now use `await import(pathToFileURL(...).href)` instead of synchronous `require()`. No architectural or behavioral changes — this is a mechanical module-system migration; anything that `require()`d this package or its entrypoint directly will break.
+- Kept `better-sqlite3` as the SQLite driver under Kysely rather than switching to Node's built-in `node:sqlite` — it's still experimental (`ExperimentalWarning`) and has no official Kysely dialect yet.
+
+### Added
+
+- ESLint flat config (`eslint.config.js`) and an `npm run lint` script — the repo previously had no linter, only Prettier formatting.
+
 ## [1.1.2] - 2026-08-18
 
 ### Fixed

@@ -9,28 +9,25 @@
  * 5. Activating the matching Discord Guild Scheduled Event.
  */
 
-"use strict";
-
-const { twitchLog } = require("../../utils/core/loggers");
-const {
+import { twitchLog } from "../../utils/core/loggers.js";
+import {
   insertStream,
   streamExists,
   updateStreamDiscordMessage,
-} = require("../../db/streams");
-const {
+} from "../../db/streams.js";
+import {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   AttachmentBuilder,
-} = require("discord.js");
-const { generateStreamBanner } = require("../../utils/helpers/imageGenerator");
-const { cleanStreamTitle } = require("../../utils/helpers/streamTitleCleaner");
-const { startViewersAverage } = require("../../utils/twitch/twitchViews");
-const { setStreamingStatus } = require("../../utils/discord/discordPresence");
-const {
-  activateGuildStreamEvent,
-} = require("../../utils/discord/discordGuildEvents");
+} from "discord.js";
+import { generateStreamBanner } from "../../utils/helpers/imageGenerator.js";
+import { cleanStreamTitle } from "../../utils/helpers/streamTitleCleaner.js";
+import { startViewersAverage } from "../../utils/twitch/twitchViews.js";
+import { setStreamingStatus } from "../../utils/discord/discordPresence.js";
+import { activateGuildStreamEvent } from "../../utils/discord/discordGuildEvents.js";
+import resources from "../../data/resources.json" with { type: "json" };
 
 /**
  * Process a `streamOnline` EventSub event.
@@ -62,7 +59,6 @@ async function streamStart(event, clientManager) {
       return;
     }
 
-    const resources = require("../../data/resources.json");
     const streamTitles = resources.en.streamTitles;
     const user = await event.getBroadcaster();
 
@@ -222,4 +218,4 @@ async function streamStart(event, clientManager) {
   }
 }
 
-module.exports = streamStart;
+export default streamStart;

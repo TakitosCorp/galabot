@@ -19,11 +19,12 @@
  * @typedef {import('./types').DomainLogFn} DomainLogFn
  */
 
-"use strict";
+import winston from "winston";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const winston = require("winston");
-const fs = require("fs");
-const path = require("path");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Create the `logs/` directory at the project root if it does not exist yet.
@@ -31,7 +32,7 @@ const path = require("path");
  *
  * @returns {string} Absolute path to the `logs/` directory.
  */
-function ensureLogsFolder() {
+export function ensureLogsFolder() {
   const logsDir = path.join(__dirname, "..", "..", "logs");
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
@@ -110,7 +111,7 @@ function formatContext(context) {
  * Emit a log line on the Twitch channel.
  * @type {DomainLogFn}
  */
-function twitchLog(level, message, context) {
+export function twitchLog(level, message, context) {
   twitchLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
@@ -118,7 +119,7 @@ function twitchLog(level, message, context) {
  * Emit a log line on the Discord channel.
  * @type {DomainLogFn}
  */
-function discordLog(level, message, context) {
+export function discordLog(level, message, context) {
   discordLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
@@ -126,7 +127,7 @@ function discordLog(level, message, context) {
  * Emit a log line on the database channel.
  * @type {DomainLogFn}
  */
-function dbLog(level, message, context) {
+export function dbLog(level, message, context) {
   dbLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
@@ -134,7 +135,7 @@ function dbLog(level, message, context) {
  * Emit a log line on the system channel (lifecycle, env validation, shutdown).
  * @type {DomainLogFn}
  */
-function sysLog(level, message, context) {
+export function sysLog(level, message, context) {
   sysLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
@@ -142,7 +143,7 @@ function sysLog(level, message, context) {
  * Emit a log line on the YouTube channel.
  * @type {DomainLogFn}
  */
-function youtubeLog(level, message, context) {
+export function youtubeLog(level, message, context) {
   youtubeLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
 
@@ -150,16 +151,6 @@ function youtubeLog(level, message, context) {
  * Emit a log line on the AI channel (Gemini queries, injected context, retries).
  * @type {DomainLogFn}
  */
-function aiLog(level, message, context) {
+export function aiLog(level, message, context) {
   aiLogger.log({ level, message: `${message}${formatContext(context)}` });
 }
-
-module.exports = {
-  ensureLogsFolder,
-  twitchLog,
-  discordLog,
-  dbLog,
-  sysLog,
-  youtubeLog,
-  aiLog,
-};

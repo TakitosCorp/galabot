@@ -12,35 +12,33 @@
  * cause a duplicate announcement for a stream that's already live.
  */
 
-"use strict";
-
-const {
+import {
   updateWorkflow,
   checkWorkflow,
   getState,
   setState,
   fetchAndCacheCategories,
-} = require("../../utils/youtube/youtubePoller");
-const streamStartHandler = require("../../events/youtube/streamStart");
-const streamEndHandler = require("../../events/youtube/streamEnd");
-const { updateStreamViewers, getActiveStream } = require("../../db/streams");
-const { youtubeLog } = require("../../utils/core/loggers");
-const { setStreamingStatus } = require("../../utils/discord/discordPresence");
-const {
+} from "../../utils/youtube/youtubePoller.js";
+import streamStartHandler from "../../events/youtube/streamStart.js";
+import streamEndHandler from "../../events/youtube/streamEnd.js";
+import { updateStreamViewers, getActiveStream } from "../../db/streams.js";
+import { youtubeLog } from "../../utils/core/loggers.js";
+import { setStreamingStatus } from "../../utils/discord/discordPresence.js";
+import {
   YOUTUBE_FAST_POLL_MS,
   YOUTUBE_SLOW_POLL_MS,
   YOUTUBE_CATEGORY_POLL_MS,
-} = require("../../utils/core/constants");
-const {
+} from "../../utils/core/constants.js";
+import {
   createGuildStreamEvent,
   cleanupRemovedEvents,
-} = require("../../utils/discord/discordGuildEvents");
-const {
+} from "../../utils/discord/discordGuildEvents.js";
+import {
   upsertUpcomingStream,
   deleteExpiredStreams,
   deleteUpcomingStream,
   getUpcomingStreamsByProvider,
-} = require("../../db/upcomingStreams");
+} from "../../db/upcomingStreams.js";
 
 /**
  * Create Discord Guild Scheduled Events from the `state.upcomingStreams`
@@ -55,7 +53,7 @@ const {
  * @param {import('discord.js').Client|null} discordClient
  * @returns {Promise<void>}
  */
-async function syncYouTubeDiscordEvents(discordClient) {
+export async function syncYouTubeDiscordEvents(discordClient) {
   try {
     const upcoming = getState().upcomingStreams ?? [];
     const currentSourceIds = [];
@@ -94,7 +92,7 @@ async function syncYouTubeDiscordEvents(discordClient) {
  * @async
  * @returns {Promise<void>}
  */
-async function syncYouTubeUpcomingStreamsToDb() {
+export async function syncYouTubeUpcomingStreamsToDb() {
   try {
     const upcoming = getState().upcomingStreams ?? [];
     const currentIds = new Set();
@@ -145,7 +143,7 @@ async function syncYouTubeUpcomingStreamsToDb() {
  * @param {import('../clientManager')} clientManager
  * @returns {Promise<void>}
  */
-async function runSlowPoll(clientManager) {
+export async function runSlowPoll(clientManager) {
   try {
     youtubeLog("info", "youtube:slowPoll start");
     await updateWorkflow();
@@ -253,7 +251,7 @@ async function runFastPoll(clientManager) {
  * @param {import('../clientManager')} clientManager
  * @returns {Promise<void>}
  */
-async function bootstrap(clientManager) {
+export async function bootstrap(clientManager) {
   youtubeLog("info", "youtube:bootstrap start");
 
   const activeStream = await getActiveStream("youtube");
@@ -304,10 +302,3 @@ async function bootstrap(clientManager) {
     fastPollMs: YOUTUBE_FAST_POLL_MS,
   });
 }
-
-module.exports = {
-  bootstrap,
-  runSlowPoll,
-  syncYouTubeDiscordEvents,
-  syncYouTubeUpcomingStreamsToDb,
-};

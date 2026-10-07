@@ -25,6 +25,19 @@ import {
 } from "../core/constants.js";
 
 /**
+ * YouTube error reasons meaning the API key itself is unusable, so the
+ * fallback key should be tried instead of giving up.
+ * @type {ReadonlySet<string>}
+ */
+const KEY_FAILURE_REASONS = new Set([
+  "keyInvalid",
+  "keyExpired",
+  "accessNotConfigured",
+  "ipRefererBlocked",
+  "dailyLimitExceeded",
+]);
+
+/**
  * Mutable singleton state for the poller.
  * @type {YouTubeState & { upcomingStreams: YouTubeStreamData[] }}
  */
@@ -93,7 +106,7 @@ function getApiKey() {
   if (state.usingFallbackKey && process.env.YOUTUBE_API_KEY_2) {
     return process.env.YOUTUBE_API_KEY_2;
   }
-  return process.env.YOUTUBE_API_KEY;
+  return process.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY_2;
 }
 
 /**
@@ -113,14 +126,29 @@ async function withRetry(fn, maxRetries = YOUTUBE_RETRY_MAX) {
       const status = err.response?.status;
       const reason = err.response?.data?.error?.errors?.[0]?.reason;
 
-      if (status === 403 && reason === "quotaExceeded") {
-        if (process.env.YOUTUBE_API_KEY_2 && !state.usingFallbackKey) {
+      const quotaExceeded = status === 403 && reason === "quotaExceeded";
+      const keyFailure = KEY_FAILURE_REASONS.has(reason);
+
+      if (quotaExceeded || keyFailure) {
+        if (
+          process.env.YOUTUBE_API_KEY &&
+          process.env.YOUTUBE_API_KEY_2 &&
+          !state.usingFallbackKey
+        ) {
           youtubeLog(
             "warn",
-            "youtubePoller:quota primary-exhausted, switching to fallback key",
+            "youtubePoller:primary key unusable, switching to fallback key",
+            { status, reason },
           );
           setState({ usingFallbackKey: true });
           continue;
+        }
+        if (keyFailure) {
+          youtubeLog("error", "youtubePoller:key rejected on all keys", {
+            status,
+            reason,
+          });
+          return null;
         }
         youtubeLog("error", "youtubePoller:quota exhausted on all keys", {
           cooldownMs: YOUTUBE_QUOTA_COOLDOWN_MS,

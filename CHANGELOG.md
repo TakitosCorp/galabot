@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.1] - 2026-10-07
+
+### Fixed
+
+- Backup API keys (`GEMINI_API_KEY_2`, `YOUTUBE_API_KEY_2`) now take over whenever the primary key is unusable, not only on quota exhaustion: Gemini fails over on invalid/denied keys (400 `API_KEY_INVALID`, 401, 403) and YouTube on `keyInvalid`, `keyExpired`, `accessNotConfigured`, `ipRefererBlocked` and `dailyLimitExceeded`. When every key is rejected the real error is surfaced and no quota cooldown is set.
+- Either key works on its own: the bot no longer requires the primary key to be set when only the backup is configured.
+
 ## [2.0.0] - 2026-08-20
 
 ### Changed

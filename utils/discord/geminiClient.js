@@ -17,16 +17,18 @@
  *
  * **Quota handling**. Mirrors the YouTube poller pattern:
  *  - `GEMINI_API_KEY` is the primary key; `GEMINI_API_KEY_2` is an optional
- *    fallback (e.g. a second free-tier project).
- *  - On 429 (RPM/RPD exhausted) the wrapper switches to the fallback for
- *    subsequent calls. If both keys are exhausted, a `GEMINI_QUOTA_COOLDOWN_MS`
- *    cooldown is set; further calls throw `Error("GEMINI quota exhausted")`
- *    until the cooldown expires (auto-reset inside `getApiKey()`).
+ *    fallback (e.g. a second free-tier project). Either works on its own.
+ *  - On 429 (RPM/RPD exhausted) or an invalid/denied key (400/401/403) the
+ *    wrapper switches to the fallback for subsequent calls. If both keys are
+ *    quota-exhausted, a `GEMINI_QUOTA_COOLDOWN_MS` cooldown is set; further
+ *    calls throw `Error("GEMINI quota exhausted")` until the cooldown expires
+ *    (auto-reset inside `getApiKey()`). If the last failure was a key error
+ *    instead, the real error is rethrown and no cooldown is set.
  *  - The caller in `msgAI.js` treats both "not configured" and
  *    "quota exhausted" errors as warn-level → silent failure to the user.
  *
- * Requires `GEMINI_API_KEY` in the environment. `GEMINI_MODEL` is optional and
- * defaults to `gemma-4-26b-a4b-it`.
+ * Requires `GEMINI_API_KEY` or `GEMINI_API_KEY_2` in the environment.
+ * `GEMINI_MODEL` is optional and defaults to `gemma-4-26b-a4b-it`.
  */
 
 import fs from "node:fs";
@@ -105,7 +107,8 @@ function refreshPromptIfChanged() {
 /**
  * Mutable in-memory state for quota fallback handling.
  *
- * `usingFallbackKey` flips to true after the primary key returns 429.
+ * `usingFallbackKey` flips to true after the primary key returns 429 or is
+ * rejected as invalid.
  * `quotaExhaustedUntil` is set after the fallback ALSO returns 429 (or when
  * primary fails and no fallback is configured); it's an epoch-ms timestamp,
  * 0 meaning "no cooldown active".
@@ -135,7 +138,16 @@ function getApiKey() {
   if (state.usingFallbackKey && process.env.GEMINI_API_KEY_2) {
     return process.env.GEMINI_API_KEY_2;
   }
-  return process.env.GEMINI_API_KEY;
+  return process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2;
+}
+
+/**
+ * Whether both the primary and the fallback key are configured.
+ *
+ * @returns {boolean}
+ */
+function hasBackupKey() {
+  return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY_2);
 }
 
 /**
@@ -149,6 +161,22 @@ function isQuotaError(err) {
   if (err.status === 429) return true;
   const msg = String(err.message ?? "");
   return /429|RESOURCE_EXHAUSTED|quotaExceeded/i.test(msg);
+}
+
+/**
+ * Detect whether a thrown error means the API key itself is unusable
+ * (invalid, revoked, or lacking permission) rather than temporarily throttled.
+ *
+ * @param {{ status?: number, message?: string }|null|undefined} err
+ * @returns {boolean}
+ */
+function isKeyError(err) {
+  if (!err || typeof err !== "object") return false;
+  if (err.status === 401 || err.status === 403) return true;
+  const msg = String(err.message ?? "");
+  return /API_KEY_INVALID|API key not valid|PERMISSION_DENIED|UNAUTHENTICATED/i.test(
+    msg,
+  );
 }
 
 /**
@@ -184,7 +212,7 @@ function isTransientError(err) {
  *   SDK error for any other failure.
  */
 export async function queryGemini(userContent, additionalContext = null) {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY_2) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
@@ -204,7 +232,7 @@ export async function queryGemini(userContent, additionalContext = null) {
   parts.push(userContent);
   const resolvedUser = parts.join("\n\n");
 
-  const maxKeyAttempts = process.env.GEMINI_API_KEY_2 ? 2 : 1;
+  const maxKeyAttempts = hasBackupKey() ? 2 : 1;
   let lastErr = null;
 
   if (process.env.GEMINI_DEBUG_LOG === "true") {
@@ -284,7 +312,7 @@ export async function queryGemini(userContent, additionalContext = null) {
           continue;
         }
 
-        if (!isQuotaError(err)) {
+        if (!isQuotaError(err) && !isKeyError(err)) {
           aiLog("error", "geminiClient:non-quota error", {
             model,
             err: err.message,
@@ -292,18 +320,25 @@ export async function queryGemini(userContent, additionalContext = null) {
           throw err;
         }
 
-        break; // quota error — fall through to key-switching logic
+        break; // quota/key error — fall through to key-switching logic
       }
     }
 
-    if (process.env.GEMINI_API_KEY_2 && !state.usingFallbackKey) {
+    if (hasBackupKey() && !state.usingFallbackKey) {
       aiLog(
         "warn",
-        "geminiClient:quota primary-exhausted, switching to fallback key",
+        "geminiClient:primary key unusable, switching to fallback key",
         { err: lastErr.message },
       );
       state.usingFallbackKey = true;
       continue;
+    }
+
+    if (!isQuotaError(lastErr)) {
+      aiLog("error", "geminiClient:key rejected on all keys", {
+        err: lastErr.message,
+      });
+      throw lastErr;
     }
 
     state.quotaExhaustedUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;

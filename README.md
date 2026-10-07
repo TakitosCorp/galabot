@@ -196,7 +196,7 @@ Notes:
 | ----------------------- | ----------- | ------------------------------------------------------------------------------------------- |
 | `YOUTUBE_CHANNEL_ID`    | conditional | The YouTube channel ID to monitor (starts with `UC...`). Required when YouTube is enabled.  |
 | `YOUTUBE_API_KEY`       | conditional | YouTube Data API v3 key. Required when YouTube is enabled.                                  |
-| `YOUTUBE_API_KEY_2`     | no          | Optional fallback key. Used when the primary key hits its 10 000 unit/day quota.            |
+| `YOUTUBE_API_KEY_2`     | no          | Optional backup key. Used when the primary hits its 10 000 unit/day quota or is rejected.   |
 | `YOUTUBE_URL`           | yes         | The streamer's YouTube URL to include in embeds.                                            |
 | `YOUTUBE_BLACKLIST_IDS` | no          | Comma-separated list of video IDs to ignore. These streams are skipped on all API requests. |
 
@@ -227,7 +227,7 @@ Transient Gemini errors (5xx / INTERNAL) are retried up to **2 times** with a 2 
 | Variable               | Required | Description                                                                                                                                                                                                                          |
 | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GEMINI_API_KEY`       | no       | Google AI Studio API key. Feature is disabled when absent.                                                                                                                                                                           |
-| `GEMINI_API_KEY_2`     | no       | Optional fallback API key used automatically when the primary returns 429. After both keys are exhausted, AI replies pause for `GEMINI_QUOTA_COOLDOWN_MS` (1 h default).                                                             |
+| `GEMINI_API_KEY_2`     | no       | Optional backup API key used automatically when the primary returns 429 or is rejected as invalid. After both keys are quota-exhausted, AI replies pause for `GEMINI_QUOTA_COOLDOWN_MS` (1 h default).                                                             |
 | `GEMINI_MODEL`         | no       | Model name to use. Defaults to `gemma-4-26b-a4b-it` when unset.                                                                                                                                                                      |
 | `GEMINI_NO_LIMITS_IDS`  | no       | Comma-separated Discord user IDs that bypass the per-user cooldown entirely (useful for the bot owner / trusted users).                                                                                                              |
 | `GEMINI_WHITELIST_ONLY` | no       | Set to `true` to restrict AI replies to users listed in `GEMINI_NO_LIMITS_IDS`. All other users are silently ignored. Defaults to `false`.                                                                                           |

@@ -180,6 +180,7 @@ Notes:
 | `DISCORD_NOTIFICATION_CHANNEL` | yes      | Channel ID where Twitch and YouTube stream notifications are posted.                                                                                                                                    |
 | `DISCORD_NOTIFICATION_ROLE_ID` | no       | Role ID mentioned in Twitch and YouTube stream notifications. Leave blank for no mention.                                                                                                               |
 | `SPANISH_CHANNEL_ID`           | no       | Channel ID treated as Spanish-locale. Any other channel falls back to English.                                                                                                                          |
+| `RULES_CHANNEL_ID`             | no       | Rules channel mentioned in `/rules` user reminders. Falls back to plain text when unset.                                                                                                                |
 | `NSFW_CHANNEL_ID`              | no       | NSFW channel mentioned in the `/rules` embed. The NSFW channel rule is omitted when unset.                                                                                                              |
 | `REACTION_ROLE_{GROUP}_EMOJI*` | no       | Reaction role mappings, namespaced by group. Format: `REACTION_ROLE_RULES_EMOJI1=🦖:roleId`. Supports Unicode and custom Discord emojis (`<:name:id>`). Each command uses its own group (e.g. `RULES`). |
 

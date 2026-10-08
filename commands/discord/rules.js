@@ -97,10 +97,13 @@ export async function execute(interaction, client) {
   });
 
   if (user) {
+    const rulesChannel = process.env.RULES_CHANNEL_ID
+      ? `<#${process.env.RULES_CHANNEL_ID}>`
+      : t.rulesChannelFallback;
     const reminderEmbed = new EmbedBuilder()
       .setColor(0x800080)
       .setTitle(t.reminderTitle(user.username))
-      .setDescription(t.reminderDesc);
+      .setDescription(t.reminderDesc(rulesChannel));
 
     try {
       await user.send({ embeds: [reminderEmbed] });
@@ -122,7 +125,7 @@ export async function execute(interaction, client) {
       try {
         const channel = await client.channels.fetch(interaction.channelId);
         await channel.send({
-          content: t.dmFallback(user.id),
+          content: t.dmFallback(user.id, rulesChannel),
         });
         await interaction.reply({
           content: t.dmFallbackReply(user.tag),

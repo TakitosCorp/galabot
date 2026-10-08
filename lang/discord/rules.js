@@ -9,11 +9,13 @@
 
 export default {
   en: {
+    rulesChannelFallback: "the rules channel",
     reminderTitle: (username) => `Reminder for ${username}`,
-    reminderDesc: `I've been asked to remind you to read the rules. Head over to <#1080660073858220147> to read them.`,
+    reminderDesc: (rulesChannel) =>
+      `I've been asked to remind you to read the rules. Head over to ${rulesChannel} to read them.`,
     dmSuccess: (tag) => `✅ Reminder sent to ${tag} via DM.`,
-    dmFallback: (id) =>
-      `Hey <@${id}>! I couldn't send you a DM, but I've been asked to remind you to read the rules in <#1080660073858220147>.`,
+    dmFallback: (id, rulesChannel) =>
+      `Hey <@${id}>! I couldn't send you a DM, but I've been asked to remind you to read the rules in ${rulesChannel}.`,
     dmFallbackReply: (tag) =>
       `⚠️ Couldn't send DM to ${tag}, notified here instead.`,
     rulesTitle: "RULES!",
@@ -82,11 +84,13 @@ export default {
     logChannelFail: (msg) => `Failed to notify in fallback channel: ${msg}`,
   },
   es: {
+    rulesChannelFallback: "el canal de normas",
     reminderTitle: (username) => `Recordatorio para ${username}`,
-    reminderDesc: `Se me ha solicitado recordarte que leas las normas. Por favor, revísalas en <#1080660073858220147>.`,
+    reminderDesc: (rulesChannel) =>
+      `Se me ha solicitado recordarte que leas las normas. Por favor, revísalas en ${rulesChannel}.`,
     dmSuccess: (tag) => `✅ Recordatorio enviado a ${tag} por mensaje directo.`,
-    dmFallback: (id) =>
-      `¡Hola <@${id}>! No he podido enviarte un mensaje directo, pero se me ha pedido que te recuerde leer las normas en <#1080660073858220147>.`,
+    dmFallback: (id, rulesChannel) =>
+      `¡Hola <@${id}>! No he podido enviarte un mensaje directo, pero se me ha pedido que te recuerde leer las normas en ${rulesChannel}.`,
     dmFallbackReply: (tag) =>
       `⚠️ No se pudo enviar el mensaje directo a ${tag}; se le notificó por este medio.`,
     rulesTitle: "¡REGLAS!",

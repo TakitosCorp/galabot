@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.1] - 2026-10-08
+
+### Changed
+
+- `/rules` user reminders no longer hardcode the rules channel ID. Optional `RULES_CHANNEL_ID` env var sets the mentioned channel, with a plain-text fallback when unset.
+
 ## [2.1.0] - 2026-10-08
 
 ### Added

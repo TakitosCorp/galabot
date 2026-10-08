@@ -29,6 +29,11 @@ export default {
           "⋆ Respect the creator's boundaries and personal space. Remember that Gala is a content creator and we are her followers. Don't cross any lines!",
       },
       {
+        name: "★ NO friend requests to Gala",
+        value:
+          "⋆ Do not send Gala friend requests unless she has approved it or asked for it. Doing so counts as a warning, just like tagging her.",
+      },
+      {
         name: "★ Be respectful",
         value: "⋆ NO offensive comments toward others!",
       },
@@ -65,6 +70,10 @@ export default {
         value: "This is not negotiable!",
       },
     ],
+    nsfwChannelField: (channel) => ({
+      name: "★ NSFW channel",
+      value: `⋆ In ${channel} you may only post content related to Gala (mention Gala) or content approved by the mods or Gala herself. If you want to post something, always ask a mod first. Do NOT ping Gala.`,
+    }),
     rulesFooter: "Thank you for reading the rules, fossil 💜",
     logSent: (username) =>
       `Server rules sent in channel by request of ${username}`,
@@ -91,6 +100,11 @@ export default {
         name: "★ RESPETO",
         value:
           "⋆ Respeta los límites y el espacio personal de la creadora. Recuerda que Gala es una creadora de contenido y nosotros somos sus seguidores. ¡No cruces la línea!",
+      },
+      {
+        name: "★ NO envíes solicitudes de amistad a Gala",
+        value:
+          "⋆ No le envíes solicitudes de amistad a Gala salvo que ella lo haya aprobado o lo haya pedido. Hacerlo cuenta como una advertencia, igual que etiquetarla.",
       },
       {
         name: "★ Sé respetuoso/a",
@@ -129,6 +143,10 @@ export default {
         value: "¡Esto no es negociable!",
       },
     ],
+    nsfwChannelField: (channel) => ({
+      name: "★ Canal NSFW",
+      value: `⋆ En ${channel} solo puedes publicar contenido relacionado con Gala (menciona a Gala) o contenido aprobado por los moderadores o por la propia Gala. Si quieres publicar algo, pregunta siempre antes a un moderador. NO etiquetes a Gala.`,
+    }),
     rulesFooter: "Muchas gracias por leer las reglas, fossil 💜",
     logSent: (username) =>
       `Normas del servidor enviadas en el canal por petición de ${username}`,

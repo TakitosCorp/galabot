@@ -63,6 +63,12 @@ function readPrompt() {
     /\{\{MOD_ROLE_ID\}\}/g,
     process.env.MOD_ROLE_ID || "{{MOD_ROLE_ID}}",
   );
+  raw = raw.replace(
+    /\{\{NSFW_CHANNEL\}\}/g,
+    process.env.NSFW_CHANNEL_ID
+      ? `<#${process.env.NSFW_CHANNEL_ID}>`
+      : "the NSFW channel",
+  );
   return raw.trim();
 }
 

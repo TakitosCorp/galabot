@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.0] - 2026-10-08
+
+### Added
+
+- `/rules` embed: new "NO friend requests to Gala" rule (warning, same policy as pings) and an NSFW channel rule (Gala-related or mod/Gala-approved content only, ask a mods first, never ping Gala). The channel is configurable via the optional `NSFW_CHANNEL_ID` env var, fetched at post time and mentioned dynamically; the rule is omitted when unset or not fetchable.
+- AI prompt (`data/AIPrompt.md`) now includes both rules. `geminiClient.js` fills the new `{{NSFW_CHANNEL}}` placeholder from `NSFW_CHANNEL_ID` (falls back to "the NSFW channel" when unset).
+
 ## [2.0.1] - 2026-10-07
 
 ### Fixed

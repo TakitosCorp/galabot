@@ -40,6 +40,43 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild);
 
 /**
+ * Resolve the channel configured in the optional `NSFW_CHANNEL_ID` env var.
+ *
+ * @async
+ * @param {import('discord.js').Guild} guild
+ * @returns {Promise<import('discord.js').GuildBasedChannel|null>} `null` when unset or not fetchable.
+ */
+async function fetchNsfwChannel(guild) {
+  const channelId = process.env.NSFW_CHANNEL_ID;
+  if (!channelId) return null;
+  try {
+    return await guild.channels.fetch(channelId);
+  } catch (err) {
+    discordLog("warn", "rules:nsfw-channel fetch failed", {
+      channelId,
+      err: err.message,
+    });
+    return null;
+  }
+}
+
+/**
+ * Rules fields with the NSFW channel rule inserted before the trailing
+ * spacer + warnings fields. The rule is omitted when no channel resolved.
+ *
+ * @param {typeof strings.en} t
+ * @param {import('discord.js').GuildBasedChannel|null} nsfwChannel
+ * @returns {import('discord.js').APIEmbedField[]}
+ */
+function buildRulesFields(t, nsfwChannel) {
+  const fields = [...t.rulesFields];
+  if (nsfwChannel) {
+    fields.splice(-2, 0, t.nsfwChannelField(nsfwChannel.toString()));
+  }
+  return fields;
+}
+
+/**
  * @async
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {import('discord.js').Client} client
@@ -100,17 +137,19 @@ export async function execute(interaction, client) {
       }
     }
   } else {
+    const nsfwChannel = await fetchNsfwChannel(interaction.guild);
+
     const rulesEmbedEs = new EmbedBuilder()
       .setColor(0x800080)
       .setTitle(tEs.rulesTitle)
-      .addFields(...tEs.rulesFields)
+      .addFields(...buildRulesFields(tEs, nsfwChannel))
       .setImage("https://i.ibb.co/wh3TkmHN/imagen-2026-05-01-164811177.png")
       .setFooter({ text: tEs.rulesFooter });
 
     const rulesEmbedEn = new EmbedBuilder()
       .setColor(0x800080)
       .setTitle(tEn.rulesTitle)
-      .addFields(...tEn.rulesFields)
+      .addFields(...buildRulesFields(tEn, nsfwChannel))
       .setImage("https://i.ibb.co/wh3TkmHN/imagen-2026-05-01-164811177.png")
       .setFooter({ text: tEn.rulesFooter });
 
